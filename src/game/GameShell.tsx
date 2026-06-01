@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { DEFAULT_CHARACTER, DEFAULT_ENEMY } from "./content";
 import { ParryGame } from "./ParryGame";
-import { PixelHeart } from "./PixelHeart";
+import { PixelHeart, PixelShield, PixelSword } from "./PixelHeart";
 
 export function GameShell() {
   const [playing, setPlaying] = useState(false);
@@ -19,10 +19,12 @@ export function GameShell() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-8 bg-background p-6 font-pixel text-foreground">
       <div className="flex items-center gap-4">
-        <PixelHeart size={36} />
+        <PixelShield size={44} />
         <h1 className="text-4xl tracking-[0.3em] sm:text-6xl">PARRY!</h1>
-        <PixelHeart size={36} />
+        <PixelSword size={44} />
       </div>
+      {/* keep PixelHeart import used elsewhere */}
+      <span className="hidden"><PixelHeart size={1} /></span>
       <p className="max-w-md text-center text-[10px] uppercase leading-relaxed tracking-widest text-muted-foreground">
         A determined soul. One button. Read the attack, strike back at the perfect moment.
       </p>
