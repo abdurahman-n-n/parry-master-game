@@ -221,15 +221,15 @@ export function ParryGame({ character, enemy, onExit }: Props) {
         )}
       </div>
 
-      {/* HP bars + log */}
+      {/* Status + log — one mistake is lethal */}
       <div className="flex w-full max-w-[640px] flex-col gap-2">
-        <HpRow label={enemy.name.toUpperCase()} hp={enemyHp} max={enemy.maxHp} color="var(--color-accent)" />
-        <HpRow label={character.name.toUpperCase()} hp={playerHp} max={character.maxHp} color="var(--color-foreground)" />
+        <StatusRow label={enemy.name.toUpperCase()} alive={enemyHp > 0} color="var(--color-accent)" />
+        <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" />
         <div className="mt-1 border-2 border-border bg-background px-3 py-2 text-[10px] uppercase tracking-widest text-foreground">
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ Space ] Parry &amp; Strike Back
+          [ Space ] Parry &amp; Strike — One Mistake Is Death
         </div>
       </div>
 
@@ -248,6 +248,16 @@ export function ParryGame({ character, enemy, onExit }: Props) {
   );
 }
 
+const SHAPE_CLIP: Record<string, string> = {
+  pentagon: "polygon(50% 0,100% 35%,80% 100%,20% 100%,0 35%)",
+  diamond: "polygon(50% 0,100% 50%,50% 100%,0 50%)",
+  circle: "circle(50% at 50% 50%)",
+  triangle: "polygon(50% 0,100% 100%,0 100%)",
+  hex: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)",
+  star:
+    "polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)",
+};
+
 function EnemySprite({
   enemy,
   attacking,
@@ -258,6 +268,7 @@ function EnemySprite({
   progress: number;
 }) {
   const wobble = attacking ? `translateX(${Math.sin(progress * 12) * 4}px)` : "none";
+  const clip = SHAPE_CLIP[enemy.shape] ?? SHAPE_CLIP.pentagon;
   return (
     <div
       className="absolute left-1/2 top-[28%] -translate-x-1/2 -translate-y-1/2"
@@ -275,11 +286,7 @@ function EnemySprite({
       >
         <div
           className="h-10 w-10"
-          style={{
-            background: enemy.color,
-            clipPath:
-              "polygon(50% 0,100% 35%,80% 100%,20% 100%,0 35%)",
-          }}
+          style={{ background: enemy.color, clipPath: clip }}
         />
       </div>
       <div className="mt-2 text-center text-[9px] uppercase tracking-widest text-foreground">
@@ -329,15 +336,13 @@ function TelegraphBar({
   );
 }
 
-function HpRow({
+function StatusRow({
   label,
-  hp,
-  max,
+  alive,
   color,
 }: {
   label: string;
-  hp: number;
-  max: number;
+  alive: boolean;
   color: string;
 }) {
   return (
@@ -345,12 +350,18 @@ function HpRow({
       <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">{label}</div>
       <div className="relative h-4 flex-1 border-2 border-border bg-background">
         <div
-          className="h-full transition-[width] duration-200"
-          style={{ width: `${(hp / max) * 100}%`, background: color }}
+          className="h-full transition-all duration-200"
+          style={{
+            width: alive ? "100%" : "0%",
+            background: color,
+          }}
         />
       </div>
-      <div className="w-16 text-right text-[9px] tracking-widest text-foreground">
-        {hp}/{max}
+      <div
+        className="w-16 text-right text-[9px] uppercase tracking-widest"
+        style={{ color: alive ? "var(--color-foreground)" : "var(--color-danger)" }}
+      >
+        {alive ? "Alive" : "Down"}
       </div>
     </div>
   );

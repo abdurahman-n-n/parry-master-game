@@ -16,12 +16,16 @@ export interface AttackPattern {
   reflect: number;
 }
 
+export type EnemyShape = "pentagon" | "diamond" | "circle" | "triangle" | "hex" | "star";
+
 export interface EnemyDef {
   id: string;
   name: string;
+  title: string;
   maxHp: number;
   /** color in oklch or hex for the sprite */
   color: string;
+  shape: EnemyShape;
   /** which attacks this enemy uses (cycled or random) */
   attacks: AttackPattern[];
   /** delay between attacks in ms */
