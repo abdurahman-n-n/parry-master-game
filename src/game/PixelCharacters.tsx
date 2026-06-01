@@ -192,19 +192,18 @@ export function PixelCharacter({
       : pose === "strike"
       ? "oklch(0.97 0.01 280)"
       : null;
+  const anim =
+    pose === "walk"
+      ? "heroWalk 0.55s ease-in-out infinite"
+      : pose === "idle"
+      ? "heroBob 1.6s ease-in-out infinite"
+      : pose === "strike"
+      ? "heroStrike 260ms ease-out"
+      : "heroShake 240ms ease-out";
   return (
     <div
       className="relative inline-block"
-      style={{
-        width: size,
-        height: size,
-        animation:
-          pose === "idle"
-            ? "heroBob 1.6s ease-in-out infinite"
-            : pose === "strike"
-            ? "heroStrike 260ms ease-out"
-            : "heroShake 240ms ease-out",
-      }}
+      style={{ width: size, height: size, animation: anim }}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} shapeRendering="crispEdges">
         {cells.map(([x, y, c], i) => (
