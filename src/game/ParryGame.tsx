@@ -337,6 +337,12 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
             <div className="text-[10px] uppercase text-muted-foreground">
               Combo: {bestCombo}
             </div>
+            {state === "victory" && pendingReward && (
+              <div className="text-[10px] uppercase tracking-widest text-accent">
+                Reward: +{pendingReward.credits} credits
+                {pendingReward.gems > 0 ? ` · +${pendingReward.gems} gem` : ""}
+              </div>
+            )}
           </div>
         )}
       </div>
