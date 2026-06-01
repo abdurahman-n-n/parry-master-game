@@ -30,6 +30,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [combo, setCombo] = useState(0);
   const [bestCombo, setBestCombo] = useState(0);
   const [log, setLog] = useState<string>("* The battle begins.");
+  const [paused, setPaused] = useState(false);
 
   const uidRef = useRef(1);
   const stateRef = useRef(state);
