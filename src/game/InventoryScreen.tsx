@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  itemsByKind, isOwned,
+  itemsByKind, isOwned, getUpgradeCount,
   getEquippedSkin, setEquippedSkin,
   getEquippedAbility, setEquippedAbility,
   type ItemKind, type StoreItem,
