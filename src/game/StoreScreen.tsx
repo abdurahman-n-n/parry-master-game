@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
-  itemsByKind, isOwned, buyItem, type ItemKind, type StoreItem,
+  itemsByKind, isOwned, buyItem, getUpgradeCount, getUpgradePrice,
+  type ItemKind, type StoreItem,
 } from "./inventory";
 import { CurrencyHUD, CreditIcon, GemIcon, getCredits, getGems } from "./Currency";
 
@@ -71,6 +72,10 @@ export function StoreScreen({ onBack }: { onBack: () => void }) {
 }
 
 function StoreCard({ item, owned, onBuy }: { item: StoreItem; owned: boolean; onBuy: () => void }) {
+  const isUpgrade = item.kind === "upgrade";
+  const price = getUpgradePrice(item);
+  const stack = isUpgrade ? getUpgradeCount(item.id) : 0;
+  const disabled = !isUpgrade && owned;
   return (
     <div className="flex flex-col gap-2 border-2 border-border bg-background p-4">
       <div className="flex items-center justify-between">
@@ -79,6 +84,9 @@ function StoreCard({ item, owned, onBuy }: { item: StoreItem; owned: boolean; on
             <span className="inline-block h-3 w-3 border border-border" style={{ background: item.color }} />
           )}
           {item.name}
+          {isUpgrade && stack > 0 && (
+            <span className="text-[10px] text-accent">×{stack}</span>
+          )}
         </div>
         {item.hotkey && (
           <div className="border border-border px-2 py-0.5 text-[9px] tracking-widest">[{item.hotkey}]</div>
@@ -86,18 +94,19 @@ function StoreCard({ item, owned, onBuy }: { item: StoreItem; owned: boolean; on
       </div>
       <div className="text-[10px] normal-case leading-relaxed tracking-wider text-muted-foreground">
         {item.desc}
+        {isUpgrade && <span className="block text-muted-foreground/80">Stackable · +10 credits per purchase.</span>}
       </div>
       <div className="mt-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest">
         <span className="inline-flex items-center gap-1">
-          <span>{item.creditCost}</span><CreditIcon size={11} />
+          <span>{price}</span><CreditIcon size={11} />
           {item.gemCost ? (<><span className="ml-1">{item.gemCost}</span><GemIcon size={11} /></>) : null}
         </span>
         <button
           onClick={onBuy}
-          disabled={owned}
+          disabled={disabled}
           className="border-2 border-border bg-background px-3 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background disabled:cursor-default disabled:bg-accent disabled:text-background disabled:opacity-100"
         >
-          {owned ? "✓ Owned" : "Buy"}
+          {disabled ? "✓ Owned" : "Buy"}
         </button>
       </div>
     </div>

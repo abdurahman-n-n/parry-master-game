@@ -34,6 +34,8 @@ export const STORE_ITEMS: StoreItem[] = [
 const OWNED_KEY = "parry.inventory";
 const SKIN_KEY = "parry.equippedSkin";
 const ABILITY_KEY = "parry.equippedAbility";
+const UPGRADE_COUNT_KEY = "parry.upgradeCounts";
+const UPGRADE_PRICE_STEP = 10;
 
 function readOwned(): string[] {
   if (typeof window === "undefined") return [];
@@ -44,14 +46,32 @@ function writeOwned(arr: string[]) {
   localStorage.setItem(OWNED_KEY, JSON.stringify(arr));
 }
 
+function readUpgradeCounts(): Record<string, number> {
+  if (typeof window === "undefined") return {};
+  try { return JSON.parse(localStorage.getItem(UPGRADE_COUNT_KEY) || "{}") as Record<string, number>; }
+  catch { return {}; }
+}
+function writeUpgradeCounts(counts: Record<string, number>) {
+  localStorage.setItem(UPGRADE_COUNT_KEY, JSON.stringify(counts));
+}
+export function getUpgradeCount(id: string): number {
+  return readUpgradeCounts()[id] ?? 0;
+}
+export function getUpgradePrice(item: StoreItem): number {
+  if (item.kind !== "upgrade") return item.creditCost;
+  return item.creditCost + UPGRADE_PRICE_STEP * getUpgradeCount(item.id);
+}
+
 export function getOwned(): Set<string> {
   return new Set(readOwned());
 }
-export function isOwned(id: string): boolean {
-  return readOwned().includes(id);
-}
 export function findItem(id: string): StoreItem | undefined {
   return STORE_ITEMS.find((i) => i.id === id);
+}
+export function isOwned(id: string): boolean {
+  const item = findItem(id);
+  if (item?.kind === "upgrade") return getUpgradeCount(id) > 0;
+  return readOwned().includes(id);
 }
 
 export type BuyResult =
@@ -61,16 +81,24 @@ export type BuyResult =
 export function buyItem(id: string): BuyResult {
   const item = findItem(id);
   if (!item) return { ok: false, reason: "missing" };
-  if (isOwned(id)) return { ok: false, reason: "owned" };
-  if (getCredits() < item.creditCost) return { ok: false, reason: "credits" };
+  const isUpgrade = item.kind === "upgrade";
+  if (!isUpgrade && isOwned(id)) return { ok: false, reason: "owned" };
+  const price = isUpgrade ? getUpgradePrice(item) : item.creditCost;
+  if (getCredits() < price) return { ok: false, reason: "credits" };
   if ((item.gemCost ?? 0) > 0 && getGems() < (item.gemCost ?? 0)) return { ok: false, reason: "gems" };
 
-  if (item.creditCost > 0 && !spendCredits(item.creditCost)) return { ok: false, reason: "credits" };
+  if (price > 0 && !spendCredits(price)) return { ok: false, reason: "credits" };
   if ((item.gemCost ?? 0) > 0 && !spendGems(item.gemCost!)) return { ok: false, reason: "gems" };
 
-  const arr = readOwned();
-  arr.push(id);
-  writeOwned(arr);
+  if (isUpgrade) {
+    const counts = readUpgradeCounts();
+    counts[id] = (counts[id] ?? 0) + 1;
+    writeUpgradeCounts(counts);
+  } else {
+    const arr = readOwned();
+    arr.push(id);
+    writeOwned(arr);
+  }
 
   // Auto-equip the first skin / ability purchased.
   if (item.kind === "skin" && !getEquippedSkin()) setEquippedSkin(id);

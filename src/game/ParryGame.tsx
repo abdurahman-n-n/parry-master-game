@@ -4,7 +4,7 @@ import { PixelCharacter } from "./PixelCharacters";
 import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
-import { isOwned, getEquippedSkinColor, getEquippedAbility } from "./inventory";
+import { isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility } from "./inventory";
 
 interface Incoming {
   uid: number;
@@ -74,17 +74,17 @@ export function enemyCountForLevel(level: number): number {
 }
 
 export function ParryGame({ character, enemy, level, onEnd }: Props) {
-  // Upgrades
-  const ownsHpUp = isOwned("hp-up");
-  const ownsDmgUp = isOwned("dmg-up");
-  const ownsCdDown = isOwned("cd-down");
-  const strikeDmg = ownsDmgUp ? 2 : 1;
-  const cdAdjust = ownsCdDown ? -2000 : 0;
+  // Upgrades (stackable)
+  const hpUpCount = getUpgradeCount("hp-up");
+  const dmgUpCount = getUpgradeCount("dmg-up");
+  const cdDownCount = getUpgradeCount("cd-down");
+  const strikeDmg = 1 + dmgUpCount;
+  const cdAdjust = Math.max(-8000, -2000 * cdDownCount);
   const skinColor = getEquippedSkinColor();
   const equippedAbility = getEquippedAbility();
 
   const [state, setState] = useState<GameState>("playing");
-  const [playerHp, setPlayerHp] = useState(character.maxHp + (ownsHpUp ? 1 : 0));
+  const [playerHp, setPlayerHp] = useState(character.maxHp + hpUpCount);
   const [flashes, setFlashes] = useState<Flash[]>([]);
   const [log, setLog] = useState<string>("* The battle begins.");
   const [paused, setPaused] = useState(false);
