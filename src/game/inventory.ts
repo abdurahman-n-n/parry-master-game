@@ -33,6 +33,7 @@ export const STORE_ITEMS: StoreItem[] = [
 
 const OWNED_KEY = "parry.inventory";
 const SKIN_KEY = "parry.equippedSkin";
+const ABILITY_KEY = "parry.equippedAbility";
 
 function readOwned(): string[] {
   if (typeof window === "undefined") return [];
@@ -71,9 +72,19 @@ export function buyItem(id: string): BuyResult {
   arr.push(id);
   writeOwned(arr);
 
-  // Auto-equip the first skin purchased.
+  // Auto-equip the first skin / ability purchased.
   if (item.kind === "skin" && !getEquippedSkin()) setEquippedSkin(id);
+  if (item.kind === "ability" && !getEquippedAbility()) setEquippedAbility(id);
   return { ok: true };
+}
+
+export function getEquippedAbility(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ABILITY_KEY);
+}
+export function setEquippedAbility(id: string | null) {
+  if (id === null) localStorage.removeItem(ABILITY_KEY);
+  else localStorage.setItem(ABILITY_KEY, id);
 }
 
 export function getEquippedSkin(): string | null {
