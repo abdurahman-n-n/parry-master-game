@@ -7,12 +7,13 @@ import { ParryGame, type FightResult } from "./ParryGame";
 import { PixelShield, PixelSword } from "./PixelHeart";
 import { SettingsScreen, getSavedAccent, applyAccent } from "./SettingsScreen";
 import { StoreScreen } from "./StoreScreen";
+import { InventoryScreen } from "./InventoryScreen";
 import {
   CurrencyHUD, addCredits, addGems, getCredits, getGems,
 } from "./Currency";
 import type { EnemyDef } from "./types";
 
-type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store";
+type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
@@ -64,8 +65,9 @@ export function GameShell() {
     );
   }
 
-  if (screen === "settings") return <SettingsScreen onBack={() => setScreen("menu")} />;
-  if (screen === "store")    return <StoreScreen onBack={() => setScreen("menu")} />;
+  if (screen === "settings")  return <SettingsScreen onBack={() => setScreen("menu")} />;
+  if (screen === "store")     return <StoreScreen onBack={() => setScreen("menu")} />;
+  if (screen === "inventory") return <InventoryScreen onBack={() => setScreen("menu")} />;
 
   if (screen === "levels") {
     return (
@@ -192,6 +194,12 @@ export function GameShell() {
           className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
         >
           🛒 Store
+        </button>
+        <button
+          onClick={() => setScreen("inventory")}
+          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+        >
+          🎒 Inventory
         </button>
         <button
           onClick={() => setScreen("settings")}
