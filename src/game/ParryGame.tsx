@@ -94,7 +94,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
 
   // Core parry action — fired by Space or mouse click
   const tryParry = useCallback(() => {
-    if (stateRef.current !== "playing") return;
+    if (stateRef.current !== "playing" || pausedRef.current) return;
     const inc = incomingRef.current;
     const now = performance.now();
     if (!inc) {
