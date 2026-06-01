@@ -33,10 +33,16 @@ interface Props {
 
 const ARENA_W = 640;
 const ARENA_H = 360;
+const HORIZON_Y = ARENA_H * 0.22;
 const ENEMY_X = ARENA_W / 2;
-const ENEMY_Y = ARENA_H * 0.30;
-const PLAYER_SPEED = 340; // px/s
+const ENEMY_Y = ARENA_H * 0.34;
+const PLAYER_SPEED = 420; // px/s
 const PLAYER_RADIUS = 18;
+// Pseudo-3D depth scale: further from camera (smaller y) = smaller sprite
+function depthScale(y: number): number {
+  const t = Math.max(0, Math.min(1, (y - HORIZON_Y) / (ARENA_H - HORIZON_Y)));
+  return 0.62 + t * 0.55; // 0.62 (far) → 1.17 (near)
+}
 const RIPOSTE_MS = 900;
 const BLOCK_RAISE_MS = 320; // how long a block stays "up" after pressing
 
@@ -402,13 +408,62 @@ export function ParryGame({ character, enemy: baseEnemy, wave, difficulty, onEnd
 
       {/* Arena */}
       <div
-        className="relative overflow-hidden border-4 border-border bg-background"
-        style={{ width: ARENA_W, height: ARENA_H }}
+        className="relative overflow-hidden border-4 border-border"
+        style={{
+          width: ARENA_W,
+          height: ARENA_H,
+          background: `linear-gradient(to bottom,
+            oklch(0.18 0.04 270) 0%,
+            oklch(0.22 0.05 270) ${(HORIZON_Y / ARENA_H) * 100}%,
+            oklch(0.32 0.04 60) ${(HORIZON_Y / ARENA_H) * 100 + 0.1}%,
+            oklch(0.18 0.03 30) 100%)`,
+        }}
       >
+        {/* Perspective floor grid */}
+        <svg
+          className="pointer-events-none absolute inset-0"
+          width={ARENA_W}
+          height={ARENA_H}
+          style={{ opacity: 0.35 }}
+        >
+          {/* horizontal floor lines */}
+          {Array.from({ length: 8 }).map((_, i) => {
+            const t = i / 7;
+            const y = HORIZON_Y + (ARENA_H - HORIZON_Y) * (t * t);
+            return (
+              <line key={`h${i}`} x1={0} y1={y} x2={ARENA_W} y2={y}
+                stroke="oklch(0.55 0.05 40)" strokeWidth={1} />
+            );
+          })}
+          {/* vanishing-point converging lines */}
+          {Array.from({ length: 11 }).map((_, i) => {
+            const x = (i / 10) * ARENA_W;
+            return (
+              <line key={`v${i}`} x1={x} y1={ARENA_H} x2={ARENA_W / 2} y2={HORIZON_Y}
+                stroke="oklch(0.55 0.05 40)" strokeWidth={1} />
+            );
+          })}
+          {/* horizon line */}
+          <line x1={0} y1={HORIZON_Y} x2={ARENA_W} y2={HORIZON_Y}
+            stroke="oklch(0.7 0.06 40)" strokeWidth={1.5} opacity={0.6} />
+        </svg>
+
+        {/* Enemy shadow */}
+        <div
+          className="pointer-events-none absolute -translate-x-1/2 rounded-[50%]"
+          style={{
+            left: ENEMY_X,
+            top: ENEMY_Y + (enemy.isBoss ? 56 : 42) * depthScale(ENEMY_Y),
+            width: (enemy.isBoss ? 110 : 80) * depthScale(ENEMY_Y),
+            height: 14 * depthScale(ENEMY_Y),
+            background: "radial-gradient(ellipse, rgba(0,0,0,0.55), rgba(0,0,0,0))",
+          }}
+        />
+
         {/* Enemy */}
         <div
           className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
-          style={{ left: ENEMY_X, top: ENEMY_Y }}
+          style={{ left: ENEMY_X, top: ENEMY_Y, transform: `translate(-50%,-50%) scale(${depthScale(ENEMY_Y)})`, transformOrigin: "center bottom" }}
         >
           <PixelEnemy
             id={enemy.id}
@@ -455,10 +510,29 @@ export function ParryGame({ character, enemy: baseEnemy, wave, difficulty, onEnd
           )
         )}
 
+        {/* Player shadow */}
+        <div
+          className="pointer-events-none absolute -translate-x-1/2 rounded-[50%]"
+          style={{
+            left: player.x,
+            top: player.y + 24 * depthScale(player.y),
+            width: 52 * depthScale(player.y),
+            height: 12 * depthScale(player.y),
+            background: "radial-gradient(ellipse, rgba(0,0,0,0.55), rgba(0,0,0,0))",
+            zIndex: Math.round(player.y),
+          }}
+        />
+
         {/* Player sprite */}
         <div
           className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{ left: player.x, top: player.y }}
+          style={{
+            left: player.x,
+            top: player.y,
+            transform: `translate(-50%,-50%) scale(${depthScale(player.y)})`,
+            transformOrigin: "center bottom",
+            zIndex: Math.round(player.y) + 1,
+          }}
         >
           <PixelCharacter
             skinId={equipped.skinId}
