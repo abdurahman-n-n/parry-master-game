@@ -351,7 +351,7 @@ export function ParryGame({ character, enemy: baseEnemy, wave, difficulty, onEnd
           dx /= len; dy /= len;
           const p = playerRef.current;
           p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * PLAYER_SPEED * dt));
-          p.y = Math.max(ARENA_H * 0.45, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * PLAYER_SPEED * dt));
+          p.y = Math.max(PLAYER_RADIUS, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * PLAYER_SPEED * dt));
           setIsWalking(true);
         } else {
           setIsWalking(false);
