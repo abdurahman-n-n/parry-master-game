@@ -180,7 +180,7 @@ export function GameShell() {
       </div>
       <CurrencyHUD credits={credits} gems={gems} />
       <p className="max-w-md text-center text-[10px] uppercase leading-relaxed tracking-widest text-muted-foreground">
-        WASD to move · F to block · Space / Click to strike · Q insta-kill · E dash
+        WASD to move · F to block · Space / Click to strike · E to use equipped ability
       </p>
       <div className="flex flex-wrap justify-center gap-3">
         <button
