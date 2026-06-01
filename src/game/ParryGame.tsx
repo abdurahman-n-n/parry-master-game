@@ -39,7 +39,11 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [bestCombo, setBestCombo] = useState(0);
   const [log, setLog] = useState<string>("* The battle begins.");
   const [paused, setPaused] = useState(false);
+  const [credits] = useState(() => getCredits());
+  const [gems] = useState(() => getGems());
+  const [pendingReward, setPendingReward] = useState<{ credits: number; gems: number } | null>(null);
 
+  const fightStartRef = useRef<number>(performance.now());
   const uidRef = useRef(1);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -52,6 +56,21 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
+  const endFight = useCallback(
+    (result: "victory" | "defeat") => {
+      const fightMs = performance.now() - fightStartRef.current;
+      const reward =
+        result === "victory"
+          ? rewardFor({ isBoss: !!enemy.isBoss, fightMs })
+          : { credits: 0, gems: 0, speedBonus: 0 };
+      setPendingReward({ credits: reward.credits, gems: reward.gems });
+      setState(result);
+      // Defer onEnd via the result-watcher effect (keeps the flash visible).
+      (endFight as any)._payload = { result, credits: reward.credits, gems: reward.gems, fightMs };
+    },
+    [enemy.isBoss],
+  );
+
   const pushFlash = useCallback((kind: Flash["kind"]) => {
     const f: Flash = { uid: uidRef.current++, kind, at: performance.now() };
     setFlashes((arr) => [...arr, f]);
@@ -61,9 +80,21 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   // Auto-advance to the shell when the fight resolves
   useEffect(() => {
     if (state === "playing") return;
-    const t = setTimeout(() => onEnd(state === "victory" ? "victory" : "defeat"), 1300);
+    const payload = (endFight as any)._payload as FightResult | undefined;
+    const t = setTimeout(
+      () =>
+        onEnd(
+          payload ?? {
+            result: state === "victory" ? "victory" : "defeat",
+            credits: 0,
+            gems: 0,
+            fightMs: performance.now() - fightStartRef.current,
+          },
+        ),
+      1300,
+    );
     return () => clearTimeout(t);
-  }, [state, onEnd]);
+  }, [state, onEnd, endFight]);
 
   // Schedule next attack
   useEffect(() => {
