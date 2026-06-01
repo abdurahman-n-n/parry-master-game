@@ -262,7 +262,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ Space ] Parry &amp; Strike — One Mistake Is Death
+          [ Space ] or [ Click ] — Parry &amp; Strike · One Mistake Is Death
         </div>
       </div>
 
