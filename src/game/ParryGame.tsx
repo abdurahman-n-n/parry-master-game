@@ -408,13 +408,62 @@ export function ParryGame({ character, enemy: baseEnemy, wave, difficulty, onEnd
 
       {/* Arena */}
       <div
-        className="relative overflow-hidden border-4 border-border bg-background"
-        style={{ width: ARENA_W, height: ARENA_H }}
+        className="relative overflow-hidden border-4 border-border"
+        style={{
+          width: ARENA_W,
+          height: ARENA_H,
+          background: `linear-gradient(to bottom,
+            oklch(0.18 0.04 270) 0%,
+            oklch(0.22 0.05 270) ${(HORIZON_Y / ARENA_H) * 100}%,
+            oklch(0.32 0.04 60) ${(HORIZON_Y / ARENA_H) * 100 + 0.1}%,
+            oklch(0.18 0.03 30) 100%)`,
+        }}
       >
+        {/* Perspective floor grid */}
+        <svg
+          className="pointer-events-none absolute inset-0"
+          width={ARENA_W}
+          height={ARENA_H}
+          style={{ opacity: 0.35 }}
+        >
+          {/* horizontal floor lines */}
+          {Array.from({ length: 8 }).map((_, i) => {
+            const t = i / 7;
+            const y = HORIZON_Y + (ARENA_H - HORIZON_Y) * (t * t);
+            return (
+              <line key={`h${i}`} x1={0} y1={y} x2={ARENA_W} y2={y}
+                stroke="oklch(0.55 0.05 40)" strokeWidth={1} />
+            );
+          })}
+          {/* vanishing-point converging lines */}
+          {Array.from({ length: 11 }).map((_, i) => {
+            const x = (i / 10) * ARENA_W;
+            return (
+              <line key={`v${i}`} x1={x} y1={ARENA_H} x2={ARENA_W / 2} y2={HORIZON_Y}
+                stroke="oklch(0.55 0.05 40)" strokeWidth={1} />
+            );
+          })}
+          {/* horizon line */}
+          <line x1={0} y1={HORIZON_Y} x2={ARENA_W} y2={HORIZON_Y}
+            stroke="oklch(0.7 0.06 40)" strokeWidth={1.5} opacity={0.6} />
+        </svg>
+
+        {/* Enemy shadow */}
+        <div
+          className="pointer-events-none absolute -translate-x-1/2 rounded-[50%]"
+          style={{
+            left: ENEMY_X,
+            top: ENEMY_Y + (enemy.isBoss ? 56 : 42) * depthScale(ENEMY_Y),
+            width: (enemy.isBoss ? 110 : 80) * depthScale(ENEMY_Y),
+            height: 14 * depthScale(ENEMY_Y),
+            background: "radial-gradient(ellipse, rgba(0,0,0,0.55), rgba(0,0,0,0))",
+          }}
+        />
+
         {/* Enemy */}
         <div
           className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
-          style={{ left: ENEMY_X, top: ENEMY_Y }}
+          style={{ left: ENEMY_X, top: ENEMY_Y, transform: `translate(-50%,-50%) scale(${depthScale(ENEMY_Y)})`, transformOrigin: "center bottom" }}
         >
           <PixelEnemy
             id={enemy.id}
