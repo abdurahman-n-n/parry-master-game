@@ -25,6 +25,7 @@ export function GameShell() {
   const [gems, setGems] = useState(0);
   const [crowns, setCrowns] = useState(0);
   const [lastReward, setLastReward] = useState<{ credits: number; gems: number } | null>(null);
+  const [difficulty, setDiffState] = useState<Difficulty>(() => getDifficulty());
 
   useEffect(() => {
     applyAccent(getSavedAccent());
