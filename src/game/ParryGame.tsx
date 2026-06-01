@@ -36,7 +36,7 @@ const ARENA_H = 360;
 const HORIZON_Y = ARENA_H * 0.22;
 const ENEMY_X = ARENA_W / 2;
 const ENEMY_Y = ARENA_H * 0.34;
-const PLAYER_SPEED = 420; // px/s
+const PLAYER_RADIUS = 18;
 // Pseudo-3D depth scale: further from camera (smaller y) = smaller sprite
 function depthScale(y: number): number {
   const t = Math.max(0, Math.min(1, (y - HORIZON_Y) / (ARENA_H - HORIZON_Y)));
