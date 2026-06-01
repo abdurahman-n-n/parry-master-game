@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DEFAULT_CHARACTER, enemyForWave } from "./content";
 import { ParryGame } from "./ParryGame";
 import { PixelShield, PixelSword } from "./PixelHeart";
+import { SettingsScreen, getSavedAccent, applyAccent } from "./SettingsScreen";
 import type { EnemyDef } from "./types";
 
-type Screen = "menu" | "fight" | "between" | "gameover";
+type Screen = "menu" | "fight" | "between" | "gameover" | "settings";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
   const [wave, setWave] = useState(1);
   const [enemy, setEnemy] = useState<EnemyDef>(() => enemyForWave(1));
   const [bestWave, setBestWave] = useState(1);
+
+  // Load + apply saved accent color on mount
+  useEffect(() => {
+    applyAccent(getSavedAccent());
+  }, []);
 
   const startRun = () => {
     const first = enemyForWave(1);
