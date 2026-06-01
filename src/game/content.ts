@@ -28,7 +28,7 @@ export const DEFAULT_CHARACTER: CharacterDef = {
 export const REGULAR_ENEMIES: EnemyDef[] = [
   {
     id: "hollow-knight",
-    name: "Hollow Knight",
+    name: "Knight",
     title: "Balanced rhythm",
     maxHp: 1,
     color: "oklch(0.70 0.18 285)",
@@ -41,7 +41,7 @@ export const REGULAR_ENEMIES: EnemyDef[] = [
   },
   {
     id: "shade",
-    name: "Shade",
+    name: "Knight",
     title: "Fast · tight windows",
     maxHp: 1,
     color: "oklch(0.55 0.20 295)",
@@ -54,7 +54,7 @@ export const REGULAR_ENEMIES: EnemyDef[] = [
   },
   {
     id: "phantom",
-    name: "Phantom",
+    name: "Knight",
     title: "Erratic tempo",
     maxHp: 1,
     color: "oklch(0.85 0.18 200)",
@@ -68,7 +68,7 @@ export const REGULAR_ENEMIES: EnemyDef[] = [
   },
   {
     id: "twin-fang",
-    name: "Twin Fang",
+    name: "Knight",
     title: "Chaining strikes",
     maxHp: 1,
     color: "oklch(0.78 0.20 130)",
