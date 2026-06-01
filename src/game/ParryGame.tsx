@@ -160,6 +160,23 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     return () => window.removeEventListener("mousedown", handler);
   }, [tryParry]);
 
+  // Keyboard: Escape — toggle pause (only while playing)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.code !== "Escape") return;
+      if (stateRef.current !== "playing") return;
+      e.preventDefault();
+      setPaused((p) => {
+        // Clear any pending attack so it doesn't land on resume
+        if (!p) setIncoming(null);
+        return !p;
+      });
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+
   // Telegraph animation tick
   const [, force] = useState(0);
   useEffect(() => {
