@@ -69,10 +69,11 @@ export function GameShell() {
   if (screen === "fight") {
     return (
       <ParryGame
-        key={`${wave}-${enemy.id}-${equipped.skinId}`}
+        key={`${wave}-${enemy.id}-${equipped.skinId}-${difficulty}`}
         character={playerCharacter}
         enemy={enemy}
         wave={wave}
+        difficulty={difficulty}
         onEnd={onFightEnd}
       />
     );
