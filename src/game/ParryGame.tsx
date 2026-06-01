@@ -33,7 +33,7 @@ const ARENA_W = 640;
 const ARENA_H = 360;
 const ENEMY_X = ARENA_W / 2;
 const ENEMY_Y = ARENA_H * 0.30;
-const PLAYER_SPEED = 200; // px/s
+const PLAYER_SPEED = 340; // px/s
 const PLAYER_RADIUS = 18;
 const RIPOSTE_MS = 1500;
 const BLOCK_RAISE_MS = 450; // how long a block stays "up" after pressing
@@ -71,7 +71,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [gems] = useState(() => getGems());
   const [crowns] = useState(() => getCrowns());
   const [pendingReward, setPendingReward] = useState<{ credits: number; gems: number } | null>(null);
-  const [pose, setPose] = useState<"idle" | "strike" | "hit">("idle");
+  const [pose, setPose] = useState<"idle" | "walk" | "strike" | "hit">("idle");
+  const [isWalking, setIsWalking] = useState(false);
   const [killPops, setKillPops] = useState<{ uid: number; x: number; y: number }[]>([]);
 
   // Equipped skin + effects
@@ -311,6 +312,9 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           const p = playerRef.current;
           p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * PLAYER_SPEED * dt));
           p.y = Math.max(ARENA_H * 0.45, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * PLAYER_SPEED * dt));
+          setIsWalking(true);
+        } else {
+          setIsWalking(false);
         }
       }
       tick((n) => (n + 1) % 1000000);
@@ -332,6 +336,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const zone = incoming ? zoneFor(incoming.attack) : null;
   const zoneAlpha = incoming ? 0.18 + 0.45 * telegraphProgress : 0;
   const slashColor = skinEffects.slashColor;
+  const effectivePose: "idle" | "walk" | "strike" | "hit" =
+    pose === "idle" && isWalking ? "walk" : pose;
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background p-4 font-pixel">
@@ -417,8 +423,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           <PixelCharacter
             skinId={equipped.skinId}
             size={56}
-            pose={pose}
-            key={overlayFlash?.uid ?? pose}
+            pose={effectivePose}
+            key={overlayFlash?.uid ?? effectivePose}
           />
           {blockUp && (
             <div

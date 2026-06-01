@@ -1,7 +1,7 @@
 // Original pixel sprites for the three playable characters.
 // 12x12 grid, same format as PixelHero.
 
-type Pose = "idle" | "strike" | "hit";
+type Pose = "idle" | "walk" | "strike" | "hit";
 type Cell = [number, number, string];
 
 interface Variant {
@@ -192,19 +192,18 @@ export function PixelCharacter({
       : pose === "strike"
       ? "oklch(0.97 0.01 280)"
       : null;
+  const anim =
+    pose === "walk"
+      ? "heroWalk 0.55s ease-in-out infinite"
+      : pose === "idle"
+      ? "heroBob 1.6s ease-in-out infinite"
+      : pose === "strike"
+      ? "heroStrike 260ms ease-out"
+      : "heroShake 240ms ease-out";
   return (
     <div
       className="relative inline-block"
-      style={{
-        width: size,
-        height: size,
-        animation:
-          pose === "idle"
-            ? "heroBob 1.6s ease-in-out infinite"
-            : pose === "strike"
-            ? "heroStrike 260ms ease-out"
-            : "heroShake 240ms ease-out",
-      }}
+      style={{ width: size, height: size, animation: anim }}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} shapeRendering="crispEdges">
         {cells.map(([x, y, c], i) => (
@@ -223,6 +222,7 @@ export function PixelCharacter({
       )}
       <style>{`
         @keyframes heroBob { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-2px);} }
+        @keyframes heroWalk { 0%,100% { transform: translateY(0) rotate(-1deg);} 25% { transform: translateY(-4px) rotate(1deg);} 50% { transform: translateY(0) rotate(-1deg);} 75% { transform: translateY(-4px) rotate(1deg);} }
         @keyframes heroStrike { 0%{transform:translateY(0) rotate(0);} 40%{transform:translateY(-5px) rotate(-6deg);} 100%{transform:translateY(0) rotate(0);} }
         @keyframes heroShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);} }
         @keyframes heroFlash { from{opacity:1;} to{opacity:0;} }
