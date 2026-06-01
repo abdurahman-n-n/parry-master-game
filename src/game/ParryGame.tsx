@@ -221,15 +221,15 @@ export function ParryGame({ character, enemy, onExit }: Props) {
         )}
       </div>
 
-      {/* HP bars + log */}
+      {/* Status + log — one mistake is lethal */}
       <div className="flex w-full max-w-[640px] flex-col gap-2">
-        <HpRow label={enemy.name.toUpperCase()} hp={enemyHp} max={enemy.maxHp} color="var(--color-accent)" />
-        <HpRow label={character.name.toUpperCase()} hp={playerHp} max={character.maxHp} color="var(--color-foreground)" />
+        <StatusRow label={enemy.name.toUpperCase()} alive={enemyHp > 0} color="var(--color-accent)" />
+        <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" />
         <div className="mt-1 border-2 border-border bg-background px-3 py-2 text-[10px] uppercase tracking-widest text-foreground">
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ Space ] Parry &amp; Strike Back
+          [ Space ] Parry &amp; Strike — One Mistake Is Death
         </div>
       </div>
 
