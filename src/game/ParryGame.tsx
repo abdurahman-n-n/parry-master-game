@@ -45,9 +45,9 @@ type Zone =
   | { kind: "heavy"; cx: number; cy: number; r: number };
 
 function zoneFor(attack: AttackPattern): Zone {
-  if (attack.kind === "thrust") return { kind: "thrust", cx: ENEMY_X, cy: ENEMY_Y + 120, w: 70, h: 240 };
-  if (attack.kind === "heavy")  return { kind: "heavy",  cx: ENEMY_X, cy: ENEMY_Y + 40,  r: 180 };
-  return { kind: "slash", cx: ENEMY_X, cy: ENEMY_Y + 110, w: 320, h: 200 };
+  if (attack.kind === "thrust") return { kind: "thrust", cx: ENEMY_X, cy: ENEMY_Y + 130, w: 110, h: 280 };
+  if (attack.kind === "heavy")  return { kind: "heavy",  cx: ENEMY_X, cy: ENEMY_Y + 50,  r: 230 };
+  return { kind: "slash", cx: ENEMY_X, cy: ENEMY_Y + 120, w: 420, h: 240 };
 }
 function insideZone(px: number, py: number, z: Zone): boolean {
   if (z.kind === "heavy") {
