@@ -6,6 +6,7 @@ import {
   CurrencyHUD, getCredits, getGems, getCrowns, rewardFor,
 } from "./Currency";
 import { getEquipped, findSkin } from "./characters";
+import { DIFFICULTIES, getDifficulty, type Difficulty } from "./difficulty";
 
 interface Incoming {
   uid: number;
