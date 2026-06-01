@@ -301,30 +301,23 @@ function EnemySprite({
   attacking: boolean;
   progress: number;
 }) {
-  const wobble = attacking ? `translateX(${Math.sin(progress * 12) * 4}px)` : "none";
-  const clip = SHAPE_CLIP[enemy.shape] ?? SHAPE_CLIP.pentagon;
   return (
-    <div
-      className="absolute left-1/2 top-[28%] -translate-x-1/2 -translate-y-1/2"
-      style={{ transform: `translate(-50%,-50%) ${wobble}` }}
-    >
-      <div
-        className="flex h-20 w-20 items-center justify-center border-4"
-        style={{
-          borderColor: enemy.color,
-          background: `color-mix(in oklab, ${enemy.color} 18%, transparent)`,
-          boxShadow: attacking
-            ? `0 0 ${20 + progress * 30}px ${enemy.color}`
-            : "none",
-        }}
-      >
-        <div
-          className="h-10 w-10"
-          style={{ background: enemy.color, clipPath: clip }}
-        />
-      </div>
-      <div className="mt-2 text-center text-[9px] uppercase tracking-widest text-foreground">
+    <div className="absolute left-1/2 top-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+      <PixelEnemy
+        id={enemy.id}
+        isBoss={enemy.isBoss}
+        accent={enemy.color}
+        size={enemy.isBoss ? 128 : 96}
+        attacking={attacking}
+        progress={progress}
+      />
+      <div className="mt-1 text-center text-[9px] uppercase tracking-widest text-foreground">
         {enemy.name}
+        {enemy.title && (
+          <div className="text-[8px] text-muted-foreground normal-case tracking-wider">
+            {enemy.title}
+          </div>
+        )}
       </div>
     </div>
   );
