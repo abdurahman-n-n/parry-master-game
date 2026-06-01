@@ -36,6 +36,12 @@ const SKIN_KEY = "parry.equippedSkin";
 const ABILITY_KEY = "parry.equippedAbility";
 const UPGRADE_COUNT_KEY = "parry.upgradeCounts";
 const UPGRADE_PRICE_STEP = 10;
+const UPGRADE_GEM_COST = 1;
+
+export function getUpgradeGemCost(item: StoreItem): number {
+  if (item.kind === "upgrade") return UPGRADE_GEM_COST;
+  return item.gemCost ?? 0;
+}
 
 function readOwned(): string[] {
   if (typeof window === "undefined") return [];
@@ -84,11 +90,12 @@ export function buyItem(id: string): BuyResult {
   const isUpgrade = item.kind === "upgrade";
   if (!isUpgrade && isOwned(id)) return { ok: false, reason: "owned" };
   const price = isUpgrade ? getUpgradePrice(item) : item.creditCost;
+  const gemPrice = getUpgradeGemCost(item);
   if (getCredits() < price) return { ok: false, reason: "credits" };
-  if ((item.gemCost ?? 0) > 0 && getGems() < (item.gemCost ?? 0)) return { ok: false, reason: "gems" };
+  if (gemPrice > 0 && getGems() < gemPrice) return { ok: false, reason: "gems" };
 
   if (price > 0 && !spendCredits(price)) return { ok: false, reason: "credits" };
-  if ((item.gemCost ?? 0) > 0 && !spendGems(item.gemCost!)) return { ok: false, reason: "gems" };
+  if (gemPrice > 0 && !spendGems(gemPrice)) return { ok: false, reason: "gems" };
 
   if (isUpgrade) {
     const counts = readUpgradeCounts();

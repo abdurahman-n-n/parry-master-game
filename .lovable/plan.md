@@ -1,25 +1,20 @@
-## Goal
-Permanent upgrades (Vitality, Sharpened, Quick Hands) become infinitely repurchasable. Each purchase increases that upgrade's price by 10 credits.
+Add a flat 1-gem cost to every permanent upgrade purchase, alongside the existing scaling credit cost.
 
 ## Changes
 
 **`src/game/inventory.ts`**
-- Track upgrade purchase counts in localStorage (`parry.upgradeCounts`, `Record<string, number>`).
-- Add `getUpgradeCount(id)` and `getUpgradePrice(item)` = `baseCost + 10 * count`.
-- `buyItem`: for `kind === "upgrade"`, skip the "already owned" check, use dynamic price, increment count instead of pushing into the owned list. Other kinds (ability, skin) keep current one-time-buy behavior.
-- Add `getUpgradeBonus(id)` helper returning the count (used by combat).
+- Add constant `UPGRADE_GEM_COST = 1`.
+- Add helper `getUpgradeGemCost(item)` → returns `UPGRADE_GEM_COST` for upgrades, `item.gemCost ?? 0` otherwise.
+- In `buyItem`:
+  - For upgrades, require and spend 1 gem (in addition to the dynamic credit price).
+  - Check both balances before spending either currency (no partial debits).
+  - Keep the existing +10 credit-per-purchase scaling and stack-count increment.
 
 **`src/game/StoreScreen.tsx`**
-- For upgrade cards: display dynamic price via `getUpgradePrice`, show "Owned: xN" instead of disabling, button always reads "Buy".
-- Abilities/skins unchanged.
+- Show the 1 gem cost next to the credit cost on upgrade cards (use existing `GemIcon`).
+- "Buy" button feedback already handles the `gems` reason from `buyItem`.
 
-**`src/game/InventoryScreen.tsx`**
-- Upgrades section shows each upgrade with its current stack count (e.g. "Vitality ×3"). Hide upgrades with count 0.
+No changes to abilities, skins, or `ParryGame.tsx`.
 
-**`src/game/ParryGame.tsx`**
-- Replace `isOwned("hp-up" | "dmg-up" | "cd-down")` checks with `getUpgradeCount(...)`:
-  - `playerHp` bonus: `+count("hp-up")`
-  - `strikeDmg`: `1 + count("dmg-up")`
-  - `cdAdjust`: `-2 * count("cd-down")` seconds (floor at a small minimum like 1s).
-
-No other systems touched.
+## Rationale
+User said "upgrades are bought for 1 gem". Interpreted as an additional gem cost layered on top of the existing credit price (rather than replacing it), since the +10 credits-per-purchase scaling was just added in the prior turn and removing it would contradict that. Gem cost stays flat at 1 per purchase.

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  itemsByKind, isOwned, buyItem, getUpgradeCount, getUpgradePrice,
+  itemsByKind, isOwned, buyItem, getUpgradeCount, getUpgradePrice, getUpgradeGemCost,
   type ItemKind, type StoreItem,
 } from "./inventory";
 import { CurrencyHUD, CreditIcon, GemIcon, getCredits, getGems } from "./Currency";
@@ -74,6 +74,7 @@ export function StoreScreen({ onBack }: { onBack: () => void }) {
 function StoreCard({ item, owned, onBuy }: { item: StoreItem; owned: boolean; onBuy: () => void }) {
   const isUpgrade = item.kind === "upgrade";
   const price = getUpgradePrice(item);
+  const gemPrice = getUpgradeGemCost(item);
   const stack = isUpgrade ? getUpgradeCount(item.id) : 0;
   const disabled = !isUpgrade && owned;
   return (
@@ -99,7 +100,7 @@ function StoreCard({ item, owned, onBuy }: { item: StoreItem; owned: boolean; on
       <div className="mt-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest">
         <span className="inline-flex items-center gap-1">
           <span>{price}</span><CreditIcon size={11} />
-          {item.gemCost ? (<><span className="ml-1">{item.gemCost}</span><GemIcon size={11} /></>) : null}
+          {gemPrice > 0 ? (<><span className="ml-1">{gemPrice}</span><GemIcon size={11} /></>) : null}
         </span>
         <button
           onClick={onBuy}
