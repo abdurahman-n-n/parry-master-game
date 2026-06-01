@@ -336,15 +336,13 @@ function TelegraphBar({
   );
 }
 
-function HpRow({
+function StatusRow({
   label,
-  hp,
-  max,
+  alive,
   color,
 }: {
   label: string;
-  hp: number;
-  max: number;
+  alive: boolean;
   color: string;
 }) {
   return (
@@ -352,12 +350,18 @@ function HpRow({
       <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">{label}</div>
       <div className="relative h-4 flex-1 border-2 border-border bg-background">
         <div
-          className="h-full transition-[width] duration-200"
-          style={{ width: `${(hp / max) * 100}%`, background: color }}
+          className="h-full transition-all duration-200"
+          style={{
+            width: alive ? "100%" : "0%",
+            background: color,
+          }}
         />
       </div>
-      <div className="w-16 text-right text-[9px] tracking-widest text-foreground">
-        {hp}/{max}
+      <div
+        className="w-16 text-right text-[9px] uppercase tracking-widest"
+        style={{ color: alive ? "var(--color-foreground)" : "var(--color-danger)" }}
+      >
+        {alive ? "Alive" : "Down"}
       </div>
     </div>
   );
