@@ -41,6 +41,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   playerHpRef.current = playerHp;
   const enemyHpRef = useRef(enemyHp);
   enemyHpRef.current = enemyHp;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
 
   const pushFlash = useCallback((kind: Flash["kind"]) => {
     const f: Flash = { uid: uidRef.current++, kind, at: performance.now() };
