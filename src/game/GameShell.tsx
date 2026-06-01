@@ -53,6 +53,11 @@ export function GameShell() {
     );
   }
 
+  if (screen === "settings") {
+    return <SettingsScreen onBack={() => setScreen("menu")} />;
+  }
+
+
   if (screen === "between") {
     const upcoming = enemyForWave(wave + 1);
     const bossNext = upcoming.isBoss;
