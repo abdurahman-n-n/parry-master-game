@@ -491,12 +491,20 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           className="absolute -translate-x-1/2 -translate-y-1/2"
           style={{ left: player.x, top: player.y }}
         >
-          <PixelCharacter
-            skinId="kid:default"
-            size={56}
-            pose={effectivePose}
-            key={overlayFlash?.uid ?? effectivePose}
-          />
+          <div className="relative" style={{ width: 56, height: 56 }}>
+            <PixelCharacter
+              skinId="kid:default"
+              size={56}
+              pose={effectivePose}
+              key={overlayFlash?.uid ?? effectivePose}
+            />
+            {skinColor && (
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{ background: skinColor, mixBlendMode: "color", opacity: 0.75 }}
+              />
+            )}
+          </div>
           {blockUp && (
             <div
               className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
