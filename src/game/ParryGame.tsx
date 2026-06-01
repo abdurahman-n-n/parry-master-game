@@ -35,8 +35,8 @@ const ENEMY_X = ARENA_W / 2;
 const ENEMY_Y = ARENA_H * 0.30;
 const PLAYER_SPEED = 340; // px/s
 const PLAYER_RADIUS = 18;
-const RIPOSTE_MS = 1500;
-const BLOCK_RAISE_MS = 450; // how long a block stays "up" after pressing
+const RIPOSTE_MS = 900;
+const BLOCK_RAISE_MS = 320; // how long a block stays "up" after pressing
 
 // ----- Danger zone geometry -----
 type Zone =
