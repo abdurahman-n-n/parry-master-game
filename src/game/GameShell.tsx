@@ -9,6 +9,7 @@ import {
   getCredits, getGems, getCrowns,
 } from "./Currency";
 import { findCharacter, getEquipped } from "./characters";
+import { DIFFICULTIES, getDifficulty, setDifficulty, type Difficulty } from "./difficulty";
 import type { EnemyDef } from "./types";
 
 type Screen = "menu" | "fight" | "gameover" | "settings" | "shop";
@@ -24,6 +25,7 @@ export function GameShell() {
   const [gems, setGems] = useState(0);
   const [crowns, setCrowns] = useState(0);
   const [lastReward, setLastReward] = useState<{ credits: number; gems: number } | null>(null);
+  const [difficulty, setDiffState] = useState<Difficulty>(() => getDifficulty());
 
   useEffect(() => {
     applyAccent(getSavedAccent());
@@ -67,10 +69,11 @@ export function GameShell() {
   if (screen === "fight") {
     return (
       <ParryGame
-        key={`${wave}-${enemy.id}-${equipped.skinId}`}
+        key={`${wave}-${enemy.id}-${equipped.skinId}-${difficulty}`}
         character={playerCharacter}
         enemy={enemy}
         wave={wave}
+        difficulty={difficulty}
         onEnd={onFightEnd}
       />
     );
@@ -117,6 +120,29 @@ export function GameShell() {
       <p className="max-w-md text-center text-[10px] uppercase leading-relaxed tracking-widest text-muted-foreground">
         Move with WASD. Stand outside the red zone to dodge. Inside? Click to block, then strike back within 1.5s.
       </p>
+      <div className="flex flex-col items-center gap-2">
+        <div className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Difficulty</div>
+        <div className="flex flex-wrap justify-center gap-2">
+          {(Object.keys(DIFFICULTIES) as Difficulty[]).map((d) => {
+            const m = DIFFICULTIES[d];
+            const active = difficulty === d;
+            return (
+              <button
+                key={d}
+                onClick={() => { setDifficulty(d); setDiffState(d); }}
+                className="border-2 px-3 py-1.5 text-[10px] uppercase tracking-[0.25em] transition-colors"
+                style={{
+                  borderColor: active ? m.color : "var(--color-border)",
+                  background: active ? m.color : "var(--color-background)",
+                  color: active ? "var(--color-background)" : "var(--color-foreground)",
+                }}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <div className="flex flex-wrap justify-center gap-3">
         <button
           onClick={startRun}

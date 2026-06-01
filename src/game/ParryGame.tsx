@@ -6,6 +6,7 @@ import {
   CurrencyHUD, getCredits, getGems, getCrowns, rewardFor,
 } from "./Currency";
 import { getEquipped, findSkin } from "./characters";
+import { DIFFICULTIES, getDifficulty, type Difficulty } from "./difficulty";
 
 interface Incoming {
   uid: number;
@@ -26,6 +27,7 @@ interface Props {
   character: CharacterDef;
   enemy: EnemyDef;
   wave: number;
+  difficulty?: Difficulty;
   onEnd: (result: FightResult) => void;
 }
 
@@ -57,7 +59,23 @@ function insideZone(px: number, py: number, z: Zone): boolean {
   return Math.abs(px - z.cx) <= z.w / 2 && Math.abs(py - z.cy) <= z.h / 2;
 }
 
-export function ParryGame({ character, enemy, wave, onEnd }: Props) {
+export function ParryGame({ character, enemy: baseEnemy, wave, difficulty, onEnd }: Props) {
+  // Apply difficulty modifiers to a fresh enemy copy
+  const mods = DIFFICULTIES[difficulty ?? getDifficulty()];
+  const enemy: EnemyDef = {
+    ...baseEnemy,
+    maxHp: Math.max(1, Math.round(baseEnemy.maxHp * mods.hpMul)),
+    cadenceMs: [
+      Math.round(baseEnemy.cadenceMs[0] * mods.cadenceMul),
+      Math.round(baseEnemy.cadenceMs[1] * mods.cadenceMul),
+    ] as [number, number],
+    attacks: baseEnemy.attacks.map((a) => ({
+      ...a,
+      windupMs: Math.max(120, Math.round(a.windupMs * mods.windupMul)),
+      parryWindowMs: Math.max(60, Math.round(a.parryWindowMs * mods.parryWindowMul)),
+      damage: Math.max(1, Math.round(a.damage * mods.damageMul)),
+    })),
+  };
   const [state, setState] = useState<GameState>("playing");
   const [playerHp, setPlayerHp] = useState(character.maxHp);
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
@@ -333,7 +351,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           dx /= len; dy /= len;
           const p = playerRef.current;
           p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * PLAYER_SPEED * dt));
-          p.y = Math.max(ARENA_H * 0.45, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * PLAYER_SPEED * dt));
+          p.y = Math.max(PLAYER_RADIUS, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * PLAYER_SPEED * dt));
           setIsWalking(true);
         } else {
           setIsWalking(false);
