@@ -2,10 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AttackPattern, CharacterDef, EnemyDef, GameState } from "./types";
 import { PixelCharacter } from "./PixelCharacters";
 import { PixelEnemy } from "./PixelEnemy";
-import {
-  CurrencyHUD, getCredits, getGems, getCrowns, rewardFor,
-} from "./Currency";
-import { getEquipped, findSkin } from "./characters";
+import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
+import { ABILITIES, findAbility } from "./abilities";
 
 interface Incoming {
   uid: number;
@@ -13,47 +11,39 @@ interface Incoming {
   spawnedAt: number;
 }
 
-type Flash = { uid: number; kind: "parry" | "hit" | "perfect" | "dodge"; at: number };
+type Flash = { uid: number; kind: "parry" | "hit" | "perfect" | "dodge" | "dash" | "instakill"; at: number };
 
 export interface FightResult {
   result: "victory" | "defeat";
-  credits: number;
-  gems: number;
   fightMs: number;
 }
 
 interface Props {
   character: CharacterDef;
   enemy: EnemyDef;
-  wave: number;
+  level: number;
   onEnd: (result: FightResult) => void;
 }
 
 const ARENA_W = 640;
 const ARENA_H = 360;
-const HORIZON_Y = ARENA_H * 0.22;
-const ENEMY_X = ARENA_W / 2;
-const ENEMY_Y = ARENA_H * 0.34;
-const PLAYER_SPEED = 420; // px/s
+const PLAYER_SPEED = 280;
 const PLAYER_RADIUS = 18;
-// Pseudo-3D depth scale: further from camera (smaller y) = smaller sprite
-function depthScale(y: number): number {
-  const t = Math.max(0, Math.min(1, (y - HORIZON_Y) / (ARENA_H - HORIZON_Y)));
-  return 0.62 + t * 0.55; // 0.62 (far) → 1.17 (near)
-}
+const ENEMY_SPEED = 90;
+const ENEMY_RADIUS = 28;
+const MELEE_RANGE = 80;
 const RIPOSTE_MS = 900;
-const BLOCK_RAISE_MS = 320; // how long a block stays "up" after pressing
+const BLOCK_RAISE_MS = 380;
 
-// ----- Danger zone geometry -----
 type Zone =
   | { kind: "slash"; cx: number; cy: number; w: number; h: number }
   | { kind: "thrust"; cx: number; cy: number; w: number; h: number }
   | { kind: "heavy"; cx: number; cy: number; r: number };
 
-function zoneFor(attack: AttackPattern): Zone {
-  if (attack.kind === "thrust") return { kind: "thrust", cx: ENEMY_X, cy: ENEMY_Y + 130, w: 110, h: 280 };
-  if (attack.kind === "heavy")  return { kind: "heavy",  cx: ENEMY_X, cy: ENEMY_Y + 50,  r: 230 };
-  return { kind: "slash", cx: ENEMY_X, cy: ENEMY_Y + 120, w: 420, h: 240 };
+function zoneFor(attack: AttackPattern, ex: number, ey: number): Zone {
+  if (attack.kind === "thrust") return { kind: "thrust", cx: ex, cy: ey + 80, w: 90, h: 220 };
+  if (attack.kind === "heavy")  return { kind: "heavy",  cx: ex, cy: ey + 30, r: 160 };
+  return { kind: "slash", cx: ex, cy: ey + 70, w: 280, h: 180 };
 }
 function insideZone(px: number, py: number, z: Zone): boolean {
   if (z.kind === "heavy") {
@@ -63,37 +53,35 @@ function insideZone(px: number, py: number, z: Zone): boolean {
   return Math.abs(px - z.cx) <= z.w / 2 && Math.abs(py - z.cy) <= z.h / 2;
 }
 
-export function ParryGame({ character, enemy, wave, onEnd }: Props) {
+export function ParryGame({ character, enemy, level, onEnd }: Props) {
   const [state, setState] = useState<GameState>("playing");
   const [playerHp, setPlayerHp] = useState(character.maxHp);
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const [flashes, setFlashes] = useState<Flash[]>([]);
-  const [combo, setCombo] = useState(0);
-  const [bestCombo, setBestCombo] = useState(0);
   const [log, setLog] = useState<string>("* The battle begins.");
   const [paused, setPaused] = useState(false);
-  const [credits] = useState(() => getCredits());
-  const [gems] = useState(() => getGems());
-  const [crowns] = useState(() => getCrowns());
-  const [pendingReward, setPendingReward] = useState<{ credits: number; gems: number } | null>(null);
+  const [credits, setCredits] = useState(() => getCredits());
+  const [gems, setGems] = useState(() => getGems());
   const [pose, setPose] = useState<"idle" | "walk" | "strike" | "hit">("idle");
   const [isWalking, setIsWalking] = useState(false);
-  const [killPops, setKillPops] = useState<{ uid: number; x: number; y: number }[]>([]);
 
-  // Equipped skin + effects
-  const equipped = useRef(getEquipped()).current;
-  const skinEffects = findSkin(equipped.skinId)?.effects ?? {};
+  // Ability cooldowns (epoch ms when ready)
+  const [cdInsta, setCdInsta] = useState(0);
+  const [cdDash, setCdDash] = useState(0);
+  const cdInstaRef = useRef(0);
+  const cdDashRef = useRef(0);
 
-  // Player position (mutable ref) + force re-render at rAF speed
-  const playerRef = useRef({ x: ARENA_W / 2, y: ARENA_H * 0.78 });
+  // Player + enemy positions
+  const playerRef = useRef({ x: ARENA_W * 0.5, y: ARENA_H * 0.75 });
+  const enemyRef = useRef({ x: ARENA_W * 0.5, y: ARENA_H * 0.3 });
   const keysRef = useRef<Record<string, boolean>>({});
+  const blockHeldRef = useRef(false);
   const [, tick] = useState(0);
 
-  // Block / riposte state machine
-  const blockUntilRef = useRef(0);     // block is "up" if performance.now() < this
-  const riposteUntilRef = useRef(0);   // riposte window
-  const lastBlockPressRef = useRef(0); // cooldown
+  const blockUntilRef = useRef(0);
+  const riposteUntilRef = useRef(0);
+  const lastActionRef = useRef(0);
   const [riposteEndAt, setRiposteEndAt] = useState(0);
 
   const fightStartRef = useRef<number>(performance.now());
@@ -107,19 +95,11 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
-  const endFight = useCallback(
-    (result: "victory" | "defeat") => {
-      const fightMs = performance.now() - fightStartRef.current;
-      const reward =
-        result === "victory"
-          ? rewardFor({ isBoss: !!enemy.isBoss, fightMs })
-          : { credits: 0, gems: 0, speedBonus: 0 };
-      setPendingReward({ credits: reward.credits, gems: reward.gems });
-      setState(result);
-      (endFight as any)._payload = { result, credits: reward.credits, gems: reward.gems, fightMs };
-    },
-    [enemy.isBoss],
-  );
+  const endFight = useCallback((result: "victory" | "defeat") => {
+    const fightMs = performance.now() - fightStartRef.current;
+    setState(result);
+    (endFight as any)._payload = { result, fightMs };
+  }, []);
 
   const pushFlash = useCallback((kind: Flash["kind"]) => {
     const f: Flash = { uid: uidRef.current++, kind, at: performance.now() };
@@ -127,35 +107,20 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     setTimeout(() => setFlashes((arr) => arr.filter((x) => x.uid !== f.uid)), 500);
   }, []);
 
-  const spawnKillPop = useCallback(() => {
-    if (!skinEffects.killNumbers) return;
-    const uid = uidRef.current++;
-    setKillPops((arr) => [...arr, { uid, x: ENEMY_X, y: ENEMY_Y - 10 }]);
-    setTimeout(() => setKillPops((arr) => arr.filter((p) => p.uid !== uid)), 900);
-  }, [skinEffects.killNumbers]);
-
-  // Resolve on victory/defeat → tell shell
   useEffect(() => {
     if (state === "playing") return;
     const payload = (endFight as any)._payload as FightResult | undefined;
     const t = setTimeout(
-      () =>
-        onEnd(
-          payload ?? {
-            result: state === "victory" ? "victory" : "defeat",
-            credits: 0, gems: 0,
-            fightMs: performance.now() - fightStartRef.current,
-          },
-        ),
-      1300,
+      () => onEnd(payload ?? { result: state === "victory" ? "victory" : "defeat",
+        fightMs: performance.now() - fightStartRef.current }),
+      1100,
     );
     return () => clearTimeout(t);
   }, [state, onEnd, endFight]);
 
   // Schedule next attack
   useEffect(() => {
-    if (state !== "playing" || paused) return;
-    if (incoming) return;
+    if (state !== "playing" || paused || incoming) return;
     const [a, b] = enemy.cadenceMs;
     const delay = a + Math.random() * (b - a);
     const t = setTimeout(() => {
@@ -172,41 +137,32 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     const timeoutId = setTimeout(() => {
       if (pausedRef.current) return;
       const player = playerRef.current;
-      const zone = zoneFor(incoming.attack);
+      const en = enemyRef.current;
+      const zone = zoneFor(incoming.attack, en.x, en.y);
       const inDanger = insideZone(player.x, player.y, zone);
       const now = performance.now();
-      const blockUp = now < blockUntilRef.current;
+      const blockUp = now < blockUntilRef.current || blockHeldRef.current;
 
       if (!inDanger) {
-        // Free dodge
-        setCombo(0);
         setLog(`* You sidestep the ${incoming.attack.kind}.`);
         pushFlash("dodge");
         setIncoming(null);
         return;
       }
       if (blockUp) {
-        // Successful block → open riposte window
         const until = performance.now() + RIPOSTE_MS;
         riposteUntilRef.current = until;
         setRiposteEndAt(until);
-        setCombo((c) => {
-          const n = c + 1;
-          setBestCombo((b) => Math.max(b, n));
-          return n;
-        });
-        setLog(`* Blocked! Strike back within 1.5s.`);
+        setLog(`* Blocked! Strike back within ${(RIPOSTE_MS / 1000).toFixed(1)}s.`);
         pushFlash("parry");
         setIncoming(null);
         return;
       }
-      // Took the hit
       setPlayerHp((hp) => {
         const next = Math.max(0, hp - incoming.attack.damage);
         if (next === 0) endFight("defeat");
         return next;
       });
-      setCombo(0);
       setLog(`* ${enemy.name}'s ${incoming.attack.kind} lands. -${incoming.attack.damage} HP`);
       pushFlash("hit");
       setPose("hit");
@@ -216,24 +172,36 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     return () => clearTimeout(timeoutId);
   }, [incoming, state, enemy.name, pushFlash, paused, endFight]);
 
-  // Action: melee / block / riposte (Space / Click)
-  const tryAction = useCallback(() => {
+  // Attack action (Space / Left click)
+  const tryAttack = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
     const now = performance.now();
-    // Melee: if close enough to enemy, swing
+    if (now - lastActionRef.current < 180) return;
+    lastActionRef.current = now;
+
     const p = playerRef.current;
-    const dxE = p.x - ENEMY_X, dyE = p.y - ENEMY_Y;
-    const distToEnemy = Math.hypot(dxE, dyE);
-    const MELEE_RANGE = 80;
-    if (distToEnemy <= MELEE_RANGE && now >= riposteUntilRef.current) {
-      if (now - lastBlockPressRef.current < 250) return;
-      lastBlockPressRef.current = now;
+    const en = enemyRef.current;
+    const distToEnemy = Math.hypot(p.x - en.x, p.y - en.y);
+    const inRiposte = now < riposteUntilRef.current;
+
+    if (inRiposte) {
+      riposteUntilRef.current = 0;
+      setRiposteEndAt(0);
       setEnemyHp((hp) => {
         const next = Math.max(0, hp - 1);
-        if (next === 0) {
-          spawnKillPop();
-          endFight("victory");
-        }
+        if (next === 0) endFight("victory");
+        return next;
+      });
+      setLog(`* Riposte! -1`);
+      pushFlash("perfect");
+      setPose("strike");
+      setTimeout(() => setPose("idle"), 220);
+      return;
+    }
+    if (distToEnemy <= MELEE_RANGE + ENEMY_RADIUS) {
+      setEnemyHp((hp) => {
+        const next = Math.max(0, hp - 1);
+        if (next === 0) endFight("victory");
         return next;
       });
       setLog(`* You strike ${enemy.name}. -1`);
@@ -242,35 +210,59 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       setTimeout(() => setPose("idle"), 220);
       return;
     }
-    // Riposte takes priority if window open
-    if (now < riposteUntilRef.current) {
-      riposteUntilRef.current = 0;
-      setRiposteEndAt(0);
-      const refl = 1; // each successful riposte = 1 wound
-      setEnemyHp((hp) => {
-        const next = Math.max(0, hp - refl);
-        if (next === 0) {
-          spawnKillPop();
-          endFight("victory");
-        }
-        return next;
-      });
-      setLog(`* Riposte! -${refl}`);
-      pushFlash("perfect");
-      setPose("strike");
-      setTimeout(() => setPose("idle"), 250);
+    setLog(`* Too far! Close the distance.`);
+  }, [enemy.name, pushFlash, endFight]);
+
+  // Block (F key) — tap also raises block briefly
+  const triggerBlockTap = useCallback(() => {
+    if (stateRef.current !== "playing" || pausedRef.current) return;
+    blockUntilRef.current = performance.now() + BLOCK_RAISE_MS;
+    setLog("* Block raised.");
+  }, []);
+
+  // Ability: Insta-kill (Q)
+  const useInstakill = useCallback(() => {
+    if (stateRef.current !== "playing" || pausedRef.current) return;
+    const now = performance.now();
+    if (now < cdInstaRef.current) return;
+    const a = findAbility("instakill");
+    if (!spendGems(a.gemCost)) {
+      setLog(`* Not enough gems (${a.gemCost} needed).`);
       return;
     }
-    // Otherwise raise block (with tiny cooldown)
-    if (now - lastBlockPressRef.current < 200) return;
-    lastBlockPressRef.current = now;
-    blockUntilRef.current = now + BLOCK_RAISE_MS;
-    setPose("strike");
-    setTimeout(() => setPose("idle"), 200);
-    setLog("* Block raised.");
-  }, [pushFlash, endFight, spawnKillPop, enemy.name]);
+    setGems(getGems());
+    cdInstaRef.current = now + a.cooldownMs;
+    setCdInsta(cdInstaRef.current);
+    setEnemyHp(0);
+    pushFlash("instakill");
+    setLog(`* INSTA-KILL! ${enemy.name} obliterated.`);
+    endFight("victory");
+  }, [enemy.name, pushFlash, endFight]);
 
-  // Keyboard handlers
+  // Ability: Dash (E) — moves player away from enemy attack zone
+  const useDash = useCallback(() => {
+    if (stateRef.current !== "playing" || pausedRef.current) return;
+    const now = performance.now();
+    if (now < cdDashRef.current) return;
+    const a = findAbility("dash");
+    cdDashRef.current = now + a.cooldownMs;
+    setCdDash(cdDashRef.current);
+
+    const p = playerRef.current;
+    const en = enemyRef.current;
+    // Direction away from enemy
+    let dx = p.x - en.x;
+    let dy = p.y - en.y;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len; dy /= len;
+    const DASH_DIST = 140;
+    p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * DASH_DIST));
+    p.y = Math.max(PLAYER_RADIUS, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * DASH_DIST));
+    pushFlash("dash");
+    setLog("* Dashed away!");
+  }, [pushFlash]);
+
+  // Keyboard
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
@@ -279,25 +271,25 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
         e.preventDefault();
         return;
       }
-      if (e.code === "Space") {
+      if (k === "f") {
         e.preventDefault();
-        tryAction();
+        if (!blockHeldRef.current) triggerBlockTap();
+        blockHeldRef.current = true;
         return;
       }
+      if (k === "q") { e.preventDefault(); useInstakill(); return; }
+      if (k === "e") { e.preventDefault(); useDash(); return; }
+      if (e.code === "Space") { e.preventDefault(); tryAttack(); return; }
       if (e.code === "Escape") {
         if (stateRef.current !== "playing") return;
         e.preventDefault();
-        setPaused((p) => {
-          if (!p) setIncoming(null);
-          return !p;
-        });
+        setPaused((p) => { if (!p) setIncoming(null); return !p; });
       }
     };
     const up = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      if (k === "w" || k === "a" || k === "s" || k === "d") {
-        keysRef.current[k] = false;
-      }
+      if (k === "w" || k === "a" || k === "s" || k === "d") keysRef.current[k] = false;
+      if (k === "f") blockHeldRef.current = false;
     };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
@@ -305,22 +297,22 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, [tryAction]);
+  }, [tryAttack, triggerBlockTap, useDash, useInstakill]);
 
-  // Mouse click on arena = action
+  // Left mouse click = attack
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (e.button !== 0) return;
       const t = e.target as HTMLElement | null;
       if (t && t.closest("button")) return;
       e.preventDefault();
-      tryAction();
+      tryAttack();
     };
     window.addEventListener("mousedown", handler);
     return () => window.removeEventListener("mousedown", handler);
-  }, [tryAction]);
+  }, [tryAttack]);
 
-  // rAF loop: move player + repaint
+  // rAF loop: move player + move enemy + repaint
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
@@ -328,6 +320,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       if (!pausedRef.current && stateRef.current === "playing") {
+        // Player movement
         const k = keysRef.current;
         let dx = 0, dy = 0;
         if (k["w"]) dy -= 1;
@@ -344,6 +337,21 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
         } else {
           setIsWalking(false);
         }
+        // Enemy movement — slowly chases player, but stops while winding up
+        const en = enemyRef.current;
+        const p = playerRef.current;
+        const incomingNow = incomingRef.current;
+        if (!incomingNow) {
+          let edx = p.x - en.x;
+          let edy = p.y - en.y;
+          const dist = Math.hypot(edx, edy);
+          const stopAt = MELEE_RANGE * 0.7;
+          if (dist > stopAt) {
+            edx /= dist; edy /= dist;
+            en.x = Math.max(ENEMY_RADIUS, Math.min(ARENA_W - ENEMY_RADIUS, en.x + edx * ENEMY_SPEED * dt));
+            en.y = Math.max(ENEMY_RADIUS, Math.min(ARENA_H * 0.7, en.y + edy * ENEMY_SPEED * dt));
+          }
+        }
       }
       tick((n) => (n + 1) % 1000000);
       raf = requestAnimationFrame(loop);
@@ -357,101 +365,70 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     : 0;
   const overlayFlash = flashes[flashes.length - 1];
   const now = performance.now();
-  const blockUp = now < blockUntilRef.current;
+  const blockUp = now < blockUntilRef.current || blockHeldRef.current;
   const inRiposte = now < riposteUntilRef.current;
   const riposteRemaining = inRiposte ? Math.max(0, riposteEndAt - now) : 0;
   const player = playerRef.current;
-  const zone = incoming ? zoneFor(incoming.attack) : null;
+  const en = enemyRef.current;
+  const zone = incoming ? zoneFor(incoming.attack, en.x, en.y) : null;
   const zoneAlpha = incoming ? 0.18 + 0.45 * telegraphProgress : 0;
-  const slashColor = skinEffects.slashColor;
   const effectivePose: "idle" | "walk" | "strike" | "hit" =
     pose === "idle" && isWalking ? "walk" : pose;
+
+  const instaReady = now >= cdInsta;
+  const dashReady = now >= cdDash;
+  const instaCdRem = Math.max(0, Math.ceil((cdInsta - now) / 1000));
+  const dashCdRem = Math.max(0, Math.ceil((cdDash - now) / 1000));
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background p-4 font-pixel">
       {/* HUD */}
       <div className="flex w-full max-w-[640px] items-center justify-between text-[10px] uppercase tracking-widest">
         <button
-          onClick={() => onEnd({ result: "defeat", credits: 0, gems: 0, fightMs: performance.now() - fightStartRef.current })}
+          onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current })}
           className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
         >
           ← Abandon
         </button>
         <div className="text-foreground">
-          Wave <span className="text-accent">{wave}</span>
+          Level <span className="text-accent">{level}</span>
           {enemy.isBoss && <span className="ml-2 text-danger">⚠ BOSS</span>}
         </div>
-        <CurrencyHUD credits={credits} gems={gems} crowns={crowns} reward={pendingReward} />
-        <div className="text-muted-foreground">
-          Combo <span className="text-foreground">{combo}</span> · Best{" "}
-          <span className="text-foreground">{bestCombo}</span>
-        </div>
+        <CurrencyHUD credits={credits} gems={gems} />
       </div>
 
-      {/* Arena */}
+      {/* Arena — flat 2D */}
       <div
         className="relative overflow-hidden border-4 border-border"
         style={{
           width: ARENA_W,
           height: ARENA_H,
-          background: `linear-gradient(to bottom,
-            oklch(0.18 0.04 270) 0%,
-            oklch(0.22 0.05 270) ${(HORIZON_Y / ARENA_H) * 100}%,
-            oklch(0.32 0.04 60) ${(HORIZON_Y / ARENA_H) * 100 + 0.1}%,
-            oklch(0.18 0.03 30) 100%)`,
+          background: "oklch(0.18 0.02 270)",
+          backgroundImage:
+            "linear-gradient(oklch(0.22 0.02 270) 1px, transparent 1px), linear-gradient(90deg, oklch(0.22 0.02 270) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
         }}
       >
-        {/* Perspective floor grid */}
-        <svg
-          className="pointer-events-none absolute inset-0"
-          width={ARENA_W}
-          height={ARENA_H}
-          style={{ opacity: 0.35 }}
-        >
-          {/* horizontal floor lines */}
-          {Array.from({ length: 8 }).map((_, i) => {
-            const t = i / 7;
-            const y = HORIZON_Y + (ARENA_H - HORIZON_Y) * (t * t);
-            return (
-              <line key={`h${i}`} x1={0} y1={y} x2={ARENA_W} y2={y}
-                stroke="oklch(0.55 0.05 40)" strokeWidth={1} />
-            );
-          })}
-          {/* vanishing-point converging lines */}
-          {Array.from({ length: 11 }).map((_, i) => {
-            const x = (i / 10) * ARENA_W;
-            return (
-              <line key={`v${i}`} x1={x} y1={ARENA_H} x2={ARENA_W / 2} y2={HORIZON_Y}
-                stroke="oklch(0.55 0.05 40)" strokeWidth={1} />
-            );
-          })}
-          {/* horizon line */}
-          <line x1={0} y1={HORIZON_Y} x2={ARENA_W} y2={HORIZON_Y}
-            stroke="oklch(0.7 0.06 40)" strokeWidth={1.5} opacity={0.6} />
-        </svg>
-
         {/* Enemy shadow */}
         <div
           className="pointer-events-none absolute -translate-x-1/2 rounded-[50%]"
           style={{
-            left: ENEMY_X,
-            top: ENEMY_Y + (enemy.isBoss ? 56 : 42) * depthScale(ENEMY_Y),
-            width: (enemy.isBoss ? 110 : 80) * depthScale(ENEMY_Y),
-            height: 14 * depthScale(ENEMY_Y),
+            left: en.x, top: en.y + (enemy.isBoss ? 50 : 38),
+            width: enemy.isBoss ? 90 : 70, height: 12,
             background: "radial-gradient(ellipse, rgba(0,0,0,0.55), rgba(0,0,0,0))",
           }}
         />
 
-        {/* Enemy */}
+        {/* Enemy sprite */}
         <div
           className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
-          style={{ left: ENEMY_X, top: ENEMY_Y, transform: `translate(-50%,-50%) scale(${depthScale(ENEMY_Y)})`, transformOrigin: "center bottom" }}
+          style={{ left: en.x, top: en.y }}
         >
           <PixelEnemy
             id={enemy.id}
             isBoss={enemy.isBoss}
             accent={enemy.color}
-            size={enemy.isBoss ? 128 : 96}
+            size={enemy.isBoss ? 112 : 88}
             attacking={!!incoming}
             progress={telegraphProgress}
           />
@@ -469,10 +446,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
             <div
               className="pointer-events-none absolute rounded-full"
               style={{
-                left: zone.cx - zone.r,
-                top: zone.cy - zone.r,
-                width: zone.r * 2,
-                height: zone.r * 2,
+                left: zone.cx - zone.r, top: zone.cy - zone.r,
+                width: zone.r * 2, height: zone.r * 2,
                 background: `color-mix(in oklab, var(--color-danger) ${zoneAlpha * 100}%, transparent)`,
                 border: "2px dashed var(--color-danger)",
               }}
@@ -481,10 +456,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
             <div
               className="pointer-events-none absolute"
               style={{
-                left: zone.cx - zone.w / 2,
-                top: zone.cy - zone.h / 2,
-                width: zone.w,
-                height: zone.h,
+                left: zone.cx - zone.w / 2, top: zone.cy - zone.h / 2,
+                width: zone.w, height: zone.h,
                 background: `color-mix(in oklab, var(--color-danger) ${zoneAlpha * 100}%, transparent)`,
                 border: "2px dashed var(--color-danger)",
               }}
@@ -496,28 +469,19 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
         <div
           className="pointer-events-none absolute -translate-x-1/2 rounded-[50%]"
           style={{
-            left: player.x,
-            top: player.y + 24 * depthScale(player.y),
-            width: 52 * depthScale(player.y),
-            height: 12 * depthScale(player.y),
+            left: player.x, top: player.y + 24,
+            width: 52, height: 12,
             background: "radial-gradient(ellipse, rgba(0,0,0,0.55), rgba(0,0,0,0))",
-            zIndex: Math.round(player.y),
           }}
         />
 
         {/* Player sprite */}
         <div
           className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{
-            left: player.x,
-            top: player.y,
-            transform: `translate(-50%,-50%) scale(${depthScale(player.y)})`,
-            transformOrigin: "center bottom",
-            zIndex: Math.round(player.y) + 1,
-          }}
+          style={{ left: player.x, top: player.y }}
         >
           <PixelCharacter
-            skinId={equipped.skinId}
+            skinId="kid:default"
             size={56}
             pose={effectivePose}
             key={overlayFlash?.uid ?? effectivePose}
@@ -539,30 +503,10 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 text-center">
             <div className="text-[10px] uppercase tracking-[0.3em] text-accent">RIPOSTE!</div>
             <div className="mx-auto mt-1 h-1 w-32 bg-background">
-              <div
-                className="h-full bg-accent"
-                style={{ width: `${(riposteRemaining / RIPOSTE_MS) * 100}%` }}
-              />
+              <div className="h-full bg-accent" style={{ width: `${(riposteRemaining / RIPOSTE_MS) * 100}%` }} />
             </div>
           </div>
         )}
-
-        {/* Kill numbers VFX */}
-        {killPops.map((p) => (
-          <div
-            key={p.uid}
-            className="pointer-events-none absolute -translate-x-1/2 font-pixel text-2xl font-bold"
-            style={{
-              left: p.x,
-              top: p.y,
-              color: slashColor ?? "oklch(0.65 0.25 25)",
-              textShadow: "2px 2px 0 #000",
-              animation: "killPop 900ms ease-out forwards",
-            }}
-          >
-            99999999
-          </div>
-        ))}
 
         {/* Flash overlays */}
         {overlayFlash && (
@@ -573,9 +517,13 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
                 overlayFlash.kind === "hit"
                   ? "color-mix(in oklab, var(--color-danger) 35%, transparent)"
                   : overlayFlash.kind === "perfect"
-                  ? `color-mix(in oklab, ${slashColor ?? "var(--color-accent)"} 45%, transparent)`
+                  ? "color-mix(in oklab, var(--color-accent) 45%, transparent)"
                   : overlayFlash.kind === "dodge"
                   ? "color-mix(in oklab, var(--color-foreground) 12%, transparent)"
+                  : overlayFlash.kind === "dash"
+                  ? "color-mix(in oklab, var(--color-accent) 20%, transparent)"
+                  : overlayFlash.kind === "instakill"
+                  ? "color-mix(in oklab, var(--color-danger) 60%, transparent)"
                   : "color-mix(in oklab, var(--color-accent) 25%, transparent)",
               animation: "parryFlash 280ms ease-out forwards",
             }}
@@ -595,10 +543,10 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
                 ▶ Continue
               </button>
               <button
-                onClick={() => onEnd({ result: "defeat", credits: 0, gems: 0, fightMs: performance.now() - fightStartRef.current })}
+                onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current })}
                 className="border-2 border-border bg-background px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background"
               >
-                ✕ Abandon Run
+                ✕ Abandon
               </button>
             </div>
           </div>
@@ -610,36 +558,48 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
             <div className="text-2xl tracking-widest text-foreground">
               {state === "victory" ? "VICTORY" : "DEFEATED"}
             </div>
-            <div className="text-[10px] uppercase text-muted-foreground">Combo: {bestCombo}</div>
-            {state === "victory" && pendingReward && (
-              <div className="text-[10px] uppercase tracking-widest text-accent">
-                Reward: +{pendingReward.credits} credits
-                {pendingReward.gems > 0 ? ` · +${pendingReward.gems} gem` : ""}
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* Status + log */}
+      {/* Status + abilities + log */}
       <div className="flex w-full max-w-[640px] flex-col gap-2">
         <EnemyHealth enemy={enemy} hp={enemyHp} />
         <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" />
+
+        {/* Abilities bar */}
+        <div className="flex items-center gap-2">
+          {ABILITIES.map((a) => {
+            const ready = a.id === "instakill" ? instaReady : dashReady;
+            const rem = a.id === "instakill" ? instaCdRem : dashCdRem;
+            return (
+              <button
+                key={a.id}
+                onClick={() => (a.id === "instakill" ? useInstakill() : useDash())}
+                disabled={!ready}
+                className="flex-1 border-2 border-border bg-background px-2 py-1 text-left text-[9px] uppercase tracking-widest text-foreground hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-background disabled:hover:text-foreground"
+              >
+                <div className="flex items-center justify-between">
+                  <span>[{a.hotkey}] {a.name}</span>
+                  <span className="text-muted-foreground">
+                    {ready ? (a.gemCost > 0 ? `${a.gemCost}💎` : "FREE") : `${rem}s`}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="mt-1 border-2 border-border bg-background px-3 py-2 text-[10px] uppercase tracking-widest text-foreground">
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ WASD ] Move/Dodge &middot; [ Space / Click ] Close = Attack · Far = Block → Riposte &middot; [ Esc ] Pause
+          [ WASD ] Move &middot; [ F ] Block &middot; [ Space / Click ] Strike &middot; [ Q ] Insta-kill &middot; [ E ] Dash &middot; [ Esc ] Pause
         </div>
       </div>
 
       <style>{`
         @keyframes parryFlash { from { opacity: 1; } to { opacity: 0; } }
-        @keyframes killPop {
-          0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
-          25% { transform: translate(-50%, -10px) scale(1.2); opacity: 1; }
-          100% { transform: translate(-50%, -60px) scale(1); opacity: 0; }
-        }
       `}</style>
     </div>
   );
@@ -661,9 +621,6 @@ function StatusRow({ label, alive, color }: { label: string; alive: boolean; col
 }
 
 function EnemyHealth({ enemy, hp }: { enemy: EnemyDef; hp: number }) {
-  if (!enemy.isBoss || enemy.maxHp <= 1) {
-    return <StatusRow label={enemy.name.toUpperCase()} alive={hp > 0} color="var(--color-accent)" />;
-  }
   return (
     <div className="flex items-center gap-3">
       <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">{enemy.name.toUpperCase()}</div>

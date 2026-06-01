@@ -1,9 +1,8 @@
 // Currency icons + persistence helpers.
-// Credits (C with vertical bar), Gems (boss drops), Crowns (clear-run trophy).
+// Credits (C with vertical bar), Gems (level / ability currency).
 
 const CREDITS_KEY = "parry-credits";
 const GEMS_KEY = "parry-gems";
-const CROWNS_KEY = "parry-crowns";
 
 function read(key: string): number {
   if (typeof window === "undefined") return 0;
@@ -15,11 +14,9 @@ function write(key: string, n: number) {
 
 export function getCredits() { return read(CREDITS_KEY); }
 export function getGems()    { return read(GEMS_KEY); }
-export function getCrowns()  { return read(CROWNS_KEY); }
 
 export function addCredits(n: number) { const v = getCredits() + n; write(CREDITS_KEY, v); return v; }
 export function addGems(n: number)    { const v = getGems() + n;    write(GEMS_KEY, v);    return v; }
-export function addCrowns(n: number)  { const v = getCrowns() + n;  write(CROWNS_KEY, v);  return v; }
 
 export function spendCredits(n: number): boolean {
   const v = getCredits();
@@ -32,13 +29,6 @@ export function spendGems(n: number): boolean {
   if (v < n) return false;
   write(GEMS_KEY, v - n);
   return true;
-}
-
-/** Reward formula. */
-export function rewardFor(opts: { isBoss: boolean; fightMs: number }) {
-  const speedBonus = Math.min(10, Math.max(0, Math.round((8000 - opts.fightMs) / 700)));
-  const base = opts.isBoss ? 10 : 5;
-  return { credits: base + speedBonus, gems: opts.isBoss ? 1 : 0, speedBonus };
 }
 
 export function CreditIcon({ size = 14 }: { size?: number }) {
@@ -62,23 +52,10 @@ export function GemIcon({ size = 14 }: { size?: number }) {
   );
 }
 
-export function CrownIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true"
-      style={{ display: "inline-block", verticalAlign: "-2px" }}>
-      <polygon points="2,12 2,5 5,8 8,3 11,8 14,5 14,12" fill="currentColor" />
-      <rect x="2" y="12" width="12" height="2" fill="currentColor" />
-      <circle cx="2" cy="5" r="1" fill="currentColor" />
-      <circle cx="14" cy="5" r="1" fill="currentColor" />
-      <circle cx="8" cy="3" r="1" fill="currentColor" />
-    </svg>
-  );
-}
-
 export function CurrencyHUD({
-  credits, gems, crowns, reward,
+  credits, gems, reward,
 }: {
-  credits: number; gems: number; crowns?: number;
+  credits: number; gems: number;
   reward?: { credits: number; gems: number } | null;
 }) {
   return (
@@ -91,11 +68,6 @@ export function CurrencyHUD({
         <GemIcon size={14} /><span>{gems}</span>
         {reward && reward.gems > 0 && <span>+{reward.gems}</span>}
       </span>
-      {crowns !== undefined && (
-        <span className="inline-flex items-center gap-1" style={{ color: "oklch(0.85 0.18 85)" }}>
-          <CrownIcon size={14} /><span>{crowns}</span>
-        </span>
-      )}
     </div>
   );
 }
