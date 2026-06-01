@@ -264,6 +264,30 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           />
         )}
 
+        {/* Pause overlay */}
+        {paused && state === "playing" && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/90 text-center">
+            <div className="text-2xl tracking-[0.4em] text-foreground">PAUSED</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              [ Esc ] to resume
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPaused(false)}
+                className="border-2 border-border bg-foreground px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent"
+              >
+                ▶ Continue
+              </button>
+              <button
+                onClick={() => onEnd("defeat")}
+                className="border-2 border-border bg-background px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background"
+              >
+                ✕ Abandon Run
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Result */}
         {state !== "playing" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/85 text-center">
