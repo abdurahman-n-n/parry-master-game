@@ -4,6 +4,7 @@ import { PixelCharacter } from "./PixelCharacters";
 import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
+import { isOwned, getEquippedSkinColor } from "./inventory";
 
 interface Incoming {
   uid: number;
@@ -54,8 +55,16 @@ function insideZone(px: number, py: number, z: Zone): boolean {
 }
 
 export function ParryGame({ character, enemy, level, onEnd }: Props) {
+  // Upgrades (read once at mount)
+  const ownsHpUp = isOwned("hp-up");
+  const ownsDmgUp = isOwned("dmg-up");
+  const ownsCdDown = isOwned("cd-down");
+  const strikeDmg = ownsDmgUp ? 2 : 1;
+  const cdAdjust = ownsCdDown ? -2000 : 0;
+  const skinColor = getEquippedSkinColor();
+
   const [state, setState] = useState<GameState>("playing");
-  const [playerHp, setPlayerHp] = useState(character.maxHp);
+  const [playerHp, setPlayerHp] = useState(character.maxHp + (ownsHpUp ? 1 : 0));
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const [flashes, setFlashes] = useState<Flash[]>([]);
@@ -188,11 +197,11 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
       riposteUntilRef.current = 0;
       setRiposteEndAt(0);
       setEnemyHp((hp) => {
-        const next = Math.max(0, hp - 1);
+        const next = Math.max(0, hp - strikeDmg);
         if (next === 0) endFight("victory");
         return next;
       });
-      setLog(`* Riposte! -1`);
+      setLog(`* Riposte! -${strikeDmg}`);
       pushFlash("perfect");
       setPose("strike");
       setTimeout(() => setPose("idle"), 220);
@@ -200,18 +209,18 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
     }
     if (distToEnemy <= MELEE_RANGE + ENEMY_RADIUS) {
       setEnemyHp((hp) => {
-        const next = Math.max(0, hp - 1);
+        const next = Math.max(0, hp - strikeDmg);
         if (next === 0) endFight("victory");
         return next;
       });
-      setLog(`* You strike ${enemy.name}. -1`);
+      setLog(`* You strike ${enemy.name}. -${strikeDmg}`);
       pushFlash("perfect");
       setPose("strike");
       setTimeout(() => setPose("idle"), 220);
       return;
     }
     setLog(`* Too far! Close the distance.`);
-  }, [enemy.name, pushFlash, endFight]);
+  }, [enemy.name, pushFlash, endFight, strikeDmg]);
 
   // Block (F key) — tap also raises block briefly
   const triggerBlockTap = useCallback(() => {
@@ -223,6 +232,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
   // Ability: Insta-kill (Q)
   const useInstakill = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
+    if (!isOwned("instakill")) { setLog("* Insta-kill not owned. Visit the Store."); return; }
     const now = performance.now();
     if (now < cdInstaRef.current) return;
     const a = findAbility("instakill");
@@ -231,21 +241,22 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
       return;
     }
     setGems(getGems());
-    cdInstaRef.current = now + a.cooldownMs;
+    cdInstaRef.current = now + Math.max(1000, a.cooldownMs + cdAdjust);
     setCdInsta(cdInstaRef.current);
     setEnemyHp(0);
     pushFlash("instakill");
     setLog(`* INSTA-KILL! ${enemy.name} obliterated.`);
     endFight("victory");
-  }, [enemy.name, pushFlash, endFight]);
+  }, [enemy.name, pushFlash, endFight, cdAdjust]);
 
   // Ability: Dash (E) — moves player away from enemy attack zone
   const useDash = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
+    if (!isOwned("dash")) { setLog("* Dash not owned. Visit the Store."); return; }
     const now = performance.now();
     if (now < cdDashRef.current) return;
     const a = findAbility("dash");
-    cdDashRef.current = now + a.cooldownMs;
+    cdDashRef.current = now + Math.max(1000, a.cooldownMs + cdAdjust);
     setCdDash(cdDashRef.current);
 
     const p = playerRef.current;
@@ -480,12 +491,20 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           className="absolute -translate-x-1/2 -translate-y-1/2"
           style={{ left: player.x, top: player.y }}
         >
-          <PixelCharacter
-            skinId="kid:default"
-            size={56}
-            pose={effectivePose}
-            key={overlayFlash?.uid ?? effectivePose}
-          />
+          <div className="relative" style={{ width: 56, height: 56 }}>
+            <PixelCharacter
+              skinId="kid:default"
+              size={56}
+              pose={effectivePose}
+              key={overlayFlash?.uid ?? effectivePose}
+            />
+            {skinColor && (
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{ background: skinColor, mixBlendMode: "color", opacity: 0.75 }}
+              />
+            )}
+          </div>
           {blockUp && (
             <div
               className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"

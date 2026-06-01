@@ -1,0 +1,96 @@
+import { useState } from "react";
+import {
+  itemsByKind, isOwned, getEquippedSkin, setEquippedSkin,
+  type ItemKind, type StoreItem,
+} from "./inventory";
+import { CurrencyHUD, getCredits, getGems } from "./Currency";
+
+const SECTIONS: { kind: ItemKind; title: string }[] = [
+  { kind: "ability", title: "Abilities" },
+  { kind: "skin",    title: "Skins" },
+  { kind: "upgrade", title: "Upgrades" },
+];
+
+export function InventoryScreen({ onBack }: { onBack: () => void }) {
+  const [, force] = useState(0);
+  const credits = getCredits();
+  const gems = getGems();
+  const equipped = getEquippedSkin();
+
+  return (
+    <div className="flex h-full w-full flex-col items-center gap-4 overflow-auto bg-background p-6 font-pixel text-foreground">
+      <div className="flex w-full max-w-2xl items-center justify-between">
+        <button
+          onClick={onBack}
+          className="border-2 border-border bg-background px-3 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background"
+        >
+          ← Back
+        </button>
+        <div className="text-2xl tracking-[0.3em]">INVENTORY</div>
+        <CurrencyHUD credits={credits} gems={gems} />
+      </div>
+
+      {SECTIONS.map(({ kind, title }) => {
+        const owned = itemsByKind(kind).filter((i) => isOwned(i.id));
+        return (
+          <div key={kind} className="w-full max-w-2xl">
+            <div className="mb-2 text-[11px] uppercase tracking-widest text-accent">{title}</div>
+            {owned.length === 0 ? (
+              <div className="border-2 border-dashed border-border bg-background p-4 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
+                None yet — visit the Store
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {owned.map((item) => (
+                  <OwnedCard
+                    key={item.id}
+                    item={item}
+                    equippedSkin={equipped}
+                    onEquip={() => { setEquippedSkin(item.id); force((n) => n + 1); }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OwnedCard({
+  item, equippedSkin, onEquip,
+}: {
+  item: StoreItem;
+  equippedSkin: string | null;
+  onEquip: () => void;
+}) {
+  const isEquippedSkin = item.kind === "skin" && equippedSkin === item.id;
+  return (
+    <div className="flex flex-col gap-2 border-2 border-border bg-background p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-[12px] uppercase tracking-widest">
+          {item.kind === "skin" && item.color && (
+            <span className="inline-block h-3 w-3 border border-border" style={{ background: item.color }} />
+          )}
+          {item.name}
+        </div>
+        {item.hotkey && (
+          <div className="border border-border px-2 py-0.5 text-[9px] tracking-widest">[{item.hotkey}]</div>
+        )}
+      </div>
+      <div className="text-[10px] normal-case leading-relaxed tracking-wider text-muted-foreground">
+        {item.desc}
+      </div>
+      {item.kind === "skin" && (
+        <button
+          onClick={onEquip}
+          disabled={isEquippedSkin}
+          className="mt-1 border-2 border-border bg-background px-3 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background disabled:cursor-default disabled:bg-accent disabled:text-background disabled:opacity-100"
+        >
+          {isEquippedSkin ? "✓ Equipped" : "Equip"}
+        </button>
+      )}
+    </div>
+  );
+}
