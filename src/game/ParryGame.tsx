@@ -13,13 +13,14 @@ type Flash = { uid: number; kind: "parry" | "hit" | "perfect"; at: number };
 interface Props {
   character: CharacterDef;
   enemy: EnemyDef;
-  onExit: () => void;
+  wave: number;
+  onEnd: (result: "victory" | "defeat") => void;
 }
 
 const ARENA_W = 640;
 const ARENA_H = 360;
 
-export function ParryGame({ character, enemy, onExit }: Props) {
+export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [state, setState] = useState<GameState>("playing");
   const [playerHp, setPlayerHp] = useState(character.maxHp);
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
