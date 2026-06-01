@@ -25,11 +25,6 @@ export function getSavedAccent(): [number, number, number] {
 export function applyAccent(rgb: [number, number, number]) {
   const [r, g, b] = rgb;
   document.documentElement.style.setProperty("--accent", `rgb(${r}, ${g}, ${b})`);
-  // Border picks up the accent too so the whole UI shifts cohesively
-  document.documentElement.style.setProperty(
-    "--border",
-    `rgb(${Math.min(255, r + 20)}, ${Math.min(255, g + 20)}, ${Math.min(255, b + 20)})`,
-  );
 }
 
 function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
