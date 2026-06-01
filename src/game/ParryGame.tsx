@@ -36,13 +36,13 @@ const ARENA_H = 360;
 const HORIZON_Y = ARENA_H * 0.22;
 const ENEMY_X = ARENA_W / 2;
 const ENEMY_Y = ARENA_H * 0.34;
+const PLAYER_SPEED = 420; // px/s
 const PLAYER_RADIUS = 18;
 // Pseudo-3D depth scale: further from camera (smaller y) = smaller sprite
 function depthScale(y: number): number {
   const t = Math.max(0, Math.min(1, (y - HORIZON_Y) / (ARENA_H - HORIZON_Y)));
   return 0.62 + t * 0.55; // 0.62 (far) → 1.17 (near)
 }
-const PLAYER_RADIUS = 18;
 const RIPOSTE_MS = 900;
 const BLOCK_RAISE_MS = 320; // how long a block stays "up" after pressing
 
