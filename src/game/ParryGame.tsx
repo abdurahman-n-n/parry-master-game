@@ -164,7 +164,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     } else {
       setPlayerHp((hp) => {
         const next = Math.max(0, hp - inc.attack.damage);
-        if (next === 0) setState("defeat");
+        if (next === 0) endFight("defeat");
         return next;
       });
       setCombo(0);
