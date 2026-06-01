@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AttackPattern, CharacterDef, EnemyDef, GameState } from "./types";
-import { PixelHeart } from "./PixelHeart";
+import { PixelHero } from "./PixelHero";
 
 interface Incoming {
   uid: number;
@@ -186,8 +186,19 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
         <EnemySprite enemy={enemy} attacking={!!incoming} progress={telegraphProgress} />
 
         {/* Player heart */}
+        {/* Hero sprite (replaces the heart) */}
         <div className="absolute left-1/2 top-[78%] -translate-x-1/2 -translate-y-1/2">
-          <PixelHeart size={28} />
+          <PixelHero
+            size={64}
+            pose={
+              overlayFlash?.kind === "hit"
+                ? "hit"
+                : overlayFlash?.kind === "parry" || overlayFlash?.kind === "perfect"
+                ? "strike"
+                : "idle"
+            }
+            key={overlayFlash?.uid ?? "idle"}
+          />
         </div>
 
         {/* Telegraph bar */}
