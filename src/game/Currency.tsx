@@ -1,130 +1,101 @@
 // Currency icons + persistence helpers.
-// CreditIcon = a stylized "C" with a single vertical line through it.
-// GemIcon    = a faceted diamond. Earned 1 per boss kill.
+// Credits (C with vertical bar), Gems (boss drops), Crowns (clear-run trophy).
 
 const CREDITS_KEY = "parry-credits";
 const GEMS_KEY = "parry-gems";
+const CROWNS_KEY = "parry-crowns";
 
-export function getCredits(): number {
+function read(key: string): number {
   if (typeof window === "undefined") return 0;
-  return Number(localStorage.getItem(CREDITS_KEY) ?? 0) || 0;
+  return Number(localStorage.getItem(key) ?? 0) || 0;
 }
-export function getGems(): number {
-  if (typeof window === "undefined") return 0;
-  return Number(localStorage.getItem(GEMS_KEY) ?? 0) || 0;
-}
-export function addCredits(n: number): number {
-  const next = getCredits() + n;
-  localStorage.setItem(CREDITS_KEY, String(next));
-  return next;
-}
-export function addGems(n: number): number {
-  const next = getGems() + n;
-  localStorage.setItem(GEMS_KEY, String(next));
-  return next;
+function write(key: string, n: number) {
+  localStorage.setItem(key, String(n));
 }
 
-/**
- * Reward formula:
- * Regular enemy = 5 base credits + a speed bonus (faster kill -> more).
- * Boss          = 10 base credits + speed bonus + 1 gem.
- *
- * Speed bonus = round( max(0, (8000 - fightMs) / 700) ), capped at +10.
- */
+export function getCredits() { return read(CREDITS_KEY); }
+export function getGems()    { return read(GEMS_KEY); }
+export function getCrowns()  { return read(CROWNS_KEY); }
+
+export function addCredits(n: number) { const v = getCredits() + n; write(CREDITS_KEY, v); return v; }
+export function addGems(n: number)    { const v = getGems() + n;    write(GEMS_KEY, v);    return v; }
+export function addCrowns(n: number)  { const v = getCrowns() + n;  write(CROWNS_KEY, v);  return v; }
+
+export function spendCredits(n: number): boolean {
+  const v = getCredits();
+  if (v < n) return false;
+  write(CREDITS_KEY, v - n);
+  return true;
+}
+export function spendGems(n: number): boolean {
+  const v = getGems();
+  if (v < n) return false;
+  write(GEMS_KEY, v - n);
+  return true;
+}
+
+/** Reward formula. */
 export function rewardFor(opts: { isBoss: boolean; fightMs: number }) {
-  const speedBonus = Math.min(
-    10,
-    Math.max(0, Math.round((8000 - opts.fightMs) / 700)),
-  );
+  const speedBonus = Math.min(10, Math.max(0, Math.round((8000 - opts.fightMs) / 700)));
   const base = opts.isBoss ? 10 : 5;
-  return {
-    credits: base + speedBonus,
-    gems: opts.isBoss ? 1 : 0,
-    speedBonus,
-  };
+  return { credits: base + speedBonus, gems: opts.isBoss ? 1 : 0, speedBonus };
 }
 
 export function CreditIcon({ size = 14 }: { size?: number }) {
-  // A "C" with a vertical bar running top-to-bottom through it.
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      style={{ display: "inline-block", verticalAlign: "-2px" }}
-    >
-      {/* C shape (open on the right) */}
-      <path
-        d="M12 4.2 A5 5 0 1 0 12 11.8"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="square"
-        fill="none"
-      />
-      {/* Vertical line through the C */}
-      <line
-        x1="8"
-        y1="0.8"
-        x2="8"
-        y2="15.2"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="square"
-      />
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true"
+      style={{ display: "inline-block", verticalAlign: "-2px" }}>
+      <path d="M12 4.2 A5 5 0 1 0 12 11.8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="square" fill="none" />
+      <line x1="8" y1="0.8" x2="8" y2="15.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square" />
     </svg>
   );
 }
 
 export function GemIcon({ size = 14 }: { size?: number }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-      style={{ display: "inline-block", verticalAlign: "-2px" }}
-    >
-      <polygon
-        points="8,1 14,6 8,15 2,6"
-        fill="currentColor"
-        opacity="0.85"
-      />
-      <polygon
-        points="8,1 14,6 2,6"
-        fill="currentColor"
-        opacity="0.55"
-      />
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true"
+      style={{ display: "inline-block", verticalAlign: "-2px" }}>
+      <polygon points="8,1 14,6 8,15 2,6" fill="currentColor" opacity="0.85" />
+      <polygon points="8,1 14,6 2,6" fill="currentColor" opacity="0.55" />
       <line x1="2" y1="6" x2="14" y2="6" stroke="var(--color-background)" strokeWidth="0.8" />
-      <line x1="8" y1="1" x2="8" y2="15" stroke="var(--color-background)" strokeWidth="0.6" opacity="0.5" />
+    </svg>
+  );
+}
+
+export function CrownIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true"
+      style={{ display: "inline-block", verticalAlign: "-2px" }}>
+      <polygon points="2,12 2,5 5,8 8,3 11,8 14,5 14,12" fill="currentColor" />
+      <rect x="2" y="12" width="12" height="2" fill="currentColor" />
+      <circle cx="2" cy="5" r="1" fill="currentColor" />
+      <circle cx="14" cy="5" r="1" fill="currentColor" />
+      <circle cx="8" cy="3" r="1" fill="currentColor" />
     </svg>
   );
 }
 
 export function CurrencyHUD({
-  credits,
-  gems,
-  reward,
+  credits, gems, crowns, reward,
 }: {
-  credits: number;
-  gems: number;
+  credits: number; gems: number; crowns?: number;
   reward?: { credits: number; gems: number } | null;
 }) {
   return (
     <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest text-foreground">
       <span className="inline-flex items-center gap-1">
-        <CreditIcon size={14} />
-        <span>{credits}</span>
-        {reward && reward.credits > 0 && (
-          <span className="text-accent">+{reward.credits}</span>
-        )}
+        <CreditIcon size={14} /><span>{credits}</span>
+        {reward && reward.credits > 0 && <span className="text-accent">+{reward.credits}</span>}
       </span>
       <span className="inline-flex items-center gap-1" style={{ color: "var(--color-accent)" }}>
-        <GemIcon size={14} />
-        <span>{gems}</span>
+        <GemIcon size={14} /><span>{gems}</span>
         {reward && reward.gems > 0 && <span>+{reward.gems}</span>}
       </span>
+      {crowns !== undefined && (
+        <span className="inline-flex items-center gap-1" style={{ color: "oklch(0.85 0.18 85)" }}>
+          <CrownIcon size={14} /><span>{crowns}</span>
+        </span>
+      )}
     </div>
   );
 }
