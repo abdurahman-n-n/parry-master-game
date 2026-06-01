@@ -248,6 +248,16 @@ export function ParryGame({ character, enemy, onExit }: Props) {
   );
 }
 
+const SHAPE_CLIP: Record<string, string> = {
+  pentagon: "polygon(50% 0,100% 35%,80% 100%,20% 100%,0 35%)",
+  diamond: "polygon(50% 0,100% 50%,50% 100%,0 50%)",
+  circle: "circle(50% at 50% 50%)",
+  triangle: "polygon(50% 0,100% 100%,0 100%)",
+  hex: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)",
+  star:
+    "polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)",
+};
+
 function EnemySprite({
   enemy,
   attacking,
@@ -258,6 +268,7 @@ function EnemySprite({
   progress: number;
 }) {
   const wobble = attacking ? `translateX(${Math.sin(progress * 12) * 4}px)` : "none";
+  const clip = SHAPE_CLIP[enemy.shape] ?? SHAPE_CLIP.pentagon;
   return (
     <div
       className="absolute left-1/2 top-[28%] -translate-x-1/2 -translate-y-1/2"
@@ -275,11 +286,7 @@ function EnemySprite({
       >
         <div
           className="h-10 w-10"
-          style={{
-            background: enemy.color,
-            clipPath:
-              "polygon(50% 0,100% 35%,80% 100%,20% 100%,0 35%)",
-          }}
+          style={{ background: enemy.color, clipPath: clip }}
         />
       </div>
       <div className="mt-2 text-center text-[9px] uppercase tracking-widest text-foreground">
