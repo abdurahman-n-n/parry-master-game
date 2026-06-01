@@ -262,7 +262,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     setPose("strike");
     setTimeout(() => setPose("idle"), 200);
     setLog("* Block raised.");
-  }, [pushFlash, endFight, spawnKillPop]);
+  }, [pushFlash, endFight, spawnKillPop, enemy.name]);
 
   // Keyboard handlers
   useEffect(() => {
