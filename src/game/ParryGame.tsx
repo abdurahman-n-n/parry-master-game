@@ -4,6 +4,7 @@ import { PixelCharacter } from "./PixelCharacters";
 import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
+import { isOwned, getEquippedSkinColor } from "./inventory";
 
 interface Incoming {
   uid: number;
@@ -54,8 +55,16 @@ function insideZone(px: number, py: number, z: Zone): boolean {
 }
 
 export function ParryGame({ character, enemy, level, onEnd }: Props) {
+  // Upgrades (read once at mount)
+  const ownsHpUp = isOwned("hp-up");
+  const ownsDmgUp = isOwned("dmg-up");
+  const ownsCdDown = isOwned("cd-down");
+  const strikeDmg = ownsDmgUp ? 2 : 1;
+  const cdAdjust = ownsCdDown ? -2000 : 0;
+  const skinColor = getEquippedSkinColor();
+
   const [state, setState] = useState<GameState>("playing");
-  const [playerHp, setPlayerHp] = useState(character.maxHp);
+  const [playerHp, setPlayerHp] = useState(character.maxHp + (ownsHpUp ? 1 : 0));
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const [flashes, setFlashes] = useState<Flash[]>([]);
