@@ -86,57 +86,73 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     return () => clearTimeout(timeoutId);
   }, [incoming, state, enemy.name, pushFlash]);
 
-  // Key handler — Space = parry/hit back
+  // Core parry action — fired by Space or mouse click
+  const tryParry = useCallback(() => {
+    if (stateRef.current !== "playing") return;
+    const inc = incomingRef.current;
+    const now = performance.now();
+    if (!inc) {
+      setCombo(0);
+      setLog("* You swing at empty air.");
+      return;
+    }
+    const elapsed = now - inc.spawnedAt;
+    const hitAt = inc.attack.windupMs;
+    const half = inc.attack.parryWindowMs / 2;
+    const delta = Math.abs(elapsed - hitAt);
+    if (delta <= half) {
+      const perfect = delta <= half * 0.35;
+      const refl = perfect ? Math.round(inc.attack.reflect * 1.5) : inc.attack.reflect;
+      setEnemyHp((hp) => {
+        const next = Math.max(0, hp - refl);
+        if (next === 0) setState("victory");
+        return next;
+      });
+      setCombo((c) => {
+        const n = c + 1;
+        setBestCombo((b) => Math.max(b, n));
+        return n;
+      });
+      setLog(perfect ? `* PERFECT PARRY! -${refl}` : `* Parried! -${refl}`);
+      pushFlash(perfect ? "perfect" : "parry");
+      setIncoming(null);
+    } else {
+      setPlayerHp((hp) => {
+        const next = Math.max(0, hp - inc.attack.damage);
+        if (next === 0) setState("defeat");
+        return next;
+      });
+      setCombo(0);
+      setLog("* Mistimed! You take the blow.");
+      pushFlash("hit");
+      setIncoming(null);
+    }
+  }, [pushFlash]);
+
+  // Keyboard: Space
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
       e.preventDefault();
-      if (stateRef.current !== "playing") return;
-      const inc = incomingRef.current;
-      const now = performance.now();
-      if (!inc) {
-        // Early/whiff — small punishment to combo
-        setCombo(0);
-        setLog("* You swing at empty air.");
-        return;
-      }
-      const elapsed = now - inc.spawnedAt;
-      const hitAt = inc.attack.windupMs;
-      const half = inc.attack.parryWindowMs / 2;
-      const delta = Math.abs(elapsed - hitAt);
-      if (delta <= half) {
-        // Successful parry — reflect damage
-        const perfect = delta <= half * 0.35;
-        const refl = perfect ? Math.round(inc.attack.reflect * 1.5) : inc.attack.reflect;
-        setEnemyHp((hp) => {
-          const next = Math.max(0, hp - refl);
-          if (next === 0) setState("victory");
-          return next;
-        });
-        setCombo((c) => {
-          const n = c + 1;
-          setBestCombo((b) => Math.max(b, n));
-          return n;
-        });
-        setLog(perfect ? `* PERFECT PARRY! -${refl}` : `* Parried! -${refl}`);
-        pushFlash(perfect ? "perfect" : "parry");
-        setIncoming(null);
-      } else {
-        // Mistimed — take partial damage
-        setPlayerHp((hp) => {
-          const next = Math.max(0, hp - inc.attack.damage);
-          if (next === 0) setState("defeat");
-          return next;
-        });
-        setCombo(0);
-        setLog("* Mistimed! You take the blow.");
-        pushFlash("hit");
-        setIncoming(null);
-      }
+      tryParry();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [pushFlash]);
+  }, [tryParry]);
+
+  // Mouse: left click anywhere on the page (handled by arena onClick too)
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      // Ignore clicks on actual UI buttons
+      const t = e.target as HTMLElement | null;
+      if (t && t.closest("button")) return;
+      e.preventDefault();
+      tryParry();
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [tryParry]);
 
   // Telegraph animation tick
   const [, force] = useState(0);
