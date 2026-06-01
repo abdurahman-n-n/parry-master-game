@@ -27,6 +27,7 @@ interface Props {
   character: CharacterDef;
   enemy: EnemyDef;
   wave: number;
+  difficulty?: Difficulty;
   onEnd: (result: FightResult) => void;
 }
 
