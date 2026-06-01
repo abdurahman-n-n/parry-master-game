@@ -94,6 +94,9 @@ function OwnedCard({
             <span className="inline-block h-3 w-3 border border-border" style={{ background: item.color }} />
           )}
           {item.name}
+          {item.kind === "upgrade" && (
+            <span className="text-[10px] text-accent">×{getUpgradeCount(item.id)}</span>
+          )}
         </div>
         {item.kind === "ability" && (
           <div className="border border-border px-2 py-0.5 text-[9px] tracking-widest">[E]</div>
