@@ -4,7 +4,7 @@ import { PixelCharacter } from "./PixelCharacters";
 import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
-import { isOwned, getEquippedSkinColor } from "./inventory";
+import { isOwned, getEquippedSkinColor, getEquippedAbility } from "./inventory";
 
 interface Incoming {
   uid: number;
@@ -62,6 +62,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
   const strikeDmg = ownsDmgUp ? 2 : 1;
   const cdAdjust = ownsCdDown ? -2000 : 0;
   const skinColor = getEquippedSkinColor();
+  const equippedAbility = getEquippedAbility(); // "instakill" | "dash" | null
 
   const [state, setState] = useState<GameState>("playing");
   const [playerHp, setPlayerHp] = useState(character.maxHp + (ownsHpUp ? 1 : 0));
@@ -288,8 +289,12 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
         blockHeldRef.current = true;
         return;
       }
-      if (k === "q") { e.preventDefault(); useInstakill(); return; }
-      if (k === "e") { e.preventDefault(); useDash(); return; }
+      if (k === "e") {
+        e.preventDefault();
+        if (equippedAbility === "instakill") useInstakill();
+        else if (equippedAbility === "dash") useDash();
+        return;
+      }
       if (e.code === "Space") { e.preventDefault(); tryAttack(); return; }
       if (e.code === "Escape") {
         if (stateRef.current !== "playing") return;
@@ -308,7 +313,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, [tryAttack, triggerBlockTap, useDash, useInstakill]);
+  }, [tryAttack, triggerBlockTap, useDash, useInstakill, equippedAbility]);
 
   // Left mouse click = attack
   useEffect(() => {
@@ -586,34 +591,41 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
         <EnemyHealth enemy={enemy} hp={enemyHp} />
         <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" />
 
-        {/* Abilities bar */}
-        <div className="flex items-center gap-2">
-          {ABILITIES.map((a) => {
-            const ready = a.id === "instakill" ? instaReady : dashReady;
-            const rem = a.id === "instakill" ? instaCdRem : dashCdRem;
+        {/* Equipped ability */}
+        {(() => {
+          if (!equippedAbility) {
             return (
-              <button
-                key={a.id}
-                onClick={() => (a.id === "instakill" ? useInstakill() : useDash())}
-                disabled={!ready}
-                className="flex-1 border-2 border-border bg-background px-2 py-1 text-left text-[9px] uppercase tracking-widest text-foreground hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-background disabled:hover:text-foreground"
-              >
-                <div className="flex items-center justify-between">
-                  <span>[{a.hotkey}] {a.name}</span>
-                  <span className="text-muted-foreground">
-                    {ready ? (a.gemCost > 0 ? `${a.gemCost}💎` : "FREE") : `${rem}s`}
-                  </span>
-                </div>
-              </button>
+              <div className="border-2 border-dashed border-border bg-background px-3 py-2 text-center text-[9px] uppercase tracking-widest text-muted-foreground">
+                No ability equipped — equip one in Inventory
+              </div>
             );
-          })}
-        </div>
+          }
+          const a = ABILITIES.find((x) => x.id === equippedAbility);
+          if (!a) return null;
+          const ready = a.id === "instakill" ? instaReady : dashReady;
+          const rem = a.id === "instakill" ? instaCdRem : dashCdRem;
+          const onUse = () => (a.id === "instakill" ? useInstakill() : useDash());
+          return (
+            <button
+              onClick={onUse}
+              disabled={!ready}
+              className="w-full border-2 border-border bg-background px-3 py-2 text-left text-[10px] uppercase tracking-widest text-foreground hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-background disabled:hover:text-foreground"
+            >
+              <div className="flex items-center justify-between">
+                <span>[E] {a.name}</span>
+                <span className="text-muted-foreground">
+                  {ready ? (a.gemCost > 0 ? `${a.gemCost}💎` : "FREE") : `${rem}s`}
+                </span>
+              </div>
+            </button>
+          );
+        })()}
 
         <div className="mt-1 border-2 border-border bg-background px-3 py-2 text-[10px] uppercase tracking-widest text-foreground">
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ WASD ] Move &middot; [ F ] Block &middot; [ Space / Click ] Strike &middot; [ Q ] Insta-kill &middot; [ E ] Dash &middot; [ Esc ] Pause
+          [ WASD ] Move &middot; [ F ] Block &middot; [ Space / Click ] Strike &middot; [ E ] Ability &middot; [ Esc ] Pause
         </div>
       </div>
 
