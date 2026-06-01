@@ -23,6 +23,7 @@ export interface EnemyDef {
   name: string;
   title: string;
   maxHp: number;
+  isBoss?: boolean;
   /** color in oklch or hex for the sprite */
   color: string;
   shape: EnemyShape;

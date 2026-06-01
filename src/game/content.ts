@@ -1,6 +1,6 @@
 import type { AttackPattern, CharacterDef, EnemyDef } from "./types";
 
-// Sudden-death tuning: one hit = lethal. Windows below differ per enemy "feel".
+// Sudden-death for the player; regulars die in 1 parry; bosses take 5-10.
 
 const mk = (
   id: string,
@@ -12,8 +12,8 @@ const mk = (
   kind,
   windupMs,
   parryWindowMs,
-  damage: 1,
-  reflect: 1,
+  damage: 1, // any hit kills the player
+  reflect: 1, // each successful parry = 1 wound
 });
 
 export const DEFAULT_CHARACTER: CharacterDef = {
@@ -24,11 +24,12 @@ export const DEFAULT_CHARACTER: CharacterDef = {
   ability: { name: "Determination", description: "One soul. One chance." },
 };
 
-export const ENEMIES: EnemyDef[] = [
+// ----- Regular enemies: 1 parry = dead -----
+export const REGULAR_ENEMIES: EnemyDef[] = [
   {
     id: "hollow-knight",
     name: "Hollow Knight",
-    title: "The trainer · balanced rhythm",
+    title: "Balanced rhythm",
     maxHp: 1,
     color: "oklch(0.70 0.18 285)",
     shape: "pentagon",
@@ -52,22 +53,9 @@ export const ENEMIES: EnemyDef[] = [
     cadenceMs: [400, 700],
   },
   {
-    id: "colossus",
-    name: "Colossus",
-    title: "Slow · heavy · forgiving",
-    maxHp: 1,
-    color: "oklch(0.65 0.22 30)",
-    shape: "hex",
-    attacks: [
-      mk("heavy-a", "heavy", 1500, 260),
-      mk("heavy-b", "heavy", 1750, 240),
-    ],
-    cadenceMs: [900, 1400],
-  },
-  {
     id: "phantom",
     name: "Phantom",
-    title: "Erratic · random tempo",
+    title: "Erratic tempo",
     maxHp: 1,
     color: "oklch(0.85 0.18 200)",
     shape: "circle",
@@ -81,7 +69,7 @@ export const ENEMIES: EnemyDef[] = [
   {
     id: "twin-fang",
     name: "Twin Fang",
-    title: "Chaining strikes · short cadence",
+    title: "Chaining strikes",
     maxHp: 1,
     color: "oklch(0.78 0.20 130)",
     shape: "triangle",
@@ -91,20 +79,76 @@ export const ENEMIES: EnemyDef[] = [
     ],
     cadenceMs: [350, 600],
   },
+];
+
+// ----- Bosses: 5-10 parries to kill, appear every 5th wave -----
+export const BOSSES: EnemyDef[] = [
+  {
+    id: "colossus",
+    name: "Colossus",
+    title: "Wave 5 · slow & heavy",
+    maxHp: 5,
+    isBoss: true,
+    color: "oklch(0.65 0.22 30)",
+    shape: "hex",
+    attacks: [
+      mk("c-heavy", "heavy", 1500, 240),
+      mk("c-slash", "slash", 1100, 180),
+    ],
+    cadenceMs: [800, 1200],
+  },
+  {
+    id: "warden",
+    name: "Warden",
+    title: "Wave 10 · relentless",
+    maxHp: 7,
+    isBoss: true,
+    color: "oklch(0.60 0.20 60)",
+    shape: "diamond",
+    attacks: [
+      mk("w-slash", "slash", 700, 140),
+      mk("w-thrust", "thrust", 500, 110),
+      mk("w-heavy", "heavy", 1200, 180),
+    ],
+    cadenceMs: [500, 900],
+  },
   {
     id: "void-queen",
     name: "Void Queen",
-    title: "Final test · mixed mastery",
-    maxHp: 1,
+    title: "Wave 15 · mixed mastery",
+    maxHp: 9,
+    isBoss: true,
     color: "oklch(0.55 0.25 320)",
     shape: "star",
     attacks: [
-      mk("vq-slash", "slash", 750, 130),
-      mk("vq-thrust", "thrust", 450, 100),
-      mk("vq-heavy", "heavy", 1300, 180),
+      mk("vq-slash", "slash", 700, 120),
+      mk("vq-thrust", "thrust", 420, 95),
+      mk("vq-heavy", "heavy", 1200, 160),
     ],
-    cadenceMs: [450, 900],
+    cadenceMs: [400, 800],
+  },
+  {
+    id: "abyss-lord",
+    name: "Abyss Lord",
+    title: "Wave 20+ · the final test",
+    maxHp: 10,
+    isBoss: true,
+    color: "oklch(0.45 0.22 305)",
+    shape: "star",
+    attacks: [
+      mk("a-slash", "slash", 600, 100),
+      mk("a-thrust", "thrust", 380, 80),
+      mk("a-heavy", "heavy", 1100, 140),
+    ],
+    cadenceMs: [350, 700],
   },
 ];
 
-export const DEFAULT_ENEMY = ENEMIES[0];
+/** Pick the enemy for a given 1-based wave. Every 5th = boss. */
+export function enemyForWave(wave: number): EnemyDef {
+  if (wave % 5 === 0) {
+    const bossIndex = Math.min(BOSSES.length - 1, Math.floor(wave / 5) - 1);
+    return BOSSES[bossIndex];
+  }
+  return REGULAR_ENEMIES[Math.floor(Math.random() * REGULAR_ENEMIES.length)];
+}

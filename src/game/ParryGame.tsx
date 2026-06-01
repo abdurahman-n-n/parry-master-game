@@ -13,13 +13,14 @@ type Flash = { uid: number; kind: "parry" | "hit" | "perfect"; at: number };
 interface Props {
   character: CharacterDef;
   enemy: EnemyDef;
-  onExit: () => void;
+  wave: number;
+  onEnd: (result: "victory" | "defeat") => void;
 }
 
 const ARENA_W = 640;
 const ARENA_H = 360;
 
-export function ParryGame({ character, enemy, onExit }: Props) {
+export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [state, setState] = useState<GameState>("playing");
   const [playerHp, setPlayerHp] = useState(character.maxHp);
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
@@ -44,6 +45,13 @@ export function ParryGame({ character, enemy, onExit }: Props) {
     setFlashes((arr) => [...arr, f]);
     setTimeout(() => setFlashes((arr) => arr.filter((x) => x.uid !== f.uid)), 500);
   }, []);
+
+  // Auto-advance to the shell when the fight resolves
+  useEffect(() => {
+    if (state === "playing") return;
+    const t = setTimeout(() => onEnd(state === "victory" ? "victory" : "defeat"), 1300);
+    return () => clearTimeout(t);
+  }, [state, onEnd]);
 
   // Schedule next attack
   useEffect(() => {
@@ -154,11 +162,15 @@ export function ParryGame({ character, enemy, onExit }: Props) {
       {/* HUD */}
       <div className="flex w-full max-w-[640px] items-center justify-between text-[10px] uppercase tracking-widest">
         <button
-          onClick={onExit}
+          onClick={() => onEnd("defeat")}
           className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
         >
-          ← Menu
+          ← Abandon
         </button>
+        <div className="text-foreground">
+          Wave <span className="text-accent">{wave}</span>
+          {enemy.isBoss && <span className="ml-2 text-danger">⚠ BOSS</span>}
+        </div>
         <div className="text-muted-foreground">
           Combo <span className="text-foreground">{combo}</span> · Best{" "}
           <span className="text-foreground">{bestCombo}</span>
@@ -206,24 +218,18 @@ export function ParryGame({ character, enemy, onExit }: Props) {
         {state !== "playing" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/85 text-center">
             <div className="text-2xl tracking-widest text-foreground">
-              {state === "victory" ? "VICTORY" : "GAME OVER"}
+              {state === "victory" ? "VICTORY" : "DEFEATED"}
             </div>
             <div className="text-[10px] uppercase text-muted-foreground">
-              Best combo: {bestCombo}
+              Combo: {bestCombo}
             </div>
-            <button
-              onClick={onExit}
-              className="mt-2 border border-border bg-foreground px-3 py-2 text-[10px] uppercase tracking-widest text-background hover:bg-accent"
-            >
-              Return
-            </button>
           </div>
         )}
       </div>
 
       {/* Status + log — one mistake is lethal */}
       <div className="flex w-full max-w-[640px] flex-col gap-2">
-        <StatusRow label={enemy.name.toUpperCase()} alive={enemyHp > 0} color="var(--color-accent)" />
+        <EnemyHealth enemy={enemy} hp={enemyHp} />
         <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" />
         <div className="mt-1 border-2 border-border bg-background px-3 py-2 text-[10px] uppercase tracking-widest text-foreground">
           {log}
@@ -362,6 +368,43 @@ function StatusRow({
         style={{ color: alive ? "var(--color-foreground)" : "var(--color-danger)" }}
       >
         {alive ? "Alive" : "Down"}
+      </div>
+    </div>
+  );
+}
+
+function EnemyHealth({ enemy, hp }: { enemy: EnemyDef; hp: number }) {
+  // Regulars use the simple Alive/Down row; bosses get HP pips.
+  if (!enemy.isBoss || enemy.maxHp <= 1) {
+    return (
+      <StatusRow
+        label={enemy.name.toUpperCase()}
+        alive={hp > 0}
+        color="var(--color-accent)"
+      />
+    );
+  }
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">
+        {enemy.name.toUpperCase()}
+      </div>
+      <div className="flex flex-1 items-center gap-1">
+        {Array.from({ length: enemy.maxHp }).map((_, i) => {
+          const filled = i < hp;
+          return (
+            <div
+              key={i}
+              className="h-4 flex-1 border-2 border-border transition-all duration-200"
+              style={{
+                background: filled ? enemy.color : "transparent",
+              }}
+            />
+          );
+        })}
+      </div>
+      <div className="w-16 text-right text-[9px] uppercase tracking-widest text-foreground">
+        {hp}/{enemy.maxHp}
       </div>
     </div>
   );
