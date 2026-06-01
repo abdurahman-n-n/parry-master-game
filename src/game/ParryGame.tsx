@@ -510,10 +510,29 @@ export function ParryGame({ character, enemy: baseEnemy, wave, difficulty, onEnd
           )
         )}
 
+        {/* Player shadow */}
+        <div
+          className="pointer-events-none absolute -translate-x-1/2 rounded-[50%]"
+          style={{
+            left: player.x,
+            top: player.y + 24 * depthScale(player.y),
+            width: 52 * depthScale(player.y),
+            height: 12 * depthScale(player.y),
+            background: "radial-gradient(ellipse, rgba(0,0,0,0.55), rgba(0,0,0,0))",
+            zIndex: Math.round(player.y),
+          }}
+        />
+
         {/* Player sprite */}
         <div
           className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{ left: player.x, top: player.y }}
+          style={{
+            left: player.x,
+            top: player.y,
+            transform: `translate(-50%,-50%) scale(${depthScale(player.y)})`,
+            transformOrigin: "center bottom",
+            zIndex: Math.round(player.y) + 1,
+          }}
         >
           <PixelCharacter
             skinId={equipped.skinId}
