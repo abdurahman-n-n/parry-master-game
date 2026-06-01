@@ -59,7 +59,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
 
   // Schedule next attack
   useEffect(() => {
-    if (state !== "playing") return;
+    if (state !== "playing" || paused) return;
     if (incoming) return;
     const [a, b] = enemy.cadenceMs;
     const delay = a + Math.random() * (b - a);
@@ -68,13 +68,14 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       setIncoming({ uid: uidRef.current++, attack: atk, spawnedAt: performance.now() });
     }, delay);
     return () => clearTimeout(t);
-  }, [state, incoming, enemy]);
+  }, [state, incoming, enemy, paused]);
 
   // Resolve attack if not parried in time
   useEffect(() => {
-    if (!incoming || state !== "playing") return;
+    if (!incoming || state !== "playing" || paused) return;
     const timeToHit = incoming.attack.windupMs;
     const timeoutId = setTimeout(() => {
+      if (pausedRef.current) return;
       // Player missed parry — take damage
       const dmg = incoming.attack.damage;
       setPlayerHp((hp) => {
@@ -88,7 +89,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       setIncoming(null);
     }, timeToHit + incoming.attack.parryWindowMs / 2);
     return () => clearTimeout(timeoutId);
-  }, [incoming, state, enemy.name, pushFlash]);
+  }, [incoming, state, enemy.name, pushFlash, paused]);
+
 
   // Core parry action — fired by Space or mouse click
   const tryParry = useCallback(() => {
