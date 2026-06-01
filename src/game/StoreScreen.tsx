@@ -74,6 +74,7 @@ export function StoreScreen({ onBack }: { onBack: () => void }) {
 function StoreCard({ item, owned, onBuy }: { item: StoreItem; owned: boolean; onBuy: () => void }) {
   const isUpgrade = item.kind === "upgrade";
   const price = getUpgradePrice(item);
+  const gemPrice = getUpgradeGemCost(item);
   const stack = isUpgrade ? getUpgradeCount(item.id) : 0;
   const disabled = !isUpgrade && owned;
   return (
