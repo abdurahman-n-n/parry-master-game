@@ -155,11 +155,15 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       {/* HUD */}
       <div className="flex w-full max-w-[640px] items-center justify-between text-[10px] uppercase tracking-widest">
         <button
-          onClick={onExit}
+          onClick={() => onEnd("defeat")}
           className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
         >
-          ← Menu
+          ← Abandon
         </button>
+        <div className="text-foreground">
+          Wave <span className="text-accent">{wave}</span>
+          {enemy.isBoss && <span className="ml-2 text-danger">⚠ BOSS</span>}
+        </div>
         <div className="text-muted-foreground">
           Combo <span className="text-foreground">{combo}</span> · Best{" "}
           <span className="text-foreground">{bestCombo}</span>
@@ -207,24 +211,18 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
         {state !== "playing" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/85 text-center">
             <div className="text-2xl tracking-widest text-foreground">
-              {state === "victory" ? "VICTORY" : "GAME OVER"}
+              {state === "victory" ? "VICTORY" : "DEFEATED"}
             </div>
             <div className="text-[10px] uppercase text-muted-foreground">
-              Best combo: {bestCombo}
+              Combo: {bestCombo}
             </div>
-            <button
-              onClick={onExit}
-              className="mt-2 border border-border bg-foreground px-3 py-2 text-[10px] uppercase tracking-widest text-background hover:bg-accent"
-            >
-              Return
-            </button>
           </div>
         )}
       </div>
 
       {/* Status + log — one mistake is lethal */}
       <div className="flex w-full max-w-[640px] flex-col gap-2">
-        <StatusRow label={enemy.name.toUpperCase()} alive={enemyHp > 0} color="var(--color-accent)" />
+        <EnemyHealth enemy={enemy} hp={enemyHp} />
         <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" />
         <div className="mt-1 border-2 border-border bg-background px-3 py-2 text-[10px] uppercase tracking-widest text-foreground">
           {log}
