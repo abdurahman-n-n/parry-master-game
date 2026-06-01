@@ -4,7 +4,7 @@ import { PixelCharacter } from "./PixelCharacters";
 import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
-import { isOwned, getEquippedSkinColor, getEquippedAbility } from "./inventory";
+import { isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility } from "./inventory";
 
 interface Incoming {
   uid: number;
