@@ -9,6 +9,7 @@ import {
   getCredits, getGems, getCrowns,
 } from "./Currency";
 import { findCharacter, getEquipped } from "./characters";
+import { DIFFICULTIES, getDifficulty, setDifficulty, type Difficulty } from "./difficulty";
 import type { EnemyDef } from "./types";
 
 type Screen = "menu" | "fight" | "gameover" | "settings" | "shop";
