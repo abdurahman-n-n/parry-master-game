@@ -555,7 +555,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ WASD ] Move/Dodge &middot; [ Space / Click ] Block → Riposte (1.5s) &middot; [ Esc ] Pause
+          [ WASD ] Move/Dodge &middot; [ Space / Click ] Close = Attack · Far = Block → Riposte &middot; [ Esc ] Pause
         </div>
       </div>
 
