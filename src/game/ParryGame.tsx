@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AttackPattern, CharacterDef, EnemyDef, GameState } from "./types";
-import { PixelHero } from "./PixelHero";
+import { PixelCharacter } from "./PixelCharacters";
 import { PixelEnemy } from "./PixelEnemy";
-import { CurrencyHUD, getCredits, getGems, rewardFor } from "./Currency";
+import {
+  CurrencyHUD, getCredits, getGems, getCrowns, rewardFor,
+} from "./Currency";
+import { getEquipped, findSkin } from "./characters";
 
 interface Incoming {
   uid: number;
@@ -10,7 +13,7 @@ interface Incoming {
   spawnedAt: number;
 }
 
-type Flash = { uid: number; kind: "parry" | "hit" | "perfect"; at: number };
+type Flash = { uid: number; kind: "parry" | "hit" | "perfect" | "dodge"; at: number };
 
 export interface FightResult {
   result: "victory" | "defeat";
@@ -28,6 +31,31 @@ interface Props {
 
 const ARENA_W = 640;
 const ARENA_H = 360;
+const ENEMY_X = ARENA_W / 2;
+const ENEMY_Y = ARENA_H * 0.30;
+const PLAYER_SPEED = 200; // px/s
+const PLAYER_RADIUS = 18;
+const RIPOSTE_MS = 1500;
+const BLOCK_RAISE_MS = 450; // how long a block stays "up" after pressing
+
+// ----- Danger zone geometry -----
+type Zone =
+  | { kind: "slash"; cx: number; cy: number; w: number; h: number }
+  | { kind: "thrust"; cx: number; cy: number; w: number; h: number }
+  | { kind: "heavy"; cx: number; cy: number; r: number };
+
+function zoneFor(attack: AttackPattern): Zone {
+  if (attack.kind === "thrust") return { kind: "thrust", cx: ENEMY_X, cy: ENEMY_Y + 120, w: 70, h: 240 };
+  if (attack.kind === "heavy")  return { kind: "heavy",  cx: ENEMY_X, cy: ENEMY_Y + 40,  r: 180 };
+  return { kind: "slash", cx: ENEMY_X, cy: ENEMY_Y + 110, w: 320, h: 200 };
+}
+function insideZone(px: number, py: number, z: Zone): boolean {
+  if (z.kind === "heavy") {
+    const dx = px - z.cx, dy = py - z.cy;
+    return dx * dx + dy * dy <= z.r * z.r;
+  }
+  return Math.abs(px - z.cx) <= z.w / 2 && Math.abs(py - z.cy) <= z.h / 2;
+}
 
 export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [state, setState] = useState<GameState>("playing");
@@ -41,7 +69,25 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [paused, setPaused] = useState(false);
   const [credits] = useState(() => getCredits());
   const [gems] = useState(() => getGems());
+  const [crowns] = useState(() => getCrowns());
   const [pendingReward, setPendingReward] = useState<{ credits: number; gems: number } | null>(null);
+  const [pose, setPose] = useState<"idle" | "strike" | "hit">("idle");
+  const [killPops, setKillPops] = useState<{ uid: number; x: number; y: number }[]>([]);
+
+  // Equipped skin + effects
+  const equipped = useRef(getEquipped()).current;
+  const skinEffects = findSkin(equipped.skinId)?.effects ?? {};
+
+  // Player position (mutable ref) + force re-render at rAF speed
+  const playerRef = useRef({ x: ARENA_W / 2, y: ARENA_H * 0.78 });
+  const keysRef = useRef<Record<string, boolean>>({});
+  const [, tick] = useState(0);
+
+  // Block / riposte state machine
+  const blockUntilRef = useRef(0);     // block is "up" if performance.now() < this
+  const riposteUntilRef = useRef(0);   // riposte window
+  const lastBlockPressRef = useRef(0); // cooldown
+  const [riposteEndAt, setRiposteEndAt] = useState(0);
 
   const fightStartRef = useRef<number>(performance.now());
   const uidRef = useRef(1);
@@ -49,8 +95,6 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   stateRef.current = state;
   const incomingRef = useRef<Incoming | null>(null);
   incomingRef.current = incoming;
-  const playerHpRef = useRef(playerHp);
-  playerHpRef.current = playerHp;
   const enemyHpRef = useRef(enemyHp);
   enemyHpRef.current = enemyHp;
   const pausedRef = useRef(paused);
@@ -65,7 +109,6 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           : { credits: 0, gems: 0, speedBonus: 0 };
       setPendingReward({ credits: reward.credits, gems: reward.gems });
       setState(result);
-      // Defer onEnd via the result-watcher effect (keeps the flash visible).
       (endFight as any)._payload = { result, credits: reward.credits, gems: reward.gems, fightMs };
     },
     [enemy.isBoss],
@@ -77,7 +120,14 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     setTimeout(() => setFlashes((arr) => arr.filter((x) => x.uid !== f.uid)), 500);
   }, []);
 
-  // Auto-advance to the shell when the fight resolves
+  const spawnKillPop = useCallback(() => {
+    if (!skinEffects.killNumbers) return;
+    const uid = uidRef.current++;
+    setKillPops((arr) => [...arr, { uid, x: ENEMY_X, y: ENEMY_Y - 10 }]);
+    setTimeout(() => setKillPops((arr) => arr.filter((p) => p.uid !== uid)), 900);
+  }, [skinEffects.killNumbers]);
+
+  // Resolve on victory/defeat → tell shell
   useEffect(() => {
     if (state === "playing") return;
     const payload = (endFight as any)._payload as FightResult | undefined;
@@ -86,8 +136,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
         onEnd(
           payload ?? {
             result: state === "victory" ? "victory" : "defeat",
-            credits: 0,
-            gems: 0,
+            credits: 0, gems: 0,
             fightMs: performance.now() - fightStartRef.current,
           },
         ),
@@ -109,131 +158,180 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     return () => clearTimeout(t);
   }, [state, incoming, enemy, paused]);
 
-  // Resolve attack if not parried in time
+  // Resolve attack at landing moment
   useEffect(() => {
     if (!incoming || state !== "playing" || paused) return;
-    const timeToHit = incoming.attack.windupMs;
+    const landAt = incoming.attack.windupMs;
     const timeoutId = setTimeout(() => {
       if (pausedRef.current) return;
-      // Player missed parry — take damage
-      const dmg = incoming.attack.damage;
+      const player = playerRef.current;
+      const zone = zoneFor(incoming.attack);
+      const inDanger = insideZone(player.x, player.y, zone);
+      const now = performance.now();
+      const blockUp = now < blockUntilRef.current;
+
+      if (!inDanger) {
+        // Free dodge
+        setCombo(0);
+        setLog(`* You sidestep the ${incoming.attack.kind}.`);
+        pushFlash("dodge");
+        setIncoming(null);
+        return;
+      }
+      if (blockUp) {
+        // Successful block → open riposte window
+        const until = performance.now() + RIPOSTE_MS;
+        riposteUntilRef.current = until;
+        setRiposteEndAt(until);
+        setCombo((c) => {
+          const n = c + 1;
+          setBestCombo((b) => Math.max(b, n));
+          return n;
+        });
+        setLog(`* Blocked! Strike back within 1.5s.`);
+        pushFlash("parry");
+        setIncoming(null);
+        return;
+      }
+      // Took the hit
       setPlayerHp((hp) => {
-        const next = Math.max(0, hp - dmg);
+        const next = Math.max(0, hp - incoming.attack.damage);
         if (next === 0) endFight("defeat");
         return next;
       });
       setCombo(0);
-      setLog(`* ${enemy.name}'s ${incoming.attack.kind} lands. -${dmg} HP`);
+      setLog(`* ${enemy.name}'s ${incoming.attack.kind} lands. -${incoming.attack.damage} HP`);
       pushFlash("hit");
+      setPose("hit");
+      setTimeout(() => setPose("idle"), 250);
       setIncoming(null);
-    }, timeToHit + incoming.attack.parryWindowMs / 2);
+    }, landAt);
     return () => clearTimeout(timeoutId);
-  }, [incoming, state, enemy.name, pushFlash, paused]);
+  }, [incoming, state, enemy.name, pushFlash, paused, endFight]);
 
-
-  // Core parry action — fired by Space or mouse click
-  const tryParry = useCallback(() => {
+  // Action: block or riposte (Space / Click)
+  const tryAction = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
-    const inc = incomingRef.current;
     const now = performance.now();
-    if (!inc) {
-      setCombo(0);
-      setLog("* You swing at empty air.");
-      return;
-    }
-    const elapsed = now - inc.spawnedAt;
-    const hitAt = inc.attack.windupMs;
-    const half = inc.attack.parryWindowMs / 2;
-    const delta = Math.abs(elapsed - hitAt);
-    if (delta <= half) {
-      const perfect = delta <= half * 0.35;
-      const refl = perfect ? Math.round(inc.attack.reflect * 1.5) : inc.attack.reflect;
+    // Riposte takes priority if window open
+    if (now < riposteUntilRef.current) {
+      riposteUntilRef.current = 0;
+      setRiposteEndAt(0);
+      const refl = 1; // each successful riposte = 1 wound
       setEnemyHp((hp) => {
         const next = Math.max(0, hp - refl);
-        if (next === 0) endFight("victory");
+        if (next === 0) {
+          spawnKillPop();
+          endFight("victory");
+        }
         return next;
       });
-      setCombo((c) => {
-        const n = c + 1;
-        setBestCombo((b) => Math.max(b, n));
-        return n;
-      });
-      setLog(perfect ? `* PERFECT PARRY! -${refl}` : `* Parried! -${refl}`);
-      pushFlash(perfect ? "perfect" : "parry");
-      setIncoming(null);
-    } else {
-      setPlayerHp((hp) => {
-        const next = Math.max(0, hp - inc.attack.damage);
-        if (next === 0) endFight("defeat");
-        return next;
-      });
-      setCombo(0);
-      setLog("* Mistimed! You take the blow.");
-      pushFlash("hit");
-      setIncoming(null);
+      setLog(`* Riposte! -${refl}`);
+      pushFlash("perfect");
+      setPose("strike");
+      setTimeout(() => setPose("idle"), 250);
+      return;
     }
-  }, [pushFlash]);
+    // Otherwise raise block (with tiny cooldown)
+    if (now - lastBlockPressRef.current < 200) return;
+    lastBlockPressRef.current = now;
+    blockUntilRef.current = now + BLOCK_RAISE_MS;
+    setPose("strike");
+    setTimeout(() => setPose("idle"), 200);
+    setLog("* Block raised.");
+  }, [pushFlash, endFight, spawnKillPop]);
 
-  // Keyboard: Space
+  // Keyboard handlers
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      e.preventDefault();
-      tryParry();
+    const down = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if (k === "w" || k === "a" || k === "s" || k === "d") {
+        keysRef.current[k] = true;
+        e.preventDefault();
+        return;
+      }
+      if (e.code === "Space") {
+        e.preventDefault();
+        tryAction();
+        return;
+      }
+      if (e.code === "Escape") {
+        if (stateRef.current !== "playing") return;
+        e.preventDefault();
+        setPaused((p) => {
+          if (!p) setIncoming(null);
+          return !p;
+        });
+      }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [tryParry]);
+    const up = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if (k === "w" || k === "a" || k === "s" || k === "d") {
+        keysRef.current[k] = false;
+      }
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, [tryAction]);
 
-  // Mouse: left click anywhere on the page (handled by arena onClick too)
+  // Mouse click on arena = action
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (e.button !== 0) return;
-      // Ignore clicks on actual UI buttons
       const t = e.target as HTMLElement | null;
       if (t && t.closest("button")) return;
       e.preventDefault();
-      tryParry();
+      tryAction();
     };
     window.addEventListener("mousedown", handler);
     return () => window.removeEventListener("mousedown", handler);
-  }, [tryParry]);
+  }, [tryAction]);
 
-  // Keyboard: Escape — toggle pause (only while playing)
+  // rAF loop: move player + repaint
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.code !== "Escape") return;
-      if (stateRef.current !== "playing") return;
-      e.preventDefault();
-      setPaused((p) => {
-        // Clear any pending attack so it doesn't land on resume
-        if (!p) setIncoming(null);
-        return !p;
-      });
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
-
-
-  // Telegraph animation tick
-  const [, force] = useState(0);
-  useEffect(() => {
-    if (!incoming) return;
     let raf = 0;
-    const loop = () => {
-      force((n) => n + 1);
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (!pausedRef.current && stateRef.current === "playing") {
+        const k = keysRef.current;
+        let dx = 0, dy = 0;
+        if (k["w"]) dy -= 1;
+        if (k["s"]) dy += 1;
+        if (k["a"]) dx -= 1;
+        if (k["d"]) dx += 1;
+        if (dx || dy) {
+          const len = Math.hypot(dx, dy);
+          dx /= len; dy /= len;
+          const p = playerRef.current;
+          p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * PLAYER_SPEED * dt));
+          p.y = Math.max(ARENA_H * 0.45, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * PLAYER_SPEED * dt));
+        }
+      }
+      tick((n) => (n + 1) % 1000000);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [incoming]);
+  }, []);
 
   const telegraphProgress = incoming
     ? Math.min(1, (performance.now() - incoming.spawnedAt) / incoming.attack.windupMs)
     : 0;
-
   const overlayFlash = flashes[flashes.length - 1];
+  const now = performance.now();
+  const blockUp = now < blockUntilRef.current;
+  const inRiposte = now < riposteUntilRef.current;
+  const riposteRemaining = inRiposte ? Math.max(0, riposteEndAt - now) : 0;
+  const player = playerRef.current;
+  const zone = incoming ? zoneFor(incoming.attack) : null;
+  const zoneAlpha = incoming ? 0.18 + 0.45 * telegraphProgress : 0;
+  const slashColor = skinEffects.slashColor;
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background p-4 font-pixel">
@@ -249,7 +347,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           Wave <span className="text-accent">{wave}</span>
           {enemy.isBoss && <span className="ml-2 text-danger">⚠ BOSS</span>}
         </div>
-        <CurrencyHUD credits={credits} gems={gems} reward={pendingReward} />
+        <CurrencyHUD credits={credits} gems={gems} crowns={crowns} reward={pendingReward} />
         <div className="text-muted-foreground">
           Combo <span className="text-foreground">{combo}</span> · Best{" "}
           <span className="text-foreground">{bestCombo}</span>
@@ -262,31 +360,107 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
         style={{ width: ARENA_W, height: ARENA_H }}
       >
         {/* Enemy */}
-        <EnemySprite enemy={enemy} attacking={!!incoming} progress={telegraphProgress} />
-
-        {/* Player heart */}
-        {/* Hero sprite (replaces the heart) */}
-        <div className="absolute left-1/2 top-[78%] -translate-x-1/2 -translate-y-1/2">
-          <PixelHero
-            size={64}
-            pose={
-              overlayFlash?.kind === "hit"
-                ? "hit"
-                : overlayFlash?.kind === "parry" || overlayFlash?.kind === "perfect"
-                ? "strike"
-                : "idle"
-            }
-            key={overlayFlash?.uid ?? "idle"}
-          />
-        </div>
-
-        {/* Telegraph bar */}
-        {incoming && (
-          <TelegraphBar
-            attack={incoming.attack}
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+          style={{ left: ENEMY_X, top: ENEMY_Y }}
+        >
+          <PixelEnemy
+            id={enemy.id}
+            isBoss={enemy.isBoss}
+            accent={enemy.color}
+            size={enemy.isBoss ? 128 : 96}
+            attacking={!!incoming}
             progress={telegraphProgress}
           />
+          <div className="mt-1 text-center text-[9px] uppercase tracking-widest text-foreground">
+            {enemy.name}
+            {enemy.title && (
+              <div className="text-[8px] text-muted-foreground normal-case tracking-wider">{enemy.title}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Danger zone */}
+        {incoming && zone && (
+          zone.kind === "heavy" ? (
+            <div
+              className="pointer-events-none absolute rounded-full"
+              style={{
+                left: zone.cx - zone.r,
+                top: zone.cy - zone.r,
+                width: zone.r * 2,
+                height: zone.r * 2,
+                background: `color-mix(in oklab, var(--color-danger) ${zoneAlpha * 100}%, transparent)`,
+                border: "2px dashed var(--color-danger)",
+              }}
+            />
+          ) : (
+            <div
+              className="pointer-events-none absolute"
+              style={{
+                left: zone.cx - zone.w / 2,
+                top: zone.cy - zone.h / 2,
+                width: zone.w,
+                height: zone.h,
+                background: `color-mix(in oklab, var(--color-danger) ${zoneAlpha * 100}%, transparent)`,
+                border: "2px dashed var(--color-danger)",
+              }}
+            />
+          )
         )}
+
+        {/* Player sprite */}
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2"
+          style={{ left: player.x, top: player.y }}
+        >
+          <PixelCharacter
+            skinId={equipped.skinId}
+            size={56}
+            pose={pose}
+            key={overlayFlash?.uid ?? pose}
+          />
+          {blockUp && (
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+              style={{
+                width: 70, height: 70,
+                border: "2px solid var(--color-accent)",
+                background: "color-mix(in oklab, var(--color-accent) 12%, transparent)",
+              }}
+            />
+          )}
+        </div>
+
+        {/* Riposte indicator */}
+        {inRiposte && (
+          <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 text-center">
+            <div className="text-[10px] uppercase tracking-[0.3em] text-accent">RIPOSTE!</div>
+            <div className="mx-auto mt-1 h-1 w-32 bg-background">
+              <div
+                className="h-full bg-accent"
+                style={{ width: `${(riposteRemaining / RIPOSTE_MS) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Kill numbers VFX */}
+        {killPops.map((p) => (
+          <div
+            key={p.uid}
+            className="pointer-events-none absolute -translate-x-1/2 font-pixel text-2xl font-bold"
+            style={{
+              left: p.x,
+              top: p.y,
+              color: slashColor ?? "oklch(0.65 0.25 25)",
+              textShadow: "2px 2px 0 #000",
+              animation: "killPop 900ms ease-out forwards",
+            }}
+          >
+            99999999
+          </div>
+        ))}
 
         {/* Flash overlays */}
         {overlayFlash && (
@@ -297,8 +471,10 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
                 overlayFlash.kind === "hit"
                   ? "color-mix(in oklab, var(--color-danger) 35%, transparent)"
                   : overlayFlash.kind === "perfect"
-                  ? "color-mix(in oklab, var(--color-accent) 45%, transparent)"
-                  : "color-mix(in oklab, var(--color-foreground) 25%, transparent)",
+                  ? `color-mix(in oklab, ${slashColor ?? "var(--color-accent)"} 45%, transparent)`
+                  : overlayFlash.kind === "dodge"
+                  ? "color-mix(in oklab, var(--color-foreground) 12%, transparent)"
+                  : "color-mix(in oklab, var(--color-accent) 25%, transparent)",
               animation: "parryFlash 280ms ease-out forwards",
             }}
           />
@@ -308,9 +484,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
         {paused && state === "playing" && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/90 text-center">
             <div className="text-2xl tracking-[0.4em] text-foreground">PAUSED</div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              [ Esc ] to resume
-            </div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">[ Esc ] to resume</div>
             <div className="flex gap-2">
               <button
                 onClick={() => setPaused(false)}
@@ -334,9 +508,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
             <div className="text-2xl tracking-widest text-foreground">
               {state === "victory" ? "VICTORY" : "DEFEATED"}
             </div>
-            <div className="text-[10px] uppercase text-muted-foreground">
-              Combo: {bestCombo}
-            </div>
+            <div className="text-[10px] uppercase text-muted-foreground">Combo: {bestCombo}</div>
             {state === "victory" && pendingReward && (
               <div className="text-[10px] uppercase tracking-widest text-accent">
                 Reward: +{pendingReward.credits} credits
@@ -347,7 +519,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
         )}
       </div>
 
-      {/* Status + log — one mistake is lethal */}
+      {/* Status + log */}
       <div className="flex w-full max-w-[640px] flex-col gap-2">
         <EnemyHealth enemy={enemy} hp={enemyHp} />
         <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" />
@@ -355,131 +527,31 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ Space ] / [ Click ] Parry &middot; [ Esc ] Pause &middot; One Mistake Is Death
+          [ WASD ] Move/Dodge &middot; [ Space / Click ] Block → Riposte (1.5s) &middot; [ Esc ] Pause
         </div>
       </div>
 
       <style>{`
-        @keyframes parryFlash {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
-        @keyframes enemyShake {
-          0%,100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
+        @keyframes parryFlash { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes killPop {
+          0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
+          25% { transform: translate(-50%, -10px) scale(1.2); opacity: 1; }
+          100% { transform: translate(-50%, -60px) scale(1); opacity: 0; }
         }
       `}</style>
     </div>
   );
 }
 
-const SHAPE_CLIP: Record<string, string> = {
-  pentagon: "polygon(50% 0,100% 35%,80% 100%,20% 100%,0 35%)",
-  diamond: "polygon(50% 0,100% 50%,50% 100%,0 50%)",
-  circle: "circle(50% at 50% 50%)",
-  triangle: "polygon(50% 0,100% 100%,0 100%)",
-  hex: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)",
-  star:
-    "polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)",
-};
-
-function EnemySprite({
-  enemy,
-  attacking,
-  progress,
-}: {
-  enemy: EnemyDef;
-  attacking: boolean;
-  progress: number;
-}) {
-  return (
-    <div className="absolute left-1/2 top-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-      <PixelEnemy
-        id={enemy.id}
-        isBoss={enemy.isBoss}
-        accent={enemy.color}
-        size={enemy.isBoss ? 128 : 96}
-        attacking={attacking}
-        progress={progress}
-      />
-      <div className="mt-1 text-center text-[9px] uppercase tracking-widest text-foreground">
-        {enemy.name}
-        {enemy.title && (
-          <div className="text-[8px] text-muted-foreground normal-case tracking-wider">
-            {enemy.title}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TelegraphBar({
-  attack,
-  progress,
-}: {
-  attack: AttackPattern;
-  progress: number;
-}) {
-  const windowFrac = attack.parryWindowMs / attack.windupMs / 2;
-  const center = 1;
-  const start = Math.max(0, center - windowFrac);
-  const end = Math.min(1, center + windowFrac);
-  return (
-    <div className="absolute bottom-3 left-1/2 w-[80%] -translate-x-1/2">
-      <div className="relative h-3 border-2 border-border bg-background">
-        {/* parry window marker */}
-        <div
-          className="absolute top-0 h-full"
-          style={{
-            left: `${start * 100}%`,
-            width: `${(end - start) * 100}%`,
-            background: "var(--color-accent)",
-            opacity: 0.55,
-          }}
-        />
-        {/* progress fill */}
-        <div
-          className="absolute top-0 h-full"
-          style={{
-            width: `${progress * 100}%`,
-            background: "var(--color-danger)",
-          }}
-        />
-      </div>
-      <div className="mt-1 text-center text-[8px] uppercase tracking-widest text-muted-foreground">
-        {attack.kind} — press space at the marker
-      </div>
-    </div>
-  );
-}
-
-function StatusRow({
-  label,
-  alive,
-  color,
-}: {
-  label: string;
-  alive: boolean;
-  color: string;
-}) {
+function StatusRow({ label, alive, color }: { label: string; alive: boolean; color: string }) {
   return (
     <div className="flex items-center gap-3">
       <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">{label}</div>
       <div className="relative h-4 flex-1 border-2 border-border bg-background">
-        <div
-          className="h-full transition-all duration-200"
-          style={{
-            width: alive ? "100%" : "0%",
-            background: color,
-          }}
-        />
+        <div className="h-full transition-all duration-200" style={{ width: alive ? "100%" : "0%", background: color }} />
       </div>
-      <div
-        className="w-16 text-right text-[9px] uppercase tracking-widest"
-        style={{ color: alive ? "var(--color-foreground)" : "var(--color-danger)" }}
-      >
+      <div className="w-16 text-right text-[9px] uppercase tracking-widest"
+        style={{ color: alive ? "var(--color-foreground)" : "var(--color-danger)" }}>
         {alive ? "Alive" : "Down"}
       </div>
     </div>
@@ -487,38 +559,19 @@ function StatusRow({
 }
 
 function EnemyHealth({ enemy, hp }: { enemy: EnemyDef; hp: number }) {
-  // Regulars use the simple Alive/Down row; bosses get HP pips.
   if (!enemy.isBoss || enemy.maxHp <= 1) {
-    return (
-      <StatusRow
-        label={enemy.name.toUpperCase()}
-        alive={hp > 0}
-        color="var(--color-accent)"
-      />
-    );
+    return <StatusRow label={enemy.name.toUpperCase()} alive={hp > 0} color="var(--color-accent)" />;
   }
   return (
     <div className="flex items-center gap-3">
-      <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">
-        {enemy.name.toUpperCase()}
-      </div>
+      <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">{enemy.name.toUpperCase()}</div>
       <div className="flex flex-1 items-center gap-1">
-        {Array.from({ length: enemy.maxHp }).map((_, i) => {
-          const filled = i < hp;
-          return (
-            <div
-              key={i}
-              className="h-4 flex-1 border-2 border-border transition-all duration-200"
-              style={{
-                background: filled ? enemy.color : "transparent",
-              }}
-            />
-          );
-        })}
+        {Array.from({ length: enemy.maxHp }).map((_, i) => (
+          <div key={i} className="h-4 flex-1 border-2 border-border transition-all duration-200"
+            style={{ background: i < hp ? enemy.color : "transparent" }} />
+        ))}
       </div>
-      <div className="w-16 text-right text-[9px] uppercase tracking-widest text-foreground">
-        {hp}/{enemy.maxHp}
-      </div>
+      <div className="w-16 text-right text-[9px] uppercase tracking-widest text-foreground">{hp}/{enemy.maxHp}</div>
     </div>
   );
 }
