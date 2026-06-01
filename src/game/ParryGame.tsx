@@ -372,3 +372,40 @@ function StatusRow({
     </div>
   );
 }
+
+function EnemyHealth({ enemy, hp }: { enemy: EnemyDef; hp: number }) {
+  // Regulars use the simple Alive/Down row; bosses get HP pips.
+  if (!enemy.isBoss || enemy.maxHp <= 1) {
+    return (
+      <StatusRow
+        label={enemy.name.toUpperCase()}
+        alive={hp > 0}
+        color="var(--color-accent)"
+      />
+    );
+  }
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">
+        {enemy.name.toUpperCase()}
+      </div>
+      <div className="flex flex-1 items-center gap-1">
+        {Array.from({ length: enemy.maxHp }).map((_, i) => {
+          const filled = i < hp;
+          return (
+            <div
+              key={i}
+              className="h-4 flex-1 border-2 border-border transition-all duration-200"
+              style={{
+                background: filled ? enemy.color : "transparent",
+              }}
+            />
+          );
+        })}
+      </div>
+      <div className="w-16 text-right text-[9px] uppercase tracking-widest text-foreground">
+        {hp}/{enemy.maxHp}
+      </div>
+    </div>
+  );
+}
