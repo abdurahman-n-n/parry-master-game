@@ -100,7 +100,7 @@ function StoreCard({ item, owned, onBuy }: { item: StoreItem; owned: boolean; on
       <div className="mt-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest">
         <span className="inline-flex items-center gap-1">
           <span>{price}</span><CreditIcon size={11} />
-          {item.gemCost ? (<><span className="ml-1">{item.gemCost}</span><GemIcon size={11} /></>) : null}
+          {gemPrice > 0 ? (<><span className="ml-1">{gemPrice}</span><GemIcon size={11} /></>) : null}
         </span>
         <button
           onClick={onBuy}
