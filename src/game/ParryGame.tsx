@@ -46,6 +46,13 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     setTimeout(() => setFlashes((arr) => arr.filter((x) => x.uid !== f.uid)), 500);
   }, []);
 
+  // Auto-advance to the shell when the fight resolves
+  useEffect(() => {
+    if (state === "playing") return;
+    const t = setTimeout(() => onEnd(state === "victory" ? "victory" : "defeat"), 1300);
+    return () => clearTimeout(t);
+  }, [state, onEnd]);
+
   // Schedule next attack
   useEffect(() => {
     if (state !== "playing") return;
