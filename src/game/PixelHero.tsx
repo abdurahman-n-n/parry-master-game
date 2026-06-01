@@ -1,61 +1,69 @@
-// Tiny 12x12 pixel hero sprite for PARRY!
-// Two poses (idle, strike) + brief flash tinting.
+// Tiny pixel "kid with a sword" sprite for PARRY!
+// Big head, small body, idle bob + strike + hit poses.
 
 type Pose = "idle" | "strike" | "hit";
 
-const SKIN = "oklch(0.85 0.08 60)";
-const ARMOR = "oklch(0.78 0.05 285)";
-const ARMOR_DARK = "oklch(0.55 0.10 285)";
+const SKIN = "oklch(0.82 0.09 55)";
+const HAIR = "oklch(0.35 0.06 60)";
+const SHIRT = "oklch(0.55 0.20 25)";        // red shirt
+const PANTS = "oklch(0.45 0.08 260)";       // blue pants
+const SHOE  = "oklch(0.25 0.04 60)";
 const BLADE = "oklch(0.97 0.01 280)";
-const HILT = "oklch(0.45 0.14 285)";
-const CAPE = "oklch(0.55 0.20 25)";
+const HILT  = "oklch(0.45 0.14 285)";
 
 type Cell = [number, number, string];
 
-// 12x12 grid. (x, y, color)
+// 12x12 grid. Kid is centered around x=4..7.
 const IDLE: Cell[] = [
-  // helmet
-  [5, 1, ARMOR_DARK], [6, 1, ARMOR_DARK],
-  [4, 2, ARMOR], [5, 2, ARMOR], [6, 2, ARMOR], [7, 2, ARMOR],
-  [4, 3, ARMOR], [5, 3, SKIN], [6, 3, SKIN], [7, 3, ARMOR],
-  // shoulders / chest
-  [3, 4, ARMOR_DARK], [4, 4, ARMOR], [5, 4, ARMOR], [6, 4, ARMOR], [7, 4, ARMOR], [8, 4, ARMOR_DARK],
-  [4, 5, ARMOR], [5, 5, ARMOR], [6, 5, ARMOR], [7, 5, ARMOR],
-  [4, 6, ARMOR_DARK], [5, 6, ARMOR], [6, 6, ARMOR], [7, 6, ARMOR_DARK],
-  // belt
-  [4, 7, HILT], [5, 7, HILT], [6, 7, HILT], [7, 7, HILT],
-  // legs
-  [4, 8, ARMOR], [5, 8, ARMOR], [6, 8, ARMOR], [7, 8, ARMOR],
-  [4, 9, ARMOR_DARK], [5, 9, ARMOR_DARK], [6, 9, ARMOR_DARK], [7, 9, ARMOR_DARK],
-  [3, 10, ARMOR_DARK], [4, 10, ARMOR_DARK], [7, 10, ARMOR_DARK], [8, 10, ARMOR_DARK],
-  // shield (left)
-  [2, 5, CAPE], [2, 6, CAPE], [2, 7, CAPE],
-  // resting sword (right side, pointing down)
-  [9, 5, HILT], [9, 6, BLADE], [9, 7, BLADE], [9, 8, BLADE], [9, 9, BLADE],
+  // hair
+  [4, 1, HAIR], [5, 1, HAIR], [6, 1, HAIR], [7, 1, HAIR],
+  [3, 2, HAIR], [4, 2, HAIR], [5, 2, HAIR], [6, 2, HAIR], [7, 2, HAIR], [8, 2, HAIR],
+  // face
+  [3, 3, SKIN], [4, 3, SKIN], [5, 3, SKIN], [6, 3, SKIN], [7, 3, SKIN], [8, 3, SKIN],
+  [3, 4, SKIN], [4, 4, HAIR], [5, 4, SKIN], [6, 4, SKIN], [7, 4, HAIR], [8, 4, SKIN],
+  [3, 5, SKIN], [4, 5, SKIN], [5, 5, SKIN], [6, 5, SKIN], [7, 5, SKIN], [8, 5, SKIN],
+  // neck
+  [5, 6, SKIN], [6, 6, SKIN],
+  // shirt + arms
+  [3, 7, SHIRT], [4, 7, SHIRT], [5, 7, SHIRT], [6, 7, SHIRT], [7, 7, SHIRT], [8, 7, SHIRT],
+  [3, 8, SKIN],  [4, 8, SHIRT], [5, 8, SHIRT], [6, 8, SHIRT], [7, 8, SHIRT], [8, 8, SKIN],
+  // pants
+  [4, 9, PANTS], [5, 9, PANTS], [6, 9, PANTS], [7, 9, PANTS],
+  [4, 10, PANTS], [5, 10, PANTS], [6, 10, PANTS], [7, 10, PANTS],
+  // shoes
+  [4, 11, SHOE], [5, 11, SHOE], [6, 11, SHOE], [7, 11, SHOE],
+  // sword resting at right side (down)
+  [9, 7, HILT],
+  [9, 8, BLADE],
+  [9, 9, BLADE],
+  [9, 10, BLADE],
 ];
 
-// Strike pose: sword raised up-right, shield forward
+// Strike: sword raised up-right, body slightly leaning
 const STRIKE: Cell[] = [
-  // helmet (slight tilt)
-  [5, 1, ARMOR_DARK], [6, 1, ARMOR_DARK],
-  [4, 2, ARMOR], [5, 2, ARMOR], [6, 2, ARMOR], [7, 2, ARMOR],
-  [4, 3, ARMOR], [5, 3, SKIN], [6, 3, SKIN], [7, 3, ARMOR],
-  // body
-  [3, 4, ARMOR_DARK], [4, 4, ARMOR], [5, 4, ARMOR], [6, 4, ARMOR], [7, 4, ARMOR], [8, 4, ARMOR_DARK],
-  [4, 5, ARMOR], [5, 5, ARMOR], [6, 5, ARMOR], [7, 5, ARMOR],
-  [4, 6, ARMOR_DARK], [5, 6, ARMOR], [6, 6, ARMOR], [7, 6, ARMOR_DARK],
-  [4, 7, HILT], [5, 7, HILT], [6, 7, HILT], [7, 7, HILT],
-  [4, 8, ARMOR], [5, 8, ARMOR], [6, 8, ARMOR], [7, 8, ARMOR],
-  [4, 9, ARMOR_DARK], [5, 9, ARMOR_DARK], [6, 9, ARMOR_DARK], [7, 9, ARMOR_DARK],
-  [3, 10, ARMOR_DARK], [4, 10, ARMOR_DARK], [7, 10, ARMOR_DARK], [8, 10, ARMOR_DARK],
-  // shield thrust forward (in front of body)
-  [3, 5, CAPE], [3, 6, CAPE], [3, 7, CAPE],
+  // hair
+  [4, 1, HAIR], [5, 1, HAIR], [6, 1, HAIR], [7, 1, HAIR],
+  [3, 2, HAIR], [4, 2, HAIR], [5, 2, HAIR], [6, 2, HAIR], [7, 2, HAIR], [8, 2, HAIR],
+  // face (mouth open, focused)
+  [3, 3, SKIN], [4, 3, SKIN], [5, 3, SKIN], [6, 3, SKIN], [7, 3, SKIN], [8, 3, SKIN],
+  [3, 4, SKIN], [4, 4, HAIR], [5, 4, SKIN], [6, 4, SKIN], [7, 4, HAIR], [8, 4, SKIN],
+  [3, 5, SKIN], [4, 5, SKIN], [5, 5, HAIR], [6, 5, HAIR], [7, 5, SKIN], [8, 5, SKIN],
+  // neck
+  [5, 6, SKIN], [6, 6, SKIN],
+  // shirt
+  [3, 7, SHIRT], [4, 7, SHIRT], [5, 7, SHIRT], [6, 7, SHIRT], [7, 7, SHIRT],
+  [4, 8, SHIRT], [5, 8, SHIRT], [6, 8, SHIRT], [7, 8, SHIRT], [8, 8, SKIN],
+  // pants (one leg forward)
+  [4, 9, PANTS], [5, 9, PANTS], [6, 9, PANTS], [7, 9, PANTS],
+  [3, 10, PANTS], [4, 10, PANTS], [6, 10, PANTS], [7, 10, PANTS],
+  // shoes
+  [3, 11, SHOE], [4, 11, SHOE], [6, 11, SHOE], [7, 11, SHOE],
   // sword raised diagonally up-right
-  [8, 5, HILT],
-  [9, 4, BLADE],
-  [10, 3, BLADE],
-  [11, 2, BLADE],
-  [11, 1, BLADE],
+  [8, 7, HILT],
+  [9, 6, BLADE],
+  [10, 5, BLADE],
+  [11, 4, BLADE],
+  [11, 3, BLADE],
 ];
 
 const POSES: Record<Pose, Cell[]> = {
@@ -89,7 +97,7 @@ export function PixelHero({
           pose === "idle"
             ? "heroBob 1.6s ease-in-out infinite"
             : pose === "strike"
-            ? "heroStrike 220ms ease-out"
+            ? "heroStrike 260ms ease-out"
             : "heroShake 240ms ease-out",
       }}
     >
@@ -115,7 +123,7 @@ export function PixelHero({
         }
         @keyframes heroStrike {
           0% { transform: translateY(0) rotate(0deg); }
-          40% { transform: translateY(-4px) rotate(-4deg); }
+          40% { transform: translateY(-5px) rotate(-6deg); }
           100% { transform: translateY(0) rotate(0deg); }
         }
         @keyframes heroShake {
