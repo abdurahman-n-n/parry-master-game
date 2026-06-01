@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
-  itemsByKind, isOwned, buyItem, type ItemKind, type StoreItem,
+  itemsByKind, isOwned, buyItem, getUpgradeCount, getUpgradePrice,
+  type ItemKind, type StoreItem,
 } from "./inventory";
 import { CurrencyHUD, CreditIcon, GemIcon, getCredits, getGems } from "./Currency";
 
