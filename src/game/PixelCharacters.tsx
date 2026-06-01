@@ -1,7 +1,7 @@
 // Original pixel sprites for the three playable characters.
 // 12x12 grid, same format as PixelHero.
 
-type Pose = "idle" | "strike" | "hit";
+type Pose = "idle" | "walk" | "strike" | "hit";
 type Cell = [number, number, string];
 
 interface Variant {

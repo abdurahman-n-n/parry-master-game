@@ -33,7 +33,7 @@ const ARENA_W = 640;
 const ARENA_H = 360;
 const ENEMY_X = ARENA_W / 2;
 const ENEMY_Y = ARENA_H * 0.30;
-const PLAYER_SPEED = 200; // px/s
+const PLAYER_SPEED = 340; // px/s
 const PLAYER_RADIUS = 18;
 const RIPOSTE_MS = 1500;
 const BLOCK_RAISE_MS = 450; // how long a block stays "up" after pressing
@@ -71,7 +71,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [gems] = useState(() => getGems());
   const [crowns] = useState(() => getCrowns());
   const [pendingReward, setPendingReward] = useState<{ credits: number; gems: number } | null>(null);
-  const [pose, setPose] = useState<"idle" | "strike" | "hit">("idle");
+  const [pose, setPose] = useState<"idle" | "walk" | "strike" | "hit">("idle");
+  const [isWalking, setIsWalking] = useState(false);
   const [killPops, setKillPops] = useState<{ uid: number; x: number; y: number }[]>([]);
 
   // Equipped skin + effects
