@@ -222,6 +222,7 @@ export function PixelCharacter({
       )}
       <style>{`
         @keyframes heroBob { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-2px);} }
+        @keyframes heroWalk { 0%,100% { transform: translateY(0) rotate(-1deg);} 25% { transform: translateY(-4px) rotate(1deg);} 50% { transform: translateY(0) rotate(-1deg);} 75% { transform: translateY(-4px) rotate(1deg);} }
         @keyframes heroStrike { 0%{transform:translateY(0) rotate(0);} 40%{transform:translateY(-5px) rotate(-6deg);} 100%{transform:translateY(0) rotate(0);} }
         @keyframes heroShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);} }
         @keyframes heroFlash { from{opacity:1;} to{opacity:0;} }
