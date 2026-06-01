@@ -1,44 +1,52 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_CHARACTER, enemyForWave } from "./content";
-import { ParryGame } from "./ParryGame";
+import { ParryGame, type FightResult } from "./ParryGame";
 import { PixelShield, PixelSword } from "./PixelHeart";
 import { SettingsScreen, getSavedAccent, applyAccent } from "./SettingsScreen";
+import { CurrencyHUD, addCredits, addGems, getCredits, getGems } from "./Currency";
 import type { EnemyDef } from "./types";
 
-type Screen = "menu" | "fight" | "between" | "gameover" | "settings";
+type Screen = "menu" | "fight" | "gameover" | "settings";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
   const [wave, setWave] = useState(1);
   const [enemy, setEnemy] = useState<EnemyDef>(() => enemyForWave(1));
   const [bestWave, setBestWave] = useState(1);
+  const [credits, setCredits] = useState(0);
+  const [gems, setGems] = useState(0);
+  const [lastReward, setLastReward] = useState<{ credits: number; gems: number } | null>(null);
 
-  // Load + apply saved accent color on mount
+  // Load + apply saved accent + currencies on mount
   useEffect(() => {
     applyAccent(getSavedAccent());
+    setCredits(getCredits());
+    setGems(getGems());
   }, []);
 
   const startRun = () => {
     const first = enemyForWave(1);
     setWave(1);
     setEnemy(first);
+    setLastReward(null);
     setScreen("fight");
   };
 
-  const onFightEnd = (result: "victory" | "defeat") => {
-    if (result === "victory") {
-      setScreen("between");
+  const onFightEnd = (res: FightResult) => {
+    if (res.result === "victory") {
+      // Persist rewards
+      if (res.credits > 0) setCredits(addCredits(res.credits));
+      if (res.gems > 0) setGems(addGems(res.gems));
+      setLastReward({ credits: res.credits, gems: res.gems });
+      // Auto-continue: jump straight to the next wave.
+      const next = wave + 1;
+      setWave(next);
+      setEnemy(enemyForWave(next));
+      setScreen("fight");
     } else {
       setBestWave((b) => Math.max(b, wave));
       setScreen("gameover");
     }
-  };
-
-  const nextWave = () => {
-    const next = wave + 1;
-    setWave(next);
-    setEnemy(enemyForWave(next));
-    setScreen("fight");
   };
 
   if (screen === "fight") {
@@ -57,41 +65,6 @@ export function GameShell() {
     return <SettingsScreen onBack={() => setScreen("menu")} />;
   }
 
-
-  if (screen === "between") {
-    const upcoming = enemyForWave(wave + 1);
-    const bossNext = upcoming.isBoss;
-    return (
-      <CenterCard>
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Wave {wave} cleared
-        </div>
-        <div className="text-3xl tracking-[0.3em] text-foreground">VICTORY</div>
-        <div className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-          Next: Wave {wave + 1}
-        </div>
-        <div
-          className="text-[11px] uppercase tracking-widest"
-          style={{ color: bossNext ? "var(--color-danger)" : "var(--color-foreground)" }}
-        >
-          {bossNext ? `⚠ BOSS — ${upcoming.name}` : upcoming.name}
-        </div>
-        <button
-          onClick={nextWave}
-          className="mt-2 border-2 border-border bg-foreground px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent"
-        >
-          ▶ Continue
-        </button>
-        <button
-          onClick={() => setScreen("menu")}
-          className="text-[9px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
-        >
-          Abandon run
-        </button>
-      </CenterCard>
-    );
-  }
-
   if (screen === "gameover") {
     return (
       <CenterCard>
@@ -102,6 +75,7 @@ export function GameShell() {
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
           Best wave reached: {bestWave}
         </div>
+        <CurrencyHUD credits={credits} gems={gems} />
         <button
           onClick={startRun}
           className="mt-2 border-2 border-border bg-foreground px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent"
@@ -125,6 +99,7 @@ export function GameShell() {
         <h1 className="text-4xl tracking-[0.3em] sm:text-6xl">PARRY!</h1>
         <PixelSword size={44} />
       </div>
+      <CurrencyHUD credits={credits} gems={gems} />
       <p className="max-w-md text-center text-[10px] uppercase leading-relaxed tracking-widest text-muted-foreground">
         Survive the waves. Regulars fall in one strike. Every 5th wave: a boss.
       </p>
@@ -146,12 +121,19 @@ export function GameShell() {
         <div>[ Space ] — Parry &amp; Strike</div>
         <div className="mt-1">One mistake = death.</div>
         <div className="mt-1 text-foreground">Bosses take 5–10 parries to fall.</div>
+        <div className="mt-1">Victory auto-continues — abandon via [ Esc ].</div>
         {bestWave > 1 && (
           <div className="mt-1 text-accent">Best wave: {bestWave}</div>
         )}
+        {lastReward && (
+          <div className="mt-1 text-accent">
+            Last run reward: +{lastReward.credits} credits
+            {lastReward.gems > 0 ? ` · +${lastReward.gems} gem` : ""}
+          </div>
+        )}
       </div>
       <div className="text-[8px] uppercase tracking-widest text-muted-foreground">
-        v0.3 · wave mode
+        v0.4 · credits &amp; gems
       </div>
     </div>
   );

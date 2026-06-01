@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AttackPattern, CharacterDef, EnemyDef, GameState } from "./types";
 import { PixelHero } from "./PixelHero";
 import { PixelEnemy } from "./PixelEnemy";
+import { CurrencyHUD, getCredits, getGems, rewardFor } from "./Currency";
 
 interface Incoming {
   uid: number;
@@ -11,11 +12,18 @@ interface Incoming {
 
 type Flash = { uid: number; kind: "parry" | "hit" | "perfect"; at: number };
 
+export interface FightResult {
+  result: "victory" | "defeat";
+  credits: number;
+  gems: number;
+  fightMs: number;
+}
+
 interface Props {
   character: CharacterDef;
   enemy: EnemyDef;
   wave: number;
-  onEnd: (result: "victory" | "defeat") => void;
+  onEnd: (result: FightResult) => void;
 }
 
 const ARENA_W = 640;
@@ -31,7 +39,11 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [bestCombo, setBestCombo] = useState(0);
   const [log, setLog] = useState<string>("* The battle begins.");
   const [paused, setPaused] = useState(false);
+  const [credits] = useState(() => getCredits());
+  const [gems] = useState(() => getGems());
+  const [pendingReward, setPendingReward] = useState<{ credits: number; gems: number } | null>(null);
 
+  const fightStartRef = useRef<number>(performance.now());
   const uidRef = useRef(1);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -44,6 +56,21 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
+  const endFight = useCallback(
+    (result: "victory" | "defeat") => {
+      const fightMs = performance.now() - fightStartRef.current;
+      const reward =
+        result === "victory"
+          ? rewardFor({ isBoss: !!enemy.isBoss, fightMs })
+          : { credits: 0, gems: 0, speedBonus: 0 };
+      setPendingReward({ credits: reward.credits, gems: reward.gems });
+      setState(result);
+      // Defer onEnd via the result-watcher effect (keeps the flash visible).
+      (endFight as any)._payload = { result, credits: reward.credits, gems: reward.gems, fightMs };
+    },
+    [enemy.isBoss],
+  );
+
   const pushFlash = useCallback((kind: Flash["kind"]) => {
     const f: Flash = { uid: uidRef.current++, kind, at: performance.now() };
     setFlashes((arr) => [...arr, f]);
@@ -53,9 +80,21 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   // Auto-advance to the shell when the fight resolves
   useEffect(() => {
     if (state === "playing") return;
-    const t = setTimeout(() => onEnd(state === "victory" ? "victory" : "defeat"), 1300);
+    const payload = (endFight as any)._payload as FightResult | undefined;
+    const t = setTimeout(
+      () =>
+        onEnd(
+          payload ?? {
+            result: state === "victory" ? "victory" : "defeat",
+            credits: 0,
+            gems: 0,
+            fightMs: performance.now() - fightStartRef.current,
+          },
+        ),
+      1300,
+    );
     return () => clearTimeout(t);
-  }, [state, onEnd]);
+  }, [state, onEnd, endFight]);
 
   // Schedule next attack
   useEffect(() => {
@@ -80,7 +119,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       const dmg = incoming.attack.damage;
       setPlayerHp((hp) => {
         const next = Math.max(0, hp - dmg);
-        if (next === 0) setState("defeat");
+        if (next === 0) endFight("defeat");
         return next;
       });
       setCombo(0);
@@ -111,7 +150,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       const refl = perfect ? Math.round(inc.attack.reflect * 1.5) : inc.attack.reflect;
       setEnemyHp((hp) => {
         const next = Math.max(0, hp - refl);
-        if (next === 0) setState("victory");
+        if (next === 0) endFight("victory");
         return next;
       });
       setCombo((c) => {
@@ -125,7 +164,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     } else {
       setPlayerHp((hp) => {
         const next = Math.max(0, hp - inc.attack.damage);
-        if (next === 0) setState("defeat");
+        if (next === 0) endFight("defeat");
         return next;
       });
       setCombo(0);
@@ -201,7 +240,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       {/* HUD */}
       <div className="flex w-full max-w-[640px] items-center justify-between text-[10px] uppercase tracking-widest">
         <button
-          onClick={() => onEnd("defeat")}
+          onClick={() => onEnd({ result: "defeat", credits: 0, gems: 0, fightMs: performance.now() - fightStartRef.current })}
           className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
         >
           ← Abandon
@@ -210,6 +249,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           Wave <span className="text-accent">{wave}</span>
           {enemy.isBoss && <span className="ml-2 text-danger">⚠ BOSS</span>}
         </div>
+        <CurrencyHUD credits={credits} gems={gems} reward={pendingReward} />
         <div className="text-muted-foreground">
           Combo <span className="text-foreground">{combo}</span> · Best{" "}
           <span className="text-foreground">{bestCombo}</span>
@@ -279,7 +319,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
                 ▶ Continue
               </button>
               <button
-                onClick={() => onEnd("defeat")}
+                onClick={() => onEnd({ result: "defeat", credits: 0, gems: 0, fightMs: performance.now() - fightStartRef.current })}
                 className="border-2 border-border bg-background px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background"
               >
                 ✕ Abandon Run
@@ -297,6 +337,12 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
             <div className="text-[10px] uppercase text-muted-foreground">
               Combo: {bestCombo}
             </div>
+            {state === "victory" && pendingReward && (
+              <div className="text-[10px] uppercase tracking-widest text-accent">
+                Reward: +{pendingReward.credits} credits
+                {pendingReward.gems > 0 ? ` · +${pendingReward.gems} gem` : ""}
+              </div>
+            )}
           </div>
         )}
       </div>
