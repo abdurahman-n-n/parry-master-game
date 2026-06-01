@@ -240,7 +240,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       {/* HUD */}
       <div className="flex w-full max-w-[640px] items-center justify-between text-[10px] uppercase tracking-widest">
         <button
-          onClick={() => onEnd("defeat")}
+          onClick={() => onEnd({ result: "defeat", credits: 0, gems: 0, fightMs: performance.now() - fightStartRef.current })}
           className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
         >
           ← Abandon
@@ -249,6 +249,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           Wave <span className="text-accent">{wave}</span>
           {enemy.isBoss && <span className="ml-2 text-danger">⚠ BOSS</span>}
         </div>
+        <CurrencyHUD credits={credits} gems={gems} reward={pendingReward} />
         <div className="text-muted-foreground">
           Combo <span className="text-foreground">{combo}</span> · Best{" "}
           <span className="text-foreground">{bestCombo}</span>
