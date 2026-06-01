@@ -336,6 +336,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const zone = incoming ? zoneFor(incoming.attack) : null;
   const zoneAlpha = incoming ? 0.18 + 0.45 * telegraphProgress : 0;
   const slashColor = skinEffects.slashColor;
+  const effectivePose: "idle" | "walk" | "strike" | "hit" =
+    pose === "idle" && isWalking ? "walk" : pose;
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background p-4 font-pixel">
