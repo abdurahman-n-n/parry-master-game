@@ -30,6 +30,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   const [combo, setCombo] = useState(0);
   const [bestCombo, setBestCombo] = useState(0);
   const [log, setLog] = useState<string>("* The battle begins.");
+  const [paused, setPaused] = useState(false);
 
   const uidRef = useRef(1);
   const stateRef = useRef(state);
@@ -40,6 +41,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
   playerHpRef.current = playerHp;
   const enemyHpRef = useRef(enemyHp);
   enemyHpRef.current = enemyHp;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
 
   const pushFlash = useCallback((kind: Flash["kind"]) => {
     const f: Flash = { uid: uidRef.current++, kind, at: performance.now() };
@@ -56,7 +59,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
 
   // Schedule next attack
   useEffect(() => {
-    if (state !== "playing") return;
+    if (state !== "playing" || paused) return;
     if (incoming) return;
     const [a, b] = enemy.cadenceMs;
     const delay = a + Math.random() * (b - a);
@@ -65,13 +68,14 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       setIncoming({ uid: uidRef.current++, attack: atk, spawnedAt: performance.now() });
     }, delay);
     return () => clearTimeout(t);
-  }, [state, incoming, enemy]);
+  }, [state, incoming, enemy, paused]);
 
   // Resolve attack if not parried in time
   useEffect(() => {
-    if (!incoming || state !== "playing") return;
+    if (!incoming || state !== "playing" || paused) return;
     const timeToHit = incoming.attack.windupMs;
     const timeoutId = setTimeout(() => {
+      if (pausedRef.current) return;
       // Player missed parry — take damage
       const dmg = incoming.attack.damage;
       setPlayerHp((hp) => {
@@ -85,11 +89,12 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       setIncoming(null);
     }, timeToHit + incoming.attack.parryWindowMs / 2);
     return () => clearTimeout(timeoutId);
-  }, [incoming, state, enemy.name, pushFlash]);
+  }, [incoming, state, enemy.name, pushFlash, paused]);
+
 
   // Core parry action — fired by Space or mouse click
   const tryParry = useCallback(() => {
-    if (stateRef.current !== "playing") return;
+    if (stateRef.current !== "playing" || pausedRef.current) return;
     const inc = incomingRef.current;
     const now = performance.now();
     if (!inc) {
@@ -154,6 +159,23 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     window.addEventListener("mousedown", handler);
     return () => window.removeEventListener("mousedown", handler);
   }, [tryParry]);
+
+  // Keyboard: Escape — toggle pause (only while playing)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.code !== "Escape") return;
+      if (stateRef.current !== "playing") return;
+      e.preventDefault();
+      setPaused((p) => {
+        // Clear any pending attack so it doesn't land on resume
+        if (!p) setIncoming(null);
+        return !p;
+      });
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
 
   // Telegraph animation tick
   const [, force] = useState(0);
@@ -242,6 +264,30 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           />
         )}
 
+        {/* Pause overlay */}
+        {paused && state === "playing" && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/90 text-center">
+            <div className="text-2xl tracking-[0.4em] text-foreground">PAUSED</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              [ Esc ] to resume
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPaused(false)}
+                className="border-2 border-border bg-foreground px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent"
+              >
+                ▶ Continue
+              </button>
+              <button
+                onClick={() => onEnd("defeat")}
+                className="border-2 border-border bg-background px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background"
+              >
+                ✕ Abandon Run
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Result */}
         {state !== "playing" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/85 text-center">
@@ -263,7 +309,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ Space ] or [ Click ] — Parry &amp; Strike · One Mistake Is Death
+          [ Space ] / [ Click ] Parry &middot; [ Esc ] Pause &middot; One Mistake Is Death
         </div>
       </div>
 

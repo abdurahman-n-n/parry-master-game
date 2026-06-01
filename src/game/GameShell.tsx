@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DEFAULT_CHARACTER, enemyForWave } from "./content";
 import { ParryGame } from "./ParryGame";
 import { PixelShield, PixelSword } from "./PixelHeart";
+import { SettingsScreen, getSavedAccent, applyAccent } from "./SettingsScreen";
 import type { EnemyDef } from "./types";
 
-type Screen = "menu" | "fight" | "between" | "gameover";
+type Screen = "menu" | "fight" | "between" | "gameover" | "settings";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
   const [wave, setWave] = useState(1);
   const [enemy, setEnemy] = useState<EnemyDef>(() => enemyForWave(1));
   const [bestWave, setBestWave] = useState(1);
+
+  // Load + apply saved accent color on mount
+  useEffect(() => {
+    applyAccent(getSavedAccent());
+  }, []);
 
   const startRun = () => {
     const first = enemyForWave(1);
@@ -46,6 +52,11 @@ export function GameShell() {
       />
     );
   }
+
+  if (screen === "settings") {
+    return <SettingsScreen onBack={() => setScreen("menu")} />;
+  }
+
 
   if (screen === "between") {
     const upcoming = enemyForWave(wave + 1);
@@ -117,12 +128,20 @@ export function GameShell() {
       <p className="max-w-md text-center text-[10px] uppercase leading-relaxed tracking-widest text-muted-foreground">
         Survive the waves. Regulars fall in one strike. Every 5th wave: a boss.
       </p>
-      <button
-        onClick={startRun}
-        className="border-2 border-border bg-foreground px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-background transition-colors hover:bg-accent"
-      >
-        ▶ Begin Run
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={startRun}
+          className="border-2 border-border bg-foreground px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-background transition-colors hover:bg-accent"
+        >
+          ▶ Begin Run
+        </button>
+        <button
+          onClick={() => setScreen("settings")}
+          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+        >
+          ⚙ Settings
+        </button>
+      </div>
       <div className="border-2 border-border bg-background px-4 py-3 text-[9px] uppercase leading-relaxed tracking-widest text-muted-foreground">
         <div>[ Space ] — Parry &amp; Strike</div>
         <div className="mt-1">One mistake = death.</div>
