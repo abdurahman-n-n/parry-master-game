@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AttackPattern, CharacterDef, EnemyDef, GameState } from "./types";
 import { PixelHero } from "./PixelHero";
+import { PixelEnemy } from "./PixelEnemy";
 
 interface Incoming {
   uid: number;
