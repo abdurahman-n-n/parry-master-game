@@ -210,10 +210,32 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     return () => clearTimeout(timeoutId);
   }, [incoming, state, enemy.name, pushFlash, paused, endFight]);
 
-  // Action: block or riposte (Space / Click)
+  // Action: melee / block / riposte (Space / Click)
   const tryAction = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
     const now = performance.now();
+    // Melee: if close enough to enemy, swing
+    const p = playerRef.current;
+    const dxE = p.x - ENEMY_X, dyE = p.y - ENEMY_Y;
+    const distToEnemy = Math.hypot(dxE, dyE);
+    const MELEE_RANGE = 80;
+    if (distToEnemy <= MELEE_RANGE && now >= riposteUntilRef.current) {
+      if (now - lastBlockPressRef.current < 250) return;
+      lastBlockPressRef.current = now;
+      setEnemyHp((hp) => {
+        const next = Math.max(0, hp - 1);
+        if (next === 0) {
+          spawnKillPop();
+          endFight("victory");
+        }
+        return next;
+      });
+      setLog(`* You strike ${enemy.name}. -1`);
+      pushFlash("perfect");
+      setPose("strike");
+      setTimeout(() => setPose("idle"), 220);
+      return;
+    }
     // Riposte takes priority if window open
     if (now < riposteUntilRef.current) {
       riposteUntilRef.current = 0;
@@ -240,7 +262,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
     setPose("strike");
     setTimeout(() => setPose("idle"), 200);
     setLog("* Block raised.");
-  }, [pushFlash, endFight, spawnKillPop]);
+  }, [pushFlash, endFight, spawnKillPop, enemy.name]);
 
   // Keyboard handlers
   useEffect(() => {
@@ -533,7 +555,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ WASD ] Move/Dodge &middot; [ Space / Click ] Block → Riposte (1.5s) &middot; [ Esc ] Pause
+          [ WASD ] Move/Dodge &middot; [ Space / Click ] Close = Attack · Far = Block → Riposte &middot; [ Esc ] Pause
         </div>
       </div>
 
