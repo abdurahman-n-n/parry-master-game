@@ -423,8 +423,8 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
           <PixelCharacter
             skinId={equipped.skinId}
             size={56}
-            pose={pose}
-            key={overlayFlash?.uid ?? pose}
+            pose={effectivePose}
+            key={overlayFlash?.uid ?? effectivePose}
           />
           {blockUp && (
             <div
