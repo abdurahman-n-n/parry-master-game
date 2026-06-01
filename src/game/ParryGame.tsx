@@ -150,7 +150,7 @@ export function ParryGame({ character, enemy, wave, onEnd }: Props) {
       const refl = perfect ? Math.round(inc.attack.reflect * 1.5) : inc.attack.reflect;
       setEnemyHp((hp) => {
         const next = Math.max(0, hp - refl);
-        if (next === 0) setState("victory");
+        if (next === 0) endFight("victory");
         return next;
       });
       setCombo((c) => {
