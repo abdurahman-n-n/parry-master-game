@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AttackPattern, CharacterDef, EnemyDef, GameState } from "./types";
 import { PixelHero } from "./PixelHero";
 import { PixelEnemy } from "./PixelEnemy";
+import { CurrencyHUD, getCredits, getGems, rewardFor } from "./Currency";
 
 interface Incoming {
   uid: number;
@@ -11,11 +12,18 @@ interface Incoming {
 
 type Flash = { uid: number; kind: "parry" | "hit" | "perfect"; at: number };
 
+export interface FightResult {
+  result: "victory" | "defeat";
+  credits: number;
+  gems: number;
+  fightMs: number;
+}
+
 interface Props {
   character: CharacterDef;
   enemy: EnemyDef;
   wave: number;
-  onEnd: (result: "victory" | "defeat") => void;
+  onEnd: (result: FightResult) => void;
 }
 
 const ARENA_W = 640;
