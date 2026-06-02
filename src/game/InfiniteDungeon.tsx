@@ -59,6 +59,8 @@ export function InfiniteDungeon({ onExit }: Props) {
     addGems(GEMS_PER_WAVE);
     setCoinsEarned((c) => c + COINS_PER_WAVE);
     setGemsEarned((g) => g + GEMS_PER_WAVE);
+    // Carry HP over to the next wave.
+    setCurrentHp(res.playerHpRemaining);
     // Every 20 waves prompt a buff before next wave.
     if (wave % 20 === 0) {
       setPhase("buff");
