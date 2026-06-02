@@ -35,6 +35,7 @@ export function InfiniteDungeon({ onExit }: Props) {
   const [buffs, setBuffs] = useState<Buffs>(INITIAL_BUFFS);
   const [coinsEarned, setCoinsEarned] = useState(0);
   const [gemsEarned, setGemsEarned] = useState(0);
+  const [currentHp, setCurrentHp] = useState<number | null>(null);
   const me = getCurrentUser() ?? "";
   const best = getBestWaveFor(me);
 
@@ -43,6 +44,7 @@ export function InfiniteDungeon({ onExit }: Props) {
     setBuffs(INITIAL_BUFFS);
     setCoinsEarned(0);
     setGemsEarned(0);
+    setCurrentHp(null);
     setPhase("fight");
   };
 
