@@ -51,5 +51,6 @@ export function scoreOf(e: LeaderboardEntry): number {
 export function getLeaderboard(): LeaderboardEntry[] {
   return load()
     .filter((e) => e.gems > 0)
-    .sort((a, b) => scoreOf(b) - scoreOf(a));
+    .sort((a, b) => scoreOf(b) - scoreOf(a))
+    .slice(0, 100);
 }
