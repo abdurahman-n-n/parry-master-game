@@ -1,22 +1,40 @@
-Expand the game from 10 to **30 levels** and change enemy scaling so each fight gains **+1 enemy every 5 levels**.
+# Adaptive enemies + scaled rewards
 
-## Changes
+Scale enemies with level tier and boost late-game payouts. Tier = `floor((level-1)/10)` (0 for levels 1–10, 1 for 11–20, 2 for 21–30).
 
-**`src/game/levels.ts`**
-- `TOTAL_LEVELS`: `10` → `30`.
-- `enemyForLevel(level)`: still treats every 10th level as a boss (so bosses at 10, 20, 30). `tier = floor((level-1)/10)` already supports 3 tiers — extend `BOSS_TEMPLATES` so each tier has a distinct boss:
-  - Tier 0 (lvl 10): existing **Colossus** (heavy hitter).
-  - Tier 1 (lvl 20): **Wraith** — fast, erratic; lower HP scaling already handled.
-  - Tier 2 (lvl 30): **Sovereign** — mixes heavy + slash + thrust, high HP.
-- Regular HP formula unchanged (already scales with tier), so levels 11–29 naturally get harder.
+## `src/game/levels.ts`
 
-**`src/game/ParryGame.tsx`**
-- `enemyCountForLevel(level)`: change from `5 + floor((level-1)/10)` to `5 + floor((level-1)/5)`.
-  - Result: levels 1–5 → 5 enemies, 6–10 → 6, 11–15 → 7, … 26–30 → 10 enemies.
-- Update the doc comment to match the new rule.
+- Export a small `levelTier(level)` helper.
+- `enemyForLevel`: regular enemies get **+1 maxHp per tier** (in addition to existing scaling) and **attack windups reduced by 5% per tier** (faster hits, narrower parry windows scale proportionally so timing stays fair). Bosses get the same treatment so tier 2 boss is meaningfully harder than tier 0.
+- `rewardForLevel(level, alreadyBeaten, isBoss)`:
+  - Base credits: `15 + 5 * tier` (so +5 coins every 10 levels).
+  - Gems unchanged.
+  - If `isBoss`: double both credits and gems.
+  - Replay still pays 1/3 (floor) of the computed reward.
 
-## Notes
+## `src/game/ParryGame.tsx`
 
-- No type changes; existing spawn / chase / aggregate-HP logic already supports any enemy count.
-- Boss levels (10/20/30) still spawn `enemyCountForLevel(level)` instances of the boss — consistent with current behavior. (If you want bosses to always be solo, say so and I'll special-case `isBoss` to count = 1.)
-- Levels page / unlocks already iterate via `TOTAL_LEVELS`, so bumping to 30 automatically shows all new levels.
+- Add `enemySpeedForLevel(level) = ENEMY_SPEED * (1 + 0.1 * tier)` and use it in the chase block instead of the constant `ENEMY_SPEED`. (+10% speed every 10 levels.)
+- Enemies already chase the player; add **aiming** so attack zones face the player:
+  - Compute `aimAngle = atan2(player.y - en.y, player.x - en.x)` at the moment the attack is scheduled, store it on `Incoming`.
+  - Extend `zoneFor` to accept the angle and offset the zone in the aim direction (slash/thrust rectangles project forward from the enemy toward the player; heavy stays radial).
+  - Render the telegraph rotated by `aimAngle` so the player sees the swing pointed at them.
+- No change to enemy count or boss-vs-minion logic.
+
+## `src/game/GameShell.tsx`
+
+- Pass `enemy.isBoss` into `rewardForLevel(level, already, enemy.isBoss)` so boss rewards double.
+
+## Technical notes
+
+- Speed/hp/cadence scaling is read from `level` (passed to `ParryGame` already) so no new plumbing is needed.
+- Parry window scales with windup (e.g. `parryWindowMs * (1 - 0.05 * tier)`) so the difficulty actually rises — otherwise faster attacks with same window become easier to parry blind.
+- Aim angle is captured once per attack (at schedule time), not continuously tracked — keeps current "telegraph then commit" feel intact.
+
+## Result by tier
+
+| Tier | Levels | Speed | +HP | Hit speed | Coin reward | Boss reward |
+|------|--------|-------|-----|-----------|-------------|-------------|
+| 0 | 1–10 | 100% | +0 | 100% | 15 | 30 cr / 2 gems |
+| 1 | 11–20 | 110% | +1 | 105% faster | 20 | 40 cr / 2 gems |
+| 2 | 21–30 | 120% | +2 | 110% faster | 25 | 50 cr / 2 gems |
