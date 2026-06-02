@@ -106,7 +106,7 @@ export function enemyCountForLevel(level: number): number {
 export function ParryGame({
   character, enemy, level, onEnd,
   enemyCountOverride, hpMul = 1, dmgMul = 1, speedMul = 1, cdBonusMs = 0,
-  hudLabel = "Level", hideAbandon = false,
+  hudLabel = "Level", hideAbandon = false, startHpOverride,
 }: Props) {
   // Upgrades (stackable)
   const hpUpCount = getUpgradeCount("hp-up");
