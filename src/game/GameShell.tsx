@@ -216,6 +216,19 @@ export function GameShell() {
         >
           ▶ Play
         </button>
+        {(() => {
+          const unlocked = beaten.size >= TOTAL_LEVELS;
+          return (
+            <button
+              onClick={() => unlocked && setScreen("infinite")}
+              disabled={!unlocked}
+              title={unlocked ? "Endless waves" : `Clear all ${TOTAL_LEVELS} levels to unlock`}
+              className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-background disabled:hover:text-foreground"
+            >
+              {unlocked ? "∞ Infinite Dungeon" : "🔒 Infinite Dungeon"}
+            </button>
+          );
+        })()}
         <button
           onClick={() => setScreen("store")}
           className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
