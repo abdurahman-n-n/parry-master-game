@@ -192,7 +192,11 @@ export function ParryGame({
     if (stateRef.current !== "playing") return;
     const fightMs = performance.now() - fightStartRef.current;
     setState(result);
-    (endFight as any)._payload = { result, fightMs };
+    (endFight as any)._payload = {
+      result,
+      fightMs,
+      playerHpRemaining: result === "victory" ? playerHpRef.current : 0,
+    };
   }, []);
 
   const pushFlash = useCallback((kind: Flash["kind"]) => {
@@ -205,8 +209,11 @@ export function ParryGame({
     if (state === "playing") return;
     const payload = (endFight as any)._payload as FightResult | undefined;
     const t = setTimeout(
-      () => onEnd(payload ?? { result: state === "victory" ? "victory" : "defeat",
-        fightMs: performance.now() - fightStartRef.current }),
+      () => onEnd(payload ?? {
+        result: state === "victory" ? "victory" : "defeat",
+        fightMs: performance.now() - fightStartRef.current,
+        playerHpRemaining: state === "victory" ? playerHpRef.current : 0,
+      }),
       1100,
     );
     return () => clearTimeout(t);
