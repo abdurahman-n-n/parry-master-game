@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
+import { lsKey } from "./storage";
 
 const STORAGE_KEY = "parry-accent-rgb";
+
 const DEFAULT_RGB: [number, number, number] = [178, 132, 240];
 
 export function getSavedAccent(): [number, number, number] {
   if (typeof window === "undefined") return DEFAULT_RGB;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(lsKey(STORAGE_KEY));
     if (!raw) return DEFAULT_RGB;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length === 3) {
@@ -50,7 +52,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
   };
 
   const save = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rgb));
+    localStorage.setItem(lsKey(STORAGE_KEY), JSON.stringify(rgb));
     onBack();
   };
   const reset = () => setRgb(DEFAULT_RGB);

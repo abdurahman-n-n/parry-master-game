@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { setActiveUser, migrateLegacyIfNeeded } from "./storage";
 
 type Account = { nickname: string; password: string };
 const ACCOUNTS_KEY = "parry.accounts";
@@ -16,11 +17,15 @@ function saveAccounts(a: Account[]) {
   localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a));
 }
 export function getCurrentUser(): string | null {
-  return localStorage.getItem(CURRENT_KEY);
+  const nick = localStorage.getItem(CURRENT_KEY);
+  if (nick) setActiveUser(nick);
+  return nick;
 }
 export function logout() {
   localStorage.removeItem(CURRENT_KEY);
+  setActiveUser(null);
 }
+
 
 export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void }) {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -45,6 +50,8 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
       accounts.push({ nickname: nick, password });
       saveAccounts(accounts);
       localStorage.setItem(CURRENT_KEY, nick);
+      setActiveUser(nick);
+      migrateLegacyIfNeeded(nick);
       onAuthed(nick);
     } else {
       const found = accounts.find(
@@ -55,6 +62,8 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
         return;
       }
       localStorage.setItem(CURRENT_KEY, found.nickname);
+      setActiveUser(found.nickname);
+      migrateLegacyIfNeeded(found.nickname);
       onAuthed(found.nickname);
     }
   };
