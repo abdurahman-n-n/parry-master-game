@@ -83,39 +83,56 @@ const MINION_TEMPLATES = [
   },
 ];
 
+/** 0 for levels 1..10, 1 for 11..20, 2 for 21..30. */
+export function levelTier(level: number): number {
+  return Math.floor((level - 1) / 10);
+}
+
+/** Speed up windups by 5% per tier, and shrink parry window in proportion. */
+function scaleAttacks(attacks: AttackPattern[], tier: number): AttackPattern[] {
+  const f = 1 - 0.05 * tier;
+  return attacks.map((a) => ({
+    ...a,
+    windupMs: Math.max(120, Math.round(a.windupMs * f)),
+    parryWindowMs: Math.max(60, Math.round(a.parryWindowMs * f)),
+  }));
+}
+
 /** Levels are 1-indexed. Every 10th level is a boss. */
 export function enemyForLevel(level: number): EnemyDef {
-  const tier = Math.floor((level - 1) / 10); // 0 for levels 1..10
+  const tier = levelTier(level);
   if (level % 10 === 0) {
     const tpl = BOSS_TEMPLATES[Math.min(BOSS_TEMPLATES.length - 1, tier)];
     return {
       ...tpl,
+      attacks: scaleAttacks(tpl.attacks, tier),
       isBoss: true,
-      maxHp: 6 + tier * 2,
+      maxHp: 6 + tier * 2 + tier, // +1 HP per tier on top of existing scaling
       title: `Level ${level} · Boss`,
     };
   }
-  // Deterministic pick so each level has a stable enemy.
   const tpl = REGULAR_TEMPLATES[(level - 1) % REGULAR_TEMPLATES.length];
-  // 3-4 HP, +1 per 10-level tier. Even levels get 4 hp, odd get 3.
   const baseHp = 3 + (level % 2 === 0 ? 1 : 0);
   return {
     ...tpl,
-    maxHp: baseHp + tier,
+    attacks: scaleAttacks(tpl.attacks, tier),
+    maxHp: baseHp + tier + tier, // tier from prior rule + new +1/tier
     title: `Level ${level}`,
   };
 }
 
 /** Minion that accompanies the boss in a boss fight. Unique per boss tier. */
 export function minionForLevel(level: number): EnemyDef {
-  const tier = Math.floor((level - 1) / 10);
+  const tier = levelTier(level);
   const tpl = MINION_TEMPLATES[Math.min(MINION_TEMPLATES.length - 1, tier)];
   return {
     ...tpl,
-    maxHp: 2 + tier,
+    attacks: scaleAttacks(tpl.attacks, tier),
+    maxHp: 2 + tier + tier,
     title: `Level ${level} · Minion`,
   };
 }
+
 
 // ----- Level progress persistence -----
 const BEATEN_KEY = "parry.beatenLevels";
@@ -137,12 +154,15 @@ export function isLevelUnlocked(level: number): boolean {
   return getBeatenLevels().has(level - 1);
 }
 
-/** Reward for finishing a level. Replays pay 1/3 (floor). */
-export function rewardForLevel(level: number, alreadyBeaten: boolean) {
-  const base = { credits: 15, gems: 1 };
+/** Reward for finishing a level. Replays pay 1/3 (floor). Bosses pay double. */
+export function rewardForLevel(level: number, alreadyBeaten: boolean, isBoss = false) {
+  const tier = levelTier(level);
+  const mult = isBoss ? 2 : 1;
+  const base = { credits: (15 + 5 * tier) * mult, gems: 1 * mult };
   if (!alreadyBeaten) return base;
   return {
     credits: Math.floor(base.credits / 3),
     gems: Math.floor(base.gems / 3),
   };
 }
+

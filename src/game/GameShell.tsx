@@ -41,7 +41,7 @@ export function GameShell() {
   const onFightEnd = (res: FightResult) => {
     if (res.result === "victory") {
       const already = beaten.has(level);
-      const reward = rewardForLevel(level, already);
+      const reward = rewardForLevel(level, already, enemy.isBoss);
       if (reward.credits > 0) setCredits(addCredits(reward.credits));
       if (reward.gems > 0) setGems(addGems(reward.gems));
       setLastReward(reward);

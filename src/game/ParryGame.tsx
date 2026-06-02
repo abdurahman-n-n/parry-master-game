@@ -5,7 +5,7 @@ import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
 import { isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility } from "./inventory";
-import { minionForLevel } from "./levels";
+import { minionForLevel, levelTier } from "./levels";
 
 interface Incoming {
   uid: number;
@@ -13,7 +13,10 @@ interface Incoming {
   spawnedAt: number;
   /** Absolute landing time = spawnedAt + windupMs */
   landAt: number;
+  /** Radians, direction from enemy toward player at schedule time. */
+  aim: number;
 }
+
 
 type Flash = { uid: number; kind: "parry" | "hit" | "perfect" | "dodge" | "dash" | "instakill"; at: number };
 
@@ -41,22 +44,33 @@ const RIPOSTE_MS = 900;
 const BLOCK_RAISE_MS = 380;
 
 type Zone =
-  | { kind: "slash"; cx: number; cy: number; w: number; h: number }
-  | { kind: "thrust"; cx: number; cy: number; w: number; h: number }
-  | { kind: "heavy"; cx: number; cy: number; r: number };
+  | { kind: "slash"; cx: number; cy: number; w: number; h: number; aim: number }
+  | { kind: "thrust"; cx: number; cy: number; w: number; h: number; aim: number }
+  | { kind: "heavy"; cx: number; cy: number; r: number; aim: number };
 
-function zoneFor(attack: AttackPattern, ex: number, ey: number): Zone {
-  if (attack.kind === "thrust") return { kind: "thrust", cx: ex, cy: ey + 80, w: 90, h: 220 };
-  if (attack.kind === "heavy")  return { kind: "heavy",  cx: ex, cy: ey + 30, r: 160 };
-  return { kind: "slash", cx: ex, cy: ey + 70, w: 280, h: 180 };
+function zoneFor(attack: AttackPattern, ex: number, ey: number, aim: number): Zone {
+  const cos = Math.cos(aim), sin = Math.sin(aim);
+  if (attack.kind === "thrust") {
+    const off = 110;
+    return { kind: "thrust", cx: ex + cos * off, cy: ey + sin * off, w: 220, h: 90, aim };
+  }
+  if (attack.kind === "heavy") {
+    const off = 30;
+    return { kind: "heavy", cx: ex + cos * off, cy: ey + sin * off, r: 160, aim };
+  }
+  const off = 90;
+  return { kind: "slash", cx: ex + cos * off, cy: ey + sin * off, w: 280, h: 180, aim };
 }
 function insideZone(px: number, py: number, z: Zone): boolean {
-  if (z.kind === "heavy") {
-    const dx = px - z.cx, dy = py - z.cy;
-    return dx * dx + dy * dy <= z.r * z.r;
-  }
-  return Math.abs(px - z.cx) <= z.w / 2 && Math.abs(py - z.cy) <= z.h / 2;
+  const dx = px - z.cx, dy = py - z.cy;
+  if (z.kind === "heavy") return dx * dx + dy * dy <= z.r * z.r;
+  // Rotate point into zone local frame (zone's long axis aligned with aim).
+  const cos = Math.cos(-z.aim), sin = Math.sin(-z.aim);
+  const lx = dx * cos - dy * sin;
+  const ly = dx * sin + dy * cos;
+  return Math.abs(lx) <= z.w / 2 && Math.abs(ly) <= z.h / 2;
 }
+
 
 interface EnemyInstance {
   uid: number;
@@ -83,6 +97,9 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
   const cdAdjust = Math.max(-8000, -2000 * cdDownCount);
   const skinColor = getEquippedSkinColor();
   const equippedAbility = getEquippedAbility();
+  const tier = levelTier(level);
+  const enemySpeed = ENEMY_SPEED * (1 + 0.1 * tier);
+
 
   const [state, setState] = useState<GameState>("playing");
   const [playerHp, setPlayerHp] = useState(character.maxHp + hpUpCount);
@@ -337,7 +354,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
     if (!en.incoming || en.hp <= 0) { en.incoming = null; return; }
     const inc = en.incoming;
     const player = playerRef.current;
-    const zone = zoneFor(inc.attack, en.x, en.y);
+    const zone = zoneFor(inc.attack, en.x, en.y, inc.aim);
     const inDanger = insideZone(player.x, player.y, zone);
     const now = performance.now();
     const blockUp = now < blockUntilRef.current || blockHeldRef.current;
@@ -415,6 +432,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
               attack: atk,
               spawnedAt: now,
               landAt: now + atk.windupMs,
+              aim: Math.atan2(p.y - en.y, p.x - en.x),
             };
             continue;
           }
@@ -427,10 +445,11 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
             const stopAt = MELEE_RANGE * 0.7;
             if (dist > stopAt) {
               edx /= dist; edy /= dist;
-              en.x = Math.max(ENEMY_RADIUS, Math.min(ARENA_W - ENEMY_RADIUS, en.x + edx * ENEMY_SPEED * dt));
-              en.y = Math.max(ENEMY_RADIUS, Math.min(ARENA_H * 0.7, en.y + edy * ENEMY_SPEED * dt));
+              en.x = Math.max(ENEMY_RADIUS, Math.min(ARENA_W - ENEMY_RADIUS, en.x + edx * enemySpeed * dt));
+              en.y = Math.max(ENEMY_RADIUS, Math.min(ARENA_H * 0.7, en.y + edy * enemySpeed * dt));
             }
           }
+
         }
 
         // Enemy separation — push apart overlapping enemies
@@ -514,7 +533,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           const tp = en.incoming
             ? Math.min(1, (performance.now() - en.incoming.spawnedAt) / en.incoming.attack.windupMs)
             : 0;
-          const zone = en.incoming ? zoneFor(en.incoming.attack, en.x, en.y) : null;
+          const zone = en.incoming ? zoneFor(en.incoming.attack, en.x, en.y, en.incoming.aim) : null;
           const zoneAlpha = en.incoming ? 0.18 + 0.45 * tp : 0;
           return (
             <div key={en.uid}>
@@ -566,6 +585,8 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
                     style={{
                       left: zone.cx - zone.w / 2, top: zone.cy - zone.h / 2,
                       width: zone.w, height: zone.h,
+                      transform: `rotate(${zone.aim}rad)`,
+                      transformOrigin: "center",
                       background: `color-mix(in oklab, var(--color-danger) ${zoneAlpha * 100}%, transparent)`,
                       border: "2px dashed var(--color-danger)",
                     }}
@@ -574,6 +595,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
               )}
             </div>
           );
+
         })}
 
         {/* Player shadow */}
