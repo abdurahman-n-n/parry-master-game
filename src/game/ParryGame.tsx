@@ -722,7 +722,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           </div>
         </div>
 
-        <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" />
+        <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" hp={playerHp} maxHp={character.maxHp + hpUpCount} />
 
         {/* Equipped ability */}
         {(() => {
@@ -769,16 +769,18 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
   );
 }
 
-function StatusRow({ label, alive, color }: { label: string; alive: boolean; color: string }) {
+function StatusRow({ label, alive, color, hp, maxHp }: { label: string; alive: boolean; color: string; hp?: number; maxHp?: number }) {
+  const hasHp = typeof hp === "number" && typeof maxHp === "number" && maxHp > 0;
+  const pct = hasHp ? Math.max(0, Math.min(100, (hp! / maxHp!) * 100)) : (alive ? 100 : 0);
   return (
     <div className="flex items-center gap-3">
       <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">{label}</div>
       <div className="relative h-4 flex-1 border-2 border-border bg-background">
-        <div className="h-full transition-all duration-200" style={{ width: alive ? "100%" : "0%", background: color }} />
+        <div className="h-full transition-all duration-200" style={{ width: `${pct}%`, background: color }} />
       </div>
       <div className="w-16 text-right text-[9px] uppercase tracking-widest"
         style={{ color: alive ? "var(--color-foreground)" : "var(--color-danger)" }}>
-        {alive ? "Alive" : "Down"}
+        {hasHp ? `${hp}/${maxHp}` : (alive ? "Alive" : "Down")}
       </div>
     </div>
   );
