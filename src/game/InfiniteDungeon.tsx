@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DEFAULT_CHARACTER, enemyForLevel } from "./levels";
 import { ParryGame, type FightResult } from "./ParryGame";
 import { getCurrentUser } from "./AuthScreen";
+import { addCredits, addGems } from "./Currency";
 import {
   getBestWaveFor, getInfiniteLeaderboard, recordInfiniteRun,
 } from "./InfiniteLeaderboard";
@@ -15,7 +16,9 @@ type Buffs = {
   cdBonusMs: number;
 };
 
-const BASE_ENEMIES = 25;
+const BASE_ENEMIES = 1;
+const COINS_PER_WAVE = 50;
+const GEMS_PER_WAVE = 1;
 function enemyCountForWave(wave: number) {
   return BASE_ENEMIES + Math.floor((wave - 1) / 5);
 }
