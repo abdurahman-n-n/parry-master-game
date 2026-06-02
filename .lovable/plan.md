@@ -1,9 +1,18 @@
-## Insta-Kill: Boss First, Else Closest
+# Plan: Add Logout Confirmation Dialog
 
-In `src/game/ParryGame.tsx`, replace the "strongest alive" target selection in `useInstakill` (~lines 255–261) with:
+## What to build
+A confirmation modal that appears when the user presses the Logout button, asking "Are you sure you want to logout?" with two options: **Logout** and **Cancel**.
 
-1. Scan `enemiesRef.current` for any alive enemy whose `def.isBoss === true`. If found, that's the target.
-2. Otherwise, pick the alive enemy with the smallest Euclidean distance to `playerRef.current`.
-3. Apply the kill exactly as today (`target.hp = 0`, flash, log, `checkVictory()`).
+## Where to change
+- `src/game/GameShell.tsx` — add the confirmation flow before the actual logout action
 
-No other files affected.
+## How
+1. Add a new `showLogoutConfirm` state boolean in `GameShell`.
+2. Replace the Logout button's `onClick` handler to set `showLogoutConfirm` to `true` instead of logging out immediately.
+3. Render a centered modal overlay (matching the game's existing pixel-styled UI with border-2, border-border, bg-background, etc.) when `showLogoutConfirm` is true. The modal contains:
+   - The confirmation message: "Are you sure you want to logout?"
+   - A "Logout" button that calls the actual logout logic and closes the modal
+   - A "Cancel" button that closes the modal without logging out
+4. The modal sits above all other content with a semi-transparent or solid overlay to block interaction with the background.
+
+No other files need changes. No backend or auth logic changes needed.

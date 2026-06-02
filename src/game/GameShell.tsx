@@ -27,6 +27,7 @@ export function GameShell() {
   const [gems, setGems] = useState(0);
   const [beaten, setBeaten] = useState<Set<number>>(new Set());
   const [lastReward, setLastReward] = useState<{ credits: number; gems: number } | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     applyAccent(getSavedAccent());
