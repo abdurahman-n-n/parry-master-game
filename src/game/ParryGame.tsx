@@ -245,11 +245,6 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
     const now = performance.now();
     if (now < cdInstaRef.current) return;
     const a = findAbility("instakill");
-    if (!spendGems(a.gemCost)) {
-      setLog(`* Not enough gems (${a.gemCost} needed).`);
-      return;
-    }
-    setGems(getGems());
     cdInstaRef.current = now + Math.max(1000, a.cooldownMs + cdAdjust);
     setCdInsta(cdInstaRef.current);
     // Boss first, else closest alive enemy
