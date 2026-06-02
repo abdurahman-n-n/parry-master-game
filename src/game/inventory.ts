@@ -1,5 +1,7 @@
 // Inventory: purchasable items, ownership persistence, equipped skin.
 import { getCredits, spendCredits, getGems, spendGems } from "./Currency";
+import { lsKey } from "./storage";
+
 
 export type ItemKind = "ability" | "skin" | "upgrade";
 
@@ -45,21 +47,22 @@ export function getUpgradeGemCost(item: StoreItem): number {
 
 function readOwned(): string[] {
   if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(OWNED_KEY) || "[]") as string[]; }
+  try { return JSON.parse(localStorage.getItem(lsKey(OWNED_KEY)) || "[]") as string[]; }
   catch { return []; }
 }
 function writeOwned(arr: string[]) {
-  localStorage.setItem(OWNED_KEY, JSON.stringify(arr));
+  localStorage.setItem(lsKey(OWNED_KEY), JSON.stringify(arr));
 }
 
 function readUpgradeCounts(): Record<string, number> {
   if (typeof window === "undefined") return {};
-  try { return JSON.parse(localStorage.getItem(UPGRADE_COUNT_KEY) || "{}") as Record<string, number>; }
+  try { return JSON.parse(localStorage.getItem(lsKey(UPGRADE_COUNT_KEY)) || "{}") as Record<string, number>; }
   catch { return {}; }
 }
 function writeUpgradeCounts(counts: Record<string, number>) {
-  localStorage.setItem(UPGRADE_COUNT_KEY, JSON.stringify(counts));
+  localStorage.setItem(lsKey(UPGRADE_COUNT_KEY), JSON.stringify(counts));
 }
+
 export function getUpgradeCount(id: string): number {
   return readUpgradeCounts()[id] ?? 0;
 }
@@ -128,21 +131,22 @@ export function buyItem(id: string, currency?: "credits" | "gems"): BuyResult {
 
 export function getEquippedAbility(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(ABILITY_KEY);
+  return localStorage.getItem(lsKey(ABILITY_KEY));
 }
 export function setEquippedAbility(id: string | null) {
-  if (id === null) localStorage.removeItem(ABILITY_KEY);
-  else localStorage.setItem(ABILITY_KEY, id);
+  if (id === null) localStorage.removeItem(lsKey(ABILITY_KEY));
+  else localStorage.setItem(lsKey(ABILITY_KEY), id);
 }
 
 export function getEquippedSkin(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(SKIN_KEY);
+  return localStorage.getItem(lsKey(SKIN_KEY));
 }
 export function setEquippedSkin(id: string | null) {
-  if (id === null) localStorage.removeItem(SKIN_KEY);
-  else localStorage.setItem(SKIN_KEY, id);
+  if (id === null) localStorage.removeItem(lsKey(SKIN_KEY));
+  else localStorage.setItem(lsKey(SKIN_KEY), id);
 }
+
 export function getEquippedSkinColor(): string | null {
   const id = getEquippedSkin();
   if (!id) return null;
