@@ -238,6 +238,14 @@ export function GameShell() {
         >
           ⚙ Settings
         </button>
+        {user?.toLowerCase() === "abdurahman" && (
+          <button
+            onClick={() => setScreen("admin")}
+            className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          >
+            🔧 Admin
+          </button>
+        )}
       </div>
       <div className="text-[8px] uppercase tracking-widest text-muted-foreground">
         v0.6 · {beaten.size}/{TOTAL_LEVELS} levels cleared
