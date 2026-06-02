@@ -17,8 +17,8 @@ export function StoreScreen({ onBack }: { onBack: () => void }) {
   const credits = getCredits();
   const gems = getGems();
 
-  const handleBuy = (id: string) => {
-    const r = buyItem(id);
+  const handleBuy = (id: string, currency?: "credits" | "gems") => {
+    const r = buyItem(id, currency);
     if (r.ok) {
       setFeedback(`Purchased!`);
     } else {
@@ -58,25 +58,33 @@ export function StoreScreen({ onBack }: { onBack: () => void }) {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {itemsByKind(kind).map((item) => (
-              <StoreCard key={item.id} item={item} owned={isOwned(item.id)} onBuy={() => handleBuy(item.id)} />
+              <StoreCard key={item.id} item={item} owned={isOwned(item.id)}
+                credits={credits} gems={gems}
+                onBuy={(currency) => handleBuy(item.id, currency)} />
             ))}
           </div>
         </div>
       ))}
 
       <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
-        Buy with <CreditIcon size={10} /> credits. Some abilities also spend <GemIcon size={10} /> gems in battle.
+        Upgrades: pay with <CreditIcon size={10} /> credits OR <GemIcon size={10} /> gems.
       </div>
     </div>
   );
 }
 
-function StoreCard({ item, owned, onBuy }: { item: StoreItem; owned: boolean; onBuy: () => void }) {
+function StoreCard({
+  item, owned, credits, gems, onBuy,
+}: {
+  item: StoreItem; owned: boolean;
+  credits: number; gems: number;
+  onBuy: (currency?: "credits" | "gems") => void;
+}) {
   const isUpgrade = item.kind === "upgrade";
   const price = getUpgradePrice(item);
   const gemPrice = getUpgradeGemCost(item);
   const stack = isUpgrade ? getUpgradeCount(item.id) : 0;
-  const disabled = !isUpgrade && owned;
+  const ownedDisabled = !isUpgrade && owned;
   return (
     <div className="flex flex-col gap-2 border-2 border-border bg-background p-4">
       <div className="flex items-center justify-between">
@@ -95,21 +103,42 @@ function StoreCard({ item, owned, onBuy }: { item: StoreItem; owned: boolean; on
       </div>
       <div className="text-[10px] normal-case leading-relaxed tracking-wider text-muted-foreground">
         {item.desc}
-        {isUpgrade && <span className="block text-muted-foreground/80">Stackable · +10 credits per purchase.</span>}
+        {isUpgrade && <span className="block text-muted-foreground/80">Stackable · +10 credits / +1 gem per 5 stacks.</span>}
       </div>
-      <div className="mt-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest">
-        <span className="inline-flex items-center gap-1">
-          <span>{price}</span><CreditIcon size={11} />
-          {gemPrice > 0 ? (<><span className="ml-1">{gemPrice}</span><GemIcon size={11} /></>) : null}
-        </span>
-        <button
-          onClick={onBuy}
-          disabled={disabled}
-          className="border-2 border-border bg-background px-3 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background disabled:cursor-default disabled:bg-accent disabled:text-background disabled:opacity-100"
-        >
-          {disabled ? "✓ Owned" : "Buy"}
-        </button>
-      </div>
+
+      {isUpgrade ? (
+        <div className="mt-1 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => onBuy("credits")}
+            disabled={credits < price}
+            className="inline-flex items-center justify-center gap-1 border-2 border-border bg-background px-2 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background disabled:cursor-default disabled:opacity-40"
+          >
+            <span>Buy</span><span>{price}</span><CreditIcon size={11} />
+          </button>
+          <button
+            onClick={() => onBuy("gems")}
+            disabled={gems < gemPrice}
+            className="inline-flex items-center justify-center gap-1 border-2 border-border bg-background px-2 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background disabled:cursor-default disabled:opacity-40"
+            style={{ color: "var(--color-accent)" }}
+          >
+            <span>Buy</span><span>{gemPrice}</span><GemIcon size={11} />
+          </button>
+        </div>
+      ) : (
+        <div className="mt-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest">
+          <span className="inline-flex items-center gap-1">
+            <span>{item.creditCost}</span><CreditIcon size={11} />
+            {(item.gemCost ?? 0) > 0 ? (<><span className="ml-1">{item.gemCost}</span><GemIcon size={11} /></>) : null}
+          </span>
+          <button
+            onClick={() => onBuy()}
+            disabled={ownedDisabled}
+            className="border-2 border-border bg-background px-3 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background disabled:cursor-default disabled:bg-accent disabled:text-background disabled:opacity-100"
+          >
+            {ownedDisabled ? "✓ Owned" : "Buy"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
