@@ -36,10 +36,10 @@ const SKIN_KEY = "parry.equippedSkin";
 const ABILITY_KEY = "parry.equippedAbility";
 const UPGRADE_COUNT_KEY = "parry.upgradeCounts";
 const UPGRADE_PRICE_STEP = 10;
-const UPGRADE_GEM_COST = 1;
+const UPGRADE_GEM_STEP = 5;
 
 export function getUpgradeGemCost(item: StoreItem): number {
-  if (item.kind === "upgrade") return UPGRADE_GEM_COST;
+  if (item.kind === "upgrade") return 1 + Math.floor(getUpgradeCount(item.id) / UPGRADE_GEM_STEP);
   return item.gemCost ?? 0;
 }
 
