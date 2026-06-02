@@ -33,12 +33,16 @@ export function InfiniteDungeon({ onExit }: Props) {
   const [phase, setPhase] = useState<Phase>("intro");
   const [wave, setWave] = useState(1);
   const [buffs, setBuffs] = useState<Buffs>(INITIAL_BUFFS);
+  const [coinsEarned, setCoinsEarned] = useState(0);
+  const [gemsEarned, setGemsEarned] = useState(0);
   const me = getCurrentUser() ?? "";
   const best = getBestWaveFor(me);
 
   const startRun = () => {
     setWave(1);
     setBuffs(INITIAL_BUFFS);
+    setCoinsEarned(0);
+    setGemsEarned(0);
     setPhase("fight");
   };
 
@@ -48,7 +52,12 @@ export function InfiniteDungeon({ onExit }: Props) {
       setPhase("gameover");
       return;
     }
-    // Victory — every 20 waves prompt a buff before next wave.
+    // Wave cleared — reward immediately.
+    addCredits(COINS_PER_WAVE);
+    addGems(GEMS_PER_WAVE);
+    setCoinsEarned((c) => c + COINS_PER_WAVE);
+    setGemsEarned((g) => g + GEMS_PER_WAVE);
+    // Every 20 waves prompt a buff before next wave.
     if (wave % 20 === 0) {
       setPhase("buff");
     } else {
@@ -56,6 +65,7 @@ export function InfiniteDungeon({ onExit }: Props) {
       setPhase("fight");
     }
   };
+
 
   const pickBuff = (kind: "hp" | "dmg" | "speed") => {
     setBuffs((b) => {
