@@ -102,17 +102,24 @@ export function enemyCountForLevel(level: number): number {
   return 5 + Math.floor((level - 1) / 5);
 }
 
-export function ParryGame({ character, enemy, level, onEnd }: Props) {
+export function ParryGame({
+  character, enemy, level, onEnd,
+  enemyCountOverride, hpMul = 1, dmgMul = 1, speedMul = 1, cdBonusMs = 0,
+  hudLabel = "Level", hideAbandon = false,
+}: Props) {
   // Upgrades (stackable)
   const hpUpCount = getUpgradeCount("hp-up");
   const dmgUpCount = getUpgradeCount("dmg-up");
   const cdDownCount = getUpgradeCount("cd-down");
-  const strikeDmg = 1 + dmgUpCount;
-  const cdAdjust = Math.max(-8000, -2000 * cdDownCount);
+  const baseMaxHp = character.maxHp + hpUpCount;
+  const playerMaxHp = Math.max(1, Math.round(baseMaxHp * hpMul));
+  const strikeDmg = Math.max(1, Math.round((1 + dmgUpCount) * dmgMul));
+  const cdAdjust = Math.max(-8000, -2000 * cdDownCount - cdBonusMs);
   const skinColor = getEquippedSkinColor();
   const equippedAbility = getEquippedAbility();
   const tier = levelTier(level);
   const enemySpeed = ENEMY_SPEED * (1 + 0.1 * tier);
+  const playerSpeed = PLAYER_SPEED * speedMul;
 
 
   const [state, setState] = useState<GameState>("playing");
