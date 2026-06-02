@@ -614,18 +614,24 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           style={{ left: player.x, top: player.y }}
         >
           <div className="relative" style={{ width: 56, height: 56 }}>
+            {skinColor && (
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background: `radial-gradient(circle, ${skinColor} 0%, transparent 70%)`,
+                  filter: "blur(6px)",
+                  opacity: effectivePose === "strike" ? 0.95 : 0.55,
+                  transform: effectivePose === "strike" ? "scale(1.35)" : "scale(1)",
+                  transition: "opacity 120ms, transform 120ms",
+                }}
+              />
+            )}
             <PixelCharacter
               skinId="kid:default"
               size={56}
               pose={effectivePose}
               key={overlayFlash?.uid ?? effectivePose}
             />
-            {skinColor && (
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{ background: skinColor, mixBlendMode: "color", opacity: 0.75 }}
-              />
-            )}
           </div>
           {blockUp && (
             <div
