@@ -159,7 +159,7 @@ export function ParryGame({
   // Initial enemy spawn
   const enemiesRef = useRef<EnemyInstance[]>([]);
   if (enemiesRef.current.length === 0) {
-    const count = enemyCountForLevel(level);
+    const count = enemyCountOverride ?? enemyCountForLevel(level);
     const minion = enemy.isBoss ? minionForLevel(level) : null;
     const arr: EnemyInstance[] = [];
     for (let i = 0; i < count; i++) {
