@@ -313,7 +313,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
         e.preventDefault();
         return;
       }
-      if (k === "f") {
+      if (k === "q") {
         e.preventDefault();
         if (!blockHeldRef.current) triggerBlockTap();
         blockHeldRef.current = true;
@@ -335,7 +335,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
     const up = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       if (k === "w" || k === "a" || k === "s" || k === "d") keysRef.current[k] = false;
-      if (k === "f") blockHeldRef.current = false;
+      if (k === "q") blockHeldRef.current = false;
     };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
@@ -773,7 +773,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ WASD ] Move &middot; [ F ] Block &middot; [ Space / Click ] Strike &middot; [ E ] Ability &middot; [ Esc ] Pause
+          [ WASD ] Move &middot; [ Q ] Block &middot; [ Space / Click ] Strike &middot; [ E ] Ability &middot; [ Esc ] Pause
         </div>
       </div>
 
