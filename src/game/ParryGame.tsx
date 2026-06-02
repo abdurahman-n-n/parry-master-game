@@ -30,6 +30,20 @@ interface Props {
   enemy: EnemyDef;
   level: number;
   onEnd: (result: FightResult) => void;
+  /** Override how many enemies spawn (default uses enemyCountForLevel). */
+  enemyCountOverride?: number;
+  /** Multiplier on max HP (stacks with hp-up upgrades). */
+  hpMul?: number;
+  /** Multiplier on strike damage (stacks with dmg-up upgrades). */
+  dmgMul?: number;
+  /** Multiplier on player movement speed. */
+  speedMul?: number;
+  /** Additional ms shaved off ability cooldowns. */
+  cdBonusMs?: number;
+  /** HUD label, e.g. "Level" or "Wave". */
+  hudLabel?: string;
+  /** When true, top-right abandon button is hidden (use pause menu). */
+  hideAbandon?: boolean;
 }
 
 const ARENA_W = 640;
