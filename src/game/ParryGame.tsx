@@ -351,7 +351,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
     if (!en.incoming || en.hp <= 0) { en.incoming = null; return; }
     const inc = en.incoming;
     const player = playerRef.current;
-    const zone = zoneFor(inc.attack, en.x, en.y);
+    const zone = zoneFor(inc.attack, en.x, en.y, inc.aim);
     const inDanger = insideZone(player.x, player.y, zone);
     const now = performance.now();
     const blockUp = now < blockUntilRef.current || blockHeldRef.current;
