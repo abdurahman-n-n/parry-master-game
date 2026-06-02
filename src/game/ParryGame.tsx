@@ -5,6 +5,7 @@ import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
 import { isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility } from "./inventory";
+import { minionForLevel } from "./levels";
 
 interface Incoming {
   uid: number;
