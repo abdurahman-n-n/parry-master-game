@@ -7,7 +7,7 @@ import { CurrencyHUD, CreditIcon, GemIcon, getCredits, getGems } from "./Currenc
 
 const SECTIONS: { kind: ItemKind; title: string; blurb: string }[] = [
   { kind: "ability", title: "Abilities", blurb: "Unlock special combat moves" },
-  { kind: "skin",    title: "Skins",     blurb: "Change your hero's look" },
+  { kind: "skin",    title: "Weapon Effects", blurb: "Glow effects for your blade" },
   { kind: "upgrade", title: "Upgrades",  blurb: "Permanent stat boosts" },
 ];
 
