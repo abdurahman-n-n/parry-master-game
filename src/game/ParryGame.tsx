@@ -733,7 +733,7 @@ export function ParryGame({
                 ▶ Continue
               </button>
               <button
-                onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current })}
+                onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current, playerHpRemaining: 0 })}
                 className="border-2 border-border bg-background px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background"
               >
                 ✕ Abandon
