@@ -12,11 +12,15 @@ import {
   CurrencyHUD, addCredits, addGems, getCredits, getGems,
 } from "./Currency";
 import type { EnemyDef } from "./types";
+import { AuthScreen, getCurrentUser, logout } from "./AuthScreen";
 
 type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
+  const [user, setUser] = useState<string | null>(() =>
+    typeof window !== "undefined" ? getCurrentUser() : null
+  );
   const [level, setLevel] = useState(1);
   const [enemy, setEnemy] = useState<EnemyDef>(() => enemyForLevel(1));
   const [credits, setCredits] = useState(0);
@@ -52,6 +56,10 @@ export function GameShell() {
       setScreen("gameover");
     }
   };
+
+  if (!user) {
+    return <AuthScreen onAuthed={(n) => setUser(n)} />;
+  }
 
   if (screen === "fight") {
     return (
@@ -210,6 +218,18 @@ export function GameShell() {
       </div>
       <div className="text-[8px] uppercase tracking-widest text-muted-foreground">
         v0.6 · {beaten.size}/{TOTAL_LEVELS} levels cleared
+      </div>
+      <div className="flex items-center gap-3 text-[9px] uppercase tracking-widest text-muted-foreground">
+        <span>Logged in as {user}</span>
+        <button
+          onClick={() => {
+            logout();
+            setUser(null);
+          }}
+          className="border border-border px-2 py-1 hover:bg-foreground hover:text-background"
+        >
+          Logout
+        </button>
       </div>
     </div>
   );
