@@ -15,8 +15,9 @@ import type { EnemyDef } from "./types";
 import { AuthScreen, getCurrentUser, logout } from "./AuthScreen";
 import { LeaderboardScreen } from "./LeaderboardScreen";
 import { AdminScreen } from "./AdminScreen";
+import { InfiniteDungeon } from "./InfiniteDungeon";
 
-type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin";
+type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
