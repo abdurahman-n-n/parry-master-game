@@ -168,7 +168,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Accent Color
+          Background Color
         </div>
 
         <div className="relative" style={{ width: WHEEL_SIZE, height: WHEEL_SIZE }}>
