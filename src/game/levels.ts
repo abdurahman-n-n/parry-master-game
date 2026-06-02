@@ -47,6 +47,18 @@ const BOSS_TEMPLATES = [
     attacks: [mk("c-heavy", "heavy", 1100, 200), mk("c-slash", "slash", 800, 150)],
     cadenceMs: [900, 1400] as [number, number],
   },
+  {
+    id: "wraith", name: "Wraith", title: "Erratic strikes",
+    color: "oklch(0.60 0.20 310)", shape: "star" as const,
+    attacks: [mk("w-thrust", "thrust", 380, 100), mk("w-slash", "slash", 560, 130), mk("w-heavy", "heavy", 950, 170)],
+    cadenceMs: [650, 1100] as [number, number],
+  },
+  {
+    id: "sovereign", name: "Sovereign", title: "Crown of edges",
+    color: "oklch(0.55 0.22 70)", shape: "hex" as const,
+    attacks: [mk("s-heavy", "heavy", 1000, 180), mk("s-slash", "slash", 680, 140), mk("s-thrust", "thrust", 440, 110)],
+    cadenceMs: [700, 1200] as [number, number],
+  },
 ];
 
 /** Levels are 1-indexed. Every 10th level is a boss. */
