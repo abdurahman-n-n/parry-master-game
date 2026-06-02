@@ -5,6 +5,7 @@ import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
 import { isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility } from "./inventory";
+import { minionForLevel } from "./levels";
 
 interface Incoming {
   uid: number;
@@ -121,17 +122,20 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
   const enemiesRef = useRef<EnemyInstance[]>([]);
   if (enemiesRef.current.length === 0) {
     const count = enemyCountForLevel(level);
+    const minion = enemy.isBoss ? minionForLevel(level) : null;
     const arr: EnemyInstance[] = [];
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0.5 : i / (count - 1);
       const x = ARENA_W * (0.12 + 0.76 * t);
       const y = ARENA_H * (i % 2 === 0 ? 0.20 : 0.32);
+      // Boss fights: index 0 is the boss; rest are minions.
+      const def = minion && i > 0 ? minion : enemy;
       arr.push({
         uid: uidRef.current++,
-        def: enemy,
+        def,
         x, y,
-        hp: enemy.maxHp,
-        maxHp: enemy.maxHp,
+        hp: def.maxHp,
+        maxHp: def.maxHp,
         incoming: null,
         nextAttackAt: performance.now() + 600 + Math.random() * 1400 + i * 180,
       });

@@ -84,6 +84,17 @@ export function enemyForLevel(level: number): EnemyDef {
   };
 }
 
+/** Minion that accompanies the boss in a boss fight. */
+export function minionForLevel(level: number): EnemyDef {
+  const tier = Math.floor((level - 1) / 10);
+  const tpl = REGULAR_TEMPLATES[(level - 1) % REGULAR_TEMPLATES.length];
+  return {
+    ...tpl,
+    maxHp: 2 + tier,
+    title: `Level ${level} · Minion`,
+  };
+}
+
 // ----- Level progress persistence -----
 const BEATEN_KEY = "parry.beatenLevels";
 
