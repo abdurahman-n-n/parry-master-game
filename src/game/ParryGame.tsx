@@ -533,7 +533,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           const tp = en.incoming
             ? Math.min(1, (performance.now() - en.incoming.spawnedAt) / en.incoming.attack.windupMs)
             : 0;
-          const zone = en.incoming ? zoneFor(en.incoming.attack, en.x, en.y) : null;
+          const zone = en.incoming ? zoneFor(en.incoming.attack, en.x, en.y, en.incoming.aim) : null;
           const zoneAlpha = en.incoming ? 0.18 + 0.45 * tp : 0;
           return (
             <div key={en.uid}>
@@ -585,6 +585,8 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
                     style={{
                       left: zone.cx - zone.w / 2, top: zone.cy - zone.h / 2,
                       width: zone.w, height: zone.h,
+                      transform: `rotate(${zone.aim}rad)`,
+                      transformOrigin: "center",
                       background: `color-mix(in oklab, var(--color-danger) ${zoneAlpha * 100}%, transparent)`,
                       border: "2px dashed var(--color-danger)",
                     }}
@@ -593,6 +595,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
               )}
             </div>
           );
+
         })}
 
         {/* Player shadow */}
