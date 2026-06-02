@@ -1,22 +1,22 @@
-## Settings Color → Lobby & Arena Background
+## Replace Color Wheel with RGB-Only Input
 
-The color picker in `SettingsScreen` currently sets `--accent` and `--border`. The user wants it to set the **background color** of both the lobby (menu, level select, store, etc.) and the in-fight arena. Both already use `bg-background`, so writing to `--background` will cover everything in one shot.
+In `src/game/SettingsScreen.tsx`, remove the HSV color wheel canvas and the brightness (V) slider. Keep only the three R / G / B numeric inputs (which already exist at lines ~219–233) as the sole way to pick the background color.
 
-### Changes
+### Changes (`src/game/SettingsScreen.tsx`)
 
-**`src/game/SettingsScreen.tsx`**
-1. Rewrite `applyAccent(rgb)`:
-   - Set `--background: rgb(r, g, b)` on `document.documentElement`.
-   - Compute perceived luminance (`0.299*r + 0.587*g + 0.114*b`) and pick a contrasting `--foreground` (near-black for light bg, near-white for dark bg) so text/buttons stay readable. Also derive a `--border` and `--muted-foreground` from that foreground at lower opacity (or a darker/lighter shade of bg).
-   - Stop overriding `--accent` (leave the theme accent intact) — or keep it; user didn't ask to change accent behavior. Prefer leaving `--accent` alone.
-2. Rename the section heading from "Accent Color" to "Background Color".
-3. Keep the existing storage key + default RGB; only the meaning changes. (Optionally rename `STORAGE_KEY` to `parry-bg-rgb` with a one-time migration — skipping unless you want it.)
-4. Function names `getSavedAccent` / `applyAccent` stay (used by `GameShell`) to avoid churn, or rename to `getSavedBgColor` / `applyBgColor` and update the two call sites in `GameShell.tsx`. Recommend renaming for clarity.
+1. **Delete unused code**:
+   - `hsvToRgb`, `rgbToHsv` helpers
+   - `WHEEL_SIZE` constant
+   - `canvasRef`, `draggingRef`, `value` state, the wheel-drawing `useEffect`, `pickFromEvent`, and the `hue/sat/cursorX/cursorY` derivations
+   - The `<canvas>` element + cursor dot block (lines ~168–197)
+   - The brightness slider block (lines ~199–216)
+   - Remove `useRef` from imports if no longer used
+2. **Keep**:
+   - `getSavedAccent`, `applyAccent` (background + contrast logic)
+   - The "Background Color" heading
+   - The R / G / B numeric inputs — make them a bit larger / clearer since they're now the primary control
+   - The hex preview swatch
+   - Reset / Save buttons
+3. **Reset** simplifies to `setRgb(DEFAULT_RGB)` (no V state to reset).
 
-**`src/game/GameShell.tsx`**
-- If renamed, update imports and the two call sites (lines 8, 28). No other logic changes — `bg-background` Tailwind class already picks up the new variable.
-
-No changes needed in `ParryGame.tsx` — its `bg-background` arena container will follow automatically.
-
-### Notes
-- Contrast handling is essential, otherwise picking a pale yellow will make white-on-bg text invisible. The luminance-based foreground swap solves this without needing per-screen tweaks.
+Result: a compact settings panel with three labeled number fields (0–255 each), a live color swatch, and Save / Reset.
