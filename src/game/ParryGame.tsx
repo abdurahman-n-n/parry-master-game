@@ -30,6 +30,20 @@ interface Props {
   enemy: EnemyDef;
   level: number;
   onEnd: (result: FightResult) => void;
+  /** Override how many enemies spawn (default uses enemyCountForLevel). */
+  enemyCountOverride?: number;
+  /** Multiplier on max HP (stacks with hp-up upgrades). */
+  hpMul?: number;
+  /** Multiplier on strike damage (stacks with dmg-up upgrades). */
+  dmgMul?: number;
+  /** Multiplier on player movement speed. */
+  speedMul?: number;
+  /** Additional ms shaved off ability cooldowns. */
+  cdBonusMs?: number;
+  /** HUD label, e.g. "Level" or "Wave". */
+  hudLabel?: string;
+  /** When true, top-right abandon button is hidden (use pause menu). */
+  hideAbandon?: boolean;
 }
 
 const ARENA_W = 640;
@@ -88,21 +102,28 @@ export function enemyCountForLevel(level: number): number {
   return 5 + Math.floor((level - 1) / 5);
 }
 
-export function ParryGame({ character, enemy, level, onEnd }: Props) {
+export function ParryGame({
+  character, enemy, level, onEnd,
+  enemyCountOverride, hpMul = 1, dmgMul = 1, speedMul = 1, cdBonusMs = 0,
+  hudLabel = "Level", hideAbandon = false,
+}: Props) {
   // Upgrades (stackable)
   const hpUpCount = getUpgradeCount("hp-up");
   const dmgUpCount = getUpgradeCount("dmg-up");
   const cdDownCount = getUpgradeCount("cd-down");
-  const strikeDmg = 1 + dmgUpCount;
-  const cdAdjust = Math.max(-8000, -2000 * cdDownCount);
+  const baseMaxHp = character.maxHp + hpUpCount;
+  const playerMaxHp = Math.max(1, Math.round(baseMaxHp * hpMul));
+  const strikeDmg = Math.max(1, Math.round((1 + dmgUpCount) * dmgMul));
+  const cdAdjust = Math.max(-8000, -2000 * cdDownCount - cdBonusMs);
   const skinColor = getEquippedSkinColor();
   const equippedAbility = getEquippedAbility();
   const tier = levelTier(level);
   const enemySpeed = ENEMY_SPEED * (1 + 0.1 * tier);
+  const playerSpeed = PLAYER_SPEED * speedMul;
 
 
   const [state, setState] = useState<GameState>("playing");
-  const [playerHp, setPlayerHp] = useState(character.maxHp + hpUpCount);
+  const [playerHp, setPlayerHp] = useState(playerMaxHp);
   const [flashes, setFlashes] = useState<Flash[]>([]);
   const [log, setLog] = useState<string>("* The battle begins.");
   const [paused, setPaused] = useState(false);
@@ -138,7 +159,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
   // Initial enemy spawn
   const enemiesRef = useRef<EnemyInstance[]>([]);
   if (enemiesRef.current.length === 0) {
-    const count = enemyCountForLevel(level);
+    const count = enemyCountOverride ?? enemyCountForLevel(level);
     const minion = enemy.isBoss ? minionForLevel(level) : null;
     const arr: EnemyInstance[] = [];
     for (let i = 0; i < count; i++) {
@@ -408,8 +429,8 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           const len = Math.hypot(dx, dy);
           dx /= len; dy /= len;
           const p = playerRef.current;
-          p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * PLAYER_SPEED * dt));
-          p.y = Math.max(PLAYER_RADIUS, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * PLAYER_SPEED * dt));
+          p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * playerSpeed * dt));
+          p.y = Math.max(PLAYER_RADIUS, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * playerSpeed * dt));
           setIsWalking(true);
         } else {
           setIsWalking(false);
@@ -505,14 +526,18 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background p-4 font-pixel">
       {/* HUD */}
       <div className="flex w-full max-w-[640px] items-center justify-between text-[10px] uppercase tracking-widest">
-        <button
-          onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current })}
-          className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
-        >
-          ← Abandon
-        </button>
+        {hideAbandon ? (
+          <div className="w-[80px]" />
+        ) : (
+          <button
+            onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current })}
+            className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
+          >
+            ← Abandon
+          </button>
+        )}
         <div className="text-foreground">
-          Level <span className="text-accent">{level}</span>
+          {hudLabel} <span className="text-accent">{level}</span>
           {enemy.isBoss && <span className="ml-2 text-danger">⚠ BOSS</span>}
           <span className="ml-2 text-muted-foreground">· {aliveCount}/{enemies.length} alive</span>
         </div>
@@ -732,7 +757,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           </div>
         </div>
 
-        <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" hp={playerHp} maxHp={character.maxHp + hpUpCount} />
+        <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" hp={playerHp} maxHp={playerMaxHp} />
 
         {/* Equipped ability */}
         {(() => {

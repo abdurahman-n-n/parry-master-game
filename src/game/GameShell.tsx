@@ -15,8 +15,9 @@ import type { EnemyDef } from "./types";
 import { AuthScreen, getCurrentUser, logout } from "./AuthScreen";
 import { LeaderboardScreen } from "./LeaderboardScreen";
 import { AdminScreen } from "./AdminScreen";
+import { InfiniteDungeon } from "./InfiniteDungeon";
 
-type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin";
+type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
@@ -93,6 +94,7 @@ export function GameShell() {
   if (screen === "inventory") return <InventoryScreen onBack={() => setScreen("menu")} />;
   if (screen === "leaderboard") return <LeaderboardScreen onBack={() => setScreen("menu")} />;
   if (screen === "admin")     return <AdminScreen onBack={() => setScreen("menu")} />;
+  if (screen === "infinite")  return <InfiniteDungeon onExit={() => setScreen("menu")} />;
 
   if (screen === "levels") {
     return (
@@ -214,6 +216,19 @@ export function GameShell() {
         >
           ▶ Play
         </button>
+        {(() => {
+          const unlocked = beaten.size >= TOTAL_LEVELS;
+          return (
+            <button
+              onClick={() => unlocked && setScreen("infinite")}
+              disabled={!unlocked}
+              title={unlocked ? "Endless waves" : `Clear all ${TOTAL_LEVELS} levels to unlock`}
+              className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-background disabled:hover:text-foreground"
+            >
+              {unlocked ? "∞ Infinite Dungeon" : "🔒 Infinite Dungeon"}
+            </button>
+          );
+        })()}
         <button
           onClick={() => setScreen("store")}
           className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
