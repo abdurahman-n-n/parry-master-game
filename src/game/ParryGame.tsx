@@ -5,7 +5,7 @@ import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
 import { isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility } from "./inventory";
-import { minionForLevel } from "./levels";
+import { minionForLevel, levelTier } from "./levels";
 
 interface Incoming {
   uid: number;
@@ -13,7 +13,10 @@ interface Incoming {
   spawnedAt: number;
   /** Absolute landing time = spawnedAt + windupMs */
   landAt: number;
+  /** Radians, direction from enemy toward player at schedule time. */
+  aim: number;
 }
+
 
 type Flash = { uid: number; kind: "parry" | "hit" | "perfect" | "dodge" | "dash" | "instakill"; at: number };
 
