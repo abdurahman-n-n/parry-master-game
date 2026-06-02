@@ -45,6 +45,8 @@ interface Props {
   hudLabel?: string;
   /** When true, top-right abandon button is hidden (use pause menu). */
   hideAbandon?: boolean;
+  /** Start fight with a specific HP value (clamped to max). Default = full HP. */
+  startHpOverride?: number;
 }
 
 const ARENA_W = 640;
