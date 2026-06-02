@@ -44,22 +44,33 @@ const RIPOSTE_MS = 900;
 const BLOCK_RAISE_MS = 380;
 
 type Zone =
-  | { kind: "slash"; cx: number; cy: number; w: number; h: number }
-  | { kind: "thrust"; cx: number; cy: number; w: number; h: number }
-  | { kind: "heavy"; cx: number; cy: number; r: number };
+  | { kind: "slash"; cx: number; cy: number; w: number; h: number; aim: number }
+  | { kind: "thrust"; cx: number; cy: number; w: number; h: number; aim: number }
+  | { kind: "heavy"; cx: number; cy: number; r: number; aim: number };
 
-function zoneFor(attack: AttackPattern, ex: number, ey: number): Zone {
-  if (attack.kind === "thrust") return { kind: "thrust", cx: ex, cy: ey + 80, w: 90, h: 220 };
-  if (attack.kind === "heavy")  return { kind: "heavy",  cx: ex, cy: ey + 30, r: 160 };
-  return { kind: "slash", cx: ex, cy: ey + 70, w: 280, h: 180 };
+function zoneFor(attack: AttackPattern, ex: number, ey: number, aim: number): Zone {
+  const cos = Math.cos(aim), sin = Math.sin(aim);
+  if (attack.kind === "thrust") {
+    const off = 110;
+    return { kind: "thrust", cx: ex + cos * off, cy: ey + sin * off, w: 220, h: 90, aim };
+  }
+  if (attack.kind === "heavy") {
+    const off = 30;
+    return { kind: "heavy", cx: ex + cos * off, cy: ey + sin * off, r: 160, aim };
+  }
+  const off = 90;
+  return { kind: "slash", cx: ex + cos * off, cy: ey + sin * off, w: 280, h: 180, aim };
 }
 function insideZone(px: number, py: number, z: Zone): boolean {
-  if (z.kind === "heavy") {
-    const dx = px - z.cx, dy = py - z.cy;
-    return dx * dx + dy * dy <= z.r * z.r;
-  }
-  return Math.abs(px - z.cx) <= z.w / 2 && Math.abs(py - z.cy) <= z.h / 2;
+  const dx = px - z.cx, dy = py - z.cy;
+  if (z.kind === "heavy") return dx * dx + dy * dy <= z.r * z.r;
+  // Rotate point into zone local frame (zone's long axis aligned with aim).
+  const cos = Math.cos(-z.aim), sin = Math.sin(-z.aim);
+  const lx = dx * cos - dy * sin;
+  const ly = dx * sin + dy * cos;
+  return Math.abs(lx) <= z.w / 2 && Math.abs(ly) <= z.h / 2;
 }
+
 
 interface EnemyInstance {
   uid: number;
