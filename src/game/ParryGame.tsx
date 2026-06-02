@@ -123,7 +123,7 @@ export function ParryGame({
 
 
   const [state, setState] = useState<GameState>("playing");
-  const [playerHp, setPlayerHp] = useState(character.maxHp + hpUpCount);
+  const [playerHp, setPlayerHp] = useState(playerMaxHp);
   const [flashes, setFlashes] = useState<Flash[]>([]);
   const [log, setLog] = useState<string>("* The battle begins.");
   const [paused, setPaused] = useState(false);
