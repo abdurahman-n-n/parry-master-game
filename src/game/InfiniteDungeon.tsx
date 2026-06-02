@@ -95,6 +95,7 @@ export function InfiniteDungeon({ onExit }: Props) {
         dmgMul={buffs.dmgMul}
         speedMul={buffs.speedMul}
         cdBonusMs={buffs.cdBonusMs}
+        startHpOverride={currentHp ?? undefined}
         hudLabel="Wave"
         hideAbandon
       />
