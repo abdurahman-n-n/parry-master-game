@@ -722,7 +722,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
           </div>
         </div>
 
-        <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" />
+        <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" hp={playerHp} maxHp={character.maxHp + hpUpCount} />
 
         {/* Equipped ability */}
         {(() => {
