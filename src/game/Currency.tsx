@@ -1,16 +1,19 @@
 // Currency icons + persistence helpers.
 // Credits (C with vertical bar), Gems (level / ability currency).
 
+import { lsKey } from "./storage";
+
 const CREDITS_KEY = "parry-credits";
 const GEMS_KEY = "parry-gems";
 
 function read(key: string): number {
   if (typeof window === "undefined") return 0;
-  return Number(localStorage.getItem(key) ?? 0) || 0;
+  return Number(localStorage.getItem(lsKey(key)) ?? 0) || 0;
 }
 function write(key: string, n: number) {
-  localStorage.setItem(key, String(n));
+  localStorage.setItem(lsKey(key), String(n));
 }
+
 
 export function getCredits() { return read(CREDITS_KEY); }
 export function getGems()    { return read(GEMS_KEY); }
