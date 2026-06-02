@@ -1,4 +1,6 @@
 import type { AttackPattern, CharacterDef, EnemyDef } from "./types";
+import { lsKey } from "./storage";
+
 
 const mk = (
   id: string,
@@ -224,15 +226,16 @@ const BEATEN_KEY = "parry.beatenLevels";
 export function getBeatenLevels(): Set<number> {
   if (typeof window === "undefined") return new Set();
   try {
-    const arr = JSON.parse(localStorage.getItem(BEATEN_KEY) || "[]") as number[];
+    const arr = JSON.parse(localStorage.getItem(lsKey(BEATEN_KEY)) || "[]") as number[];
     return new Set(arr);
   } catch { return new Set(); }
 }
 export function markLevelBeaten(level: number) {
   const s = getBeatenLevels();
   s.add(level);
-  localStorage.setItem(BEATEN_KEY, JSON.stringify([...s]));
+  localStorage.setItem(lsKey(BEATEN_KEY), JSON.stringify([...s]));
 }
+
 export function isLevelUnlocked(level: number): boolean {
   if (level <= 1) return true;
   return getBeatenLevels().has(level - 1);
