@@ -526,14 +526,18 @@ export function ParryGame({
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background p-4 font-pixel">
       {/* HUD */}
       <div className="flex w-full max-w-[640px] items-center justify-between text-[10px] uppercase tracking-widest">
-        <button
-          onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current })}
-          className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
-        >
-          ← Abandon
-        </button>
+        {hideAbandon ? (
+          <div className="w-[80px]" />
+        ) : (
+          <button
+            onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current })}
+            className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
+          >
+            ← Abandon
+          </button>
+        )}
         <div className="text-foreground">
-          Level <span className="text-accent">{level}</span>
+          {hudLabel} <span className="text-accent">{level}</span>
           {enemy.isBoss && <span className="ml-2 text-danger">⚠ BOSS</span>}
           <span className="ml-2 text-muted-foreground">· {aliveCount}/{enemies.length} alive</span>
         </div>
