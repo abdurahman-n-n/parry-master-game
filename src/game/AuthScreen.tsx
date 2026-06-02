@@ -50,6 +50,8 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
       accounts.push({ nickname: nick, password });
       saveAccounts(accounts);
       localStorage.setItem(CURRENT_KEY, nick);
+      setActiveUser(nick);
+      migrateLegacyIfNeeded(nick);
       onAuthed(nick);
     } else {
       const found = accounts.find(
@@ -60,6 +62,8 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
         return;
       }
       localStorage.setItem(CURRENT_KEY, found.nickname);
+      setActiveUser(found.nickname);
+      migrateLegacyIfNeeded(found.nickname);
       onAuthed(found.nickname);
     }
   };
