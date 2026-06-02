@@ -757,7 +757,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
               <div className="flex items-center justify-between">
                 <span>[E] {a.name}</span>
                 <span className="text-muted-foreground">
-                  {ready ? (a.gemCost > 0 ? `${a.gemCost}💎` : "FREE") : `${rem}s`}
+                  {ready ? "READY" : `${rem}s`}
                 </span>
               </div>
             </button>
