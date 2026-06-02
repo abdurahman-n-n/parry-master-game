@@ -68,9 +68,9 @@ interface EnemyInstance {
   nextAttackAt: number;
 }
 
-/** 5 in every level, +1 every 10 levels */
+/** 5 in every level, +1 every 5 levels */
 export function enemyCountForLevel(level: number): number {
-  return 5 + Math.floor((level - 1) / 10);
+  return 5 + Math.floor((level - 1) / 5);
 }
 
 export function ParryGame({ character, enemy, level, onEnd }: Props) {
