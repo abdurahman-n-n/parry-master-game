@@ -1,37 +1,21 @@
+## Infinite Dungeon tweaks
 
-# Email verification via 6-digit code
+### Rewards
+- Each cleared wave grants **50 coins + 1 gem**, awarded immediately as the wave ends (so an abandoned run still keeps everything earned up to that point).
+- Show a small "+50 / +1💎" toast or HUD bump on wave clear; final run summary shows totals (waves, coins, gems).
 
-Goal: confirm the user actually owns the Gmail (or any email) they typed by sending a real 6-digit code to it. Required on register AND on every login.
+### Wave scaling
+- Start at **1 enemy** on wave 1 (was 25).
+- Keep "+1 enemy every 5 waves" progression → wave 1:1, wave 6:2, wave 11:3, etc.
+- **Boss every 10 waves** (waves 10, 20, 30…). Remove the previous "every 10" duplicate logic — single source of truth.
+- Buff selection still triggers every 20 waves.
 
-## Flow
+### Files to edit
+- `src/game/InfiniteDungeon.tsx`
+  - Change base enemy count `25 → 1`.
+  - On each successful wave completion: increment local `coinsEarned += 50`, `gemsEarned += 1`, persist to currency store, show toast.
+  - Pass cumulative totals into the end-of-run summary.
+- `src/game/ParryGame.tsx` — no logic change, just verify `enemyCountOverride` still flows through.
+- Currency helper (wherever `rewardForLevel` lives, e.g. `src/game/levels.ts` or a currency module) — reuse existing add-coins / add-gems function; no new API needed.
 
-**Register**
-1. User enters nickname + password + email.
-2. App sends a 6-digit code to that email.
-3. New "Enter code" screen — on success, account is created and they enter the game.
-
-**Login**
-1. User enters nickname + password (as today).
-2. App sends a 6-digit code to the email on file.
-3. "Enter code" screen — on success, they enter the game.
-
-Resend button with 30s cooldown. Wrong code = error; 5 wrong attempts invalidates the code.
-
-## Backend
-
-- New `auth_codes` table: `email`, `code_hash` (SHA-256), `purpose` ('register' | 'login'), `expires_at` (10 min), `attempts`. RLS denies all — only server (service role) reads/writes.
-- Server function `requestEmailCode({ email, purpose })` — generates 6-digit code, hashes it, upserts row, sends email through Lovable Emails. Rate-limited 1 per 30s per email.
-- Server function `verifyEmailCode({ email, code, purpose })` — checks hash + expiry + attempts, deletes row on success.
-
-## Frontend (`src/game/AuthScreen.tsx`)
-
-- Add `email` input to register.
-- Account record extended to `{ nickname, password, email }` in localStorage. Existing accounts without an email get prompted once to add+verify one before they can log in.
-- After step 1 (register or login passes), render a new `EmailCodeStep` component: 6 digit boxes, "Resend code" (30s cooldown), error text.
-- On verify success → `onAuthed(nickname)` as today.
-
-## Technical notes
-
-- Codes never travel to the client.
-- Email delivery uses Lovable Emails (no API key needed). Setup requires a workspace email domain — if not already configured, I'll trigger the email setup dialog so you (or a workspace admin) can complete it; without it, emails can't actually go out.
-- Game data still lives in localStorage per nickname; only the verification step uses the backend.
+No changes to controls, pause/abandon, or leaderboard logic.
