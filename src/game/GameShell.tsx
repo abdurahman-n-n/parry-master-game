@@ -14,12 +14,14 @@ import {
 import type { EnemyDef } from "./types";
 import { AuthScreen, getCurrentUser, logout } from "./AuthScreen";
 import { LeaderboardScreen } from "./LeaderboardScreen";
+import { AdminScreen } from "./AdminScreen";
 
-type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard";
+type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
   const [user, setUser] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const [level, setLevel] = useState(1);
   const [enemy, setEnemy] = useState<EnemyDef>(() => enemyForLevel(1));
   const [credits, setCredits] = useState(0);
@@ -30,6 +32,7 @@ export function GameShell() {
 
   useEffect(() => {
     setUser(getCurrentUser());
+    setReady(true);
   }, []);
 
   useEffect(() => {
@@ -61,6 +64,14 @@ export function GameShell() {
     }
   };
 
+  if (!ready) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-background p-6 font-pixel text-foreground">
+        <div className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Loading…</div>
+      </div>
+    );
+  }
+
   if (!user) {
     return <AuthScreen onAuthed={(n) => setUser(n)} />;
   }
@@ -81,6 +92,7 @@ export function GameShell() {
   if (screen === "store")     return <StoreScreen onBack={() => setScreen("menu")} />;
   if (screen === "inventory") return <InventoryScreen onBack={() => setScreen("menu")} />;
   if (screen === "leaderboard") return <LeaderboardScreen onBack={() => setScreen("menu")} />;
+  if (screen === "admin")     return <AdminScreen onBack={() => setScreen("menu")} />;
 
   if (screen === "levels") {
     return (
@@ -226,6 +238,14 @@ export function GameShell() {
         >
           ⚙ Settings
         </button>
+        {user?.toLowerCase() === "abdurahman" && (
+          <button
+            onClick={() => setScreen("admin")}
+            className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          >
+            🔧 Admin
+          </button>
+        )}
       </div>
       <div className="text-[8px] uppercase tracking-widest text-muted-foreground">
         v0.6 · {beaten.size}/{TOTAL_LEVELS} levels cleared
