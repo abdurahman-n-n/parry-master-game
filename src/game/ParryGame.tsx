@@ -97,6 +97,9 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
   const cdAdjust = Math.max(-8000, -2000 * cdDownCount);
   const skinColor = getEquippedSkinColor();
   const equippedAbility = getEquippedAbility();
+  const tier = levelTier(level);
+  const enemySpeed = ENEMY_SPEED * (1 + 0.1 * tier);
+
 
   const [state, setState] = useState<GameState>("playing");
   const [playerHp, setPlayerHp] = useState(character.maxHp + hpUpCount);
