@@ -1,31 +1,37 @@
-# Email 2FA on Login
 
-Add a second step to login: after correct nickname + password, the user gets a 6-digit code emailed to them and must enter it to enter the game.
+# Email verification via 6-digit code
+
+Goal: confirm the user actually owns the Gmail (or any email) they typed by sending a real 6-digit code to it. Required on register AND on every login.
 
 ## Flow
 
-1. **Register** — add an `email` field next to nickname/password. Stored on the local account.
-2. **Login step 1** — nickname + password (as today). On success, server generates a 6-digit code, emails it, returns success (no code to client).
-3. **Login step 2** — new screen: "Enter the 6-digit code sent to a***@gmail.com". Resend button (30s cooldown). On verify success → enter game.
+**Register**
+1. User enters nickname + password + email.
+2. App sends a 6-digit code to that email.
+3. New "Enter code" screen — on success, account is created and they enter the game.
 
-## Setup
+**Login**
+1. User enters nickname + password (as today).
+2. App sends a 6-digit code to the email on file.
+3. "Enter code" screen — on success, they enter the game.
 
-- Connect **Resend** (the previous attempt was rejected — I'll re-trigger it). Sender starts as `onboarding@resend.dev` for testing; for production delivery to arbitrary inboxes the user will need a verified domain in Resend.
+Resend button with 30s cooldown. Wrong code = error; 5 wrong attempts invalidates the code.
 
 ## Backend
 
-- New table `auth_codes` (email, code_hash, expires_at, attempts) — code hashed with SHA-256, 10‑min expiry, max 5 attempts, RLS denies all (only service role writes/reads).
-- Server function `requestLoginCode({ email })` — generates code, hashes, upserts row, sends email via Resend gateway.
-- Server function `verifyLoginCode({ email, code })` — checks hash + expiry + attempts, deletes row on success.
+- New `auth_codes` table: `email`, `code_hash` (SHA-256), `purpose` ('register' | 'login'), `expires_at` (10 min), `attempts`. RLS denies all — only server (service role) reads/writes.
+- Server function `requestEmailCode({ email, purpose })` — generates 6-digit code, hashes it, upserts row, sends email through Lovable Emails. Rate-limited 1 per 30s per email.
+- Server function `verifyEmailCode({ email, code, purpose })` — checks hash + expiry + attempts, deletes row on success.
 
-## Frontend
+## Frontend (`src/game/AuthScreen.tsx`)
 
-- `src/game/AuthScreen.tsx` — add email field on register; on login success, transition to step 2.
-- New `TwoFactorStep` rendered inside AuthScreen with 6-digit input, resend button, error display.
-- Account record extended to `{ nickname, password, email }`; existing accounts without an email get prompted once to add one before they can log in.
+- Add `email` input to register.
+- Account record extended to `{ nickname, password, email }` in localStorage. Existing accounts without an email get prompted once to add+verify one before they can log in.
+- After step 1 (register or login passes), render a new `EmailCodeStep` component: 6 digit boxes, "Resend code" (30s cooldown), error text.
+- On verify success → `onAuthed(nickname)` as today.
 
 ## Technical notes
 
 - Codes never travel to the client.
-- Rate-limit `requestLoginCode` to 1/30s per email server-side.
-- All Supabase calls go through `createServerFn` with `supabaseAdmin` (no user session exists yet at login).
+- Email delivery uses Lovable Emails (no API key needed). Setup requires a workspace email domain — if not already configured, I'll trigger the email setup dialog so you (or a workspace admin) can complete it; without it, emails can't actually go out.
+- Game data still lives in localStorage per nickname; only the verification step uses the backend.
