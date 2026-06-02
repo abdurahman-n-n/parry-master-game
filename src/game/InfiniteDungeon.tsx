@@ -184,10 +184,11 @@ export function InfiniteDungeon({ onExit }: Props) {
         Endless waves · pick a buff every 20
       </div>
       <ul className="mt-2 flex w-full flex-col gap-1 border-2 border-border p-3 text-left text-[9px] uppercase tracking-widest text-muted-foreground">
-        <li>· Wave 1 starts with {BASE_ENEMIES} enemies</li>
+        <li>· Wave 1 starts with {BASE_ENEMIES} enemy</li>
         <li>· +1 enemy every 5 waves</li>
         <li>· Boss every 10 waves</li>
         <li>· Choose a buff every 20 waves</li>
+        <li>· Each wave clear: +{COINS_PER_WAVE} ◈ · +{GEMS_PER_WAVE} 💎</li>
         <li>· Next wave starts automatically</li>
         <li>· Press [Esc] to pause / abandon</li>
       </ul>
