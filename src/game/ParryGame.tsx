@@ -429,6 +429,7 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
               attack: atk,
               spawnedAt: now,
               landAt: now + atk.windupMs,
+              aim: Math.atan2(p.y - en.y, p.x - en.x),
             };
             continue;
           }
@@ -441,10 +442,11 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
             const stopAt = MELEE_RANGE * 0.7;
             if (dist > stopAt) {
               edx /= dist; edy /= dist;
-              en.x = Math.max(ENEMY_RADIUS, Math.min(ARENA_W - ENEMY_RADIUS, en.x + edx * ENEMY_SPEED * dt));
-              en.y = Math.max(ENEMY_RADIUS, Math.min(ARENA_H * 0.7, en.y + edy * ENEMY_SPEED * dt));
+              en.x = Math.max(ENEMY_RADIUS, Math.min(ARENA_W - ENEMY_RADIUS, en.x + edx * enemySpeed * dt));
+              en.y = Math.max(ENEMY_RADIUS, Math.min(ARENA_H * 0.7, en.y + edy * enemySpeed * dt));
             }
           }
+
         }
 
         // Enemy separation — push apart overlapping enemies
