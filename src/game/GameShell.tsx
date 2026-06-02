@@ -21,6 +21,7 @@ type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
   const [user, setUser] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const [level, setLevel] = useState(1);
   const [enemy, setEnemy] = useState<EnemyDef>(() => enemyForLevel(1));
   const [credits, setCredits] = useState(0);
@@ -31,6 +32,7 @@ export function GameShell() {
 
   useEffect(() => {
     setUser(getCurrentUser());
+    setReady(true);
   }, []);
 
   useEffect(() => {
