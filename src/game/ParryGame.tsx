@@ -252,11 +252,20 @@ export function ParryGame({ character, enemy, level, onEnd }: Props) {
     setGems(getGems());
     cdInstaRef.current = now + Math.max(1000, a.cooldownMs + cdAdjust);
     setCdInsta(cdInstaRef.current);
-    // Strongest alive
+    // Boss first, else closest alive enemy
     let target: EnemyInstance | null = null;
     for (const e of enemiesRef.current) {
       if (e.hp <= 0) continue;
-      if (!target || e.hp > target.hp) target = e;
+      if (e.def.isBoss) { target = e; break; }
+    }
+    if (!target) {
+      const p = playerRef.current;
+      let bestDist = Infinity;
+      for (const e of enemiesRef.current) {
+        if (e.hp <= 0) continue;
+        const d = Math.hypot(p.x - e.x, p.y - e.y);
+        if (d < bestDist) { bestDist = d; target = e; }
+      }
     }
     if (!target) return;
     target.hp = 0;
