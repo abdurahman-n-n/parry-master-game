@@ -1,12 +1,22 @@
-The player's HP is tracked internally (`playerHp` state) but the `StatusRow` component only shows "Alive" / "Down" with a full/empty bar. Update it to show actual HP values.
+## Settings Color → Lobby & Arena Background
 
-**Changes to `src/game/ParryGame.tsx`:**
+The color picker in `SettingsScreen` currently sets `--accent` and `--border`. The user wants it to set the **background color** of both the lobby (menu, level select, store, etc.) and the in-fight arena. Both already use `bg-background`, so writing to `--background` will cover everything in one shot.
 
-1. **Refactor `StatusRow`** — add optional `hp` / `maxHp` number props. When both are provided, render the bar width proportionally (`(hp / maxHp) * 100%`) and display `"{hp}/{maxHp}"` on the right instead of "Alive" / "Down". Keep the existing `alive` boolean behavior as a fallback when hp/maxHp are omitted.
+### Changes
 
-2. **Wire player stats** — at the call site (line 725), pass:
-   - `hp={playerHp}`
-   - `maxHp={character.maxHp + hpUpCount}`
-   (computed the same way as the initial `playerHp` state)
+**`src/game/SettingsScreen.tsx`**
+1. Rewrite `applyAccent(rgb)`:
+   - Set `--background: rgb(r, g, b)` on `document.documentElement`.
+   - Compute perceived luminance (`0.299*r + 0.587*g + 0.114*b`) and pick a contrasting `--foreground` (near-black for light bg, near-white for dark bg) so text/buttons stay readable. Also derive a `--border` and `--muted-foreground` from that foreground at lower opacity (or a darker/lighter shade of bg).
+   - Stop overriding `--accent` (leave the theme accent intact) — or keep it; user didn't ask to change accent behavior. Prefer leaving `--accent` alone.
+2. Rename the section heading from "Accent Color" to "Background Color".
+3. Keep the existing storage key + default RGB; only the meaning changes. (Optionally rename `STORAGE_KEY` to `parry-bg-rgb` with a one-time migration — skipping unless you want it.)
+4. Function names `getSavedAccent` / `applyAccent` stay (used by `GameShell`) to avoid churn, or rename to `getSavedBgColor` / `applyBgColor` and update the two call sites in `GameShell.tsx`. Recommend renaming for clarity.
 
-This gives the player a proportional HP bar and exact numeric readout during fights, matching how enemy HP is already displayed.
+**`src/game/GameShell.tsx`**
+- If renamed, update imports and the two call sites (lines 8, 28). No other logic changes — `bg-background` Tailwind class already picks up the new variable.
+
+No changes needed in `ParryGame.tsx` — its `bg-background` arena container will follow automatically.
+
+### Notes
+- Contrast handling is essential, otherwise picking a pale yellow will make white-on-bg text invisible. The luminance-based foreground swap solves this without needing per-screen tweaks.

@@ -24,12 +24,18 @@ export function getSavedAccent(): [number, number, number] {
 
 export function applyAccent(rgb: [number, number, number]) {
   const [r, g, b] = rgb;
-  document.documentElement.style.setProperty("--accent", `rgb(${r}, ${g}, ${b})`);
-  // Border picks up the accent too so the whole UI shifts cohesively
-  document.documentElement.style.setProperty(
-    "--border",
-    `rgb(${Math.min(255, r + 20)}, ${Math.min(255, g + 20)}, ${Math.min(255, b + 20)})`,
-  );
+  const root = document.documentElement.style;
+  // Background follows the picked color across lobby + arena (both use bg-background).
+  root.setProperty("--background", `rgb(${r}, ${g}, ${b})`);
+  // Pick a contrasting foreground so text stays readable.
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const isLight = luminance > 0.55;
+  const fg = isLight ? "rgb(20, 20, 24)" : "rgb(240, 240, 245)";
+  const muted = isLight ? "rgba(20, 20, 24, 0.6)" : "rgba(240, 240, 245, 0.6)";
+  const border = isLight ? "rgba(20, 20, 24, 0.25)" : "rgba(240, 240, 245, 0.25)";
+  root.setProperty("--foreground", fg);
+  root.setProperty("--muted-foreground", muted);
+  root.setProperty("--border", border);
 }
 
 function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
@@ -162,7 +168,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Accent Color
+          Background Color
         </div>
 
         <div className="relative" style={{ width: WHEEL_SIZE, height: WHEEL_SIZE }}>
