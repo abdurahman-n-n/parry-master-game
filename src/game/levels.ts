@@ -154,12 +154,15 @@ export function isLevelUnlocked(level: number): boolean {
   return getBeatenLevels().has(level - 1);
 }
 
-/** Reward for finishing a level. Replays pay 1/3 (floor). */
-export function rewardForLevel(level: number, alreadyBeaten: boolean) {
-  const base = { credits: 15, gems: 1 };
+/** Reward for finishing a level. Replays pay 1/3 (floor). Bosses pay double. */
+export function rewardForLevel(level: number, alreadyBeaten: boolean, isBoss = false) {
+  const tier = levelTier(level);
+  const mult = isBoss ? 2 : 1;
+  const base = { credits: (15 + 5 * tier) * mult, gems: 1 * mult };
   if (!alreadyBeaten) return base;
   return {
     credits: Math.floor(base.credits / 3),
     gems: Math.floor(base.gems / 3),
   };
 }
+
