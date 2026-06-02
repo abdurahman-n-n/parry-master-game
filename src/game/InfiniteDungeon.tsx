@@ -35,6 +35,7 @@ export function InfiniteDungeon({ onExit }: Props) {
   const [buffs, setBuffs] = useState<Buffs>(INITIAL_BUFFS);
   const [coinsEarned, setCoinsEarned] = useState(0);
   const [gemsEarned, setGemsEarned] = useState(0);
+  const [currentHp, setCurrentHp] = useState<number | null>(null);
   const me = getCurrentUser() ?? "";
   const best = getBestWaveFor(me);
 
@@ -43,6 +44,7 @@ export function InfiniteDungeon({ onExit }: Props) {
     setBuffs(INITIAL_BUFFS);
     setCoinsEarned(0);
     setGemsEarned(0);
+    setCurrentHp(null);
     setPhase("fight");
   };
 
@@ -57,6 +59,8 @@ export function InfiniteDungeon({ onExit }: Props) {
     addGems(GEMS_PER_WAVE);
     setCoinsEarned((c) => c + COINS_PER_WAVE);
     setGemsEarned((g) => g + GEMS_PER_WAVE);
+    // Carry HP over to the next wave.
+    setCurrentHp(res.playerHpRemaining);
     // Every 20 waves prompt a buff before next wave.
     if (wave % 20 === 0) {
       setPhase("buff");
@@ -91,6 +95,7 @@ export function InfiniteDungeon({ onExit }: Props) {
         dmgMul={buffs.dmgMul}
         speedMul={buffs.speedMul}
         cdBonusMs={buffs.cdBonusMs}
+        startHpOverride={currentHp ?? undefined}
         hudLabel="Wave"
         hideAbandon
       />

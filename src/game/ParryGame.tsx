@@ -23,6 +23,7 @@ type Flash = { uid: number; kind: "parry" | "hit" | "perfect" | "dodge" | "dash"
 export interface FightResult {
   result: "victory" | "defeat";
   fightMs: number;
+  playerHpRemaining: number;
 }
 
 interface Props {
@@ -44,6 +45,8 @@ interface Props {
   hudLabel?: string;
   /** When true, top-right abandon button is hidden (use pause menu). */
   hideAbandon?: boolean;
+  /** Start fight with a specific HP value (clamped to max). Default = full HP. */
+  startHpOverride?: number;
 }
 
 const ARENA_W = 640;
@@ -105,7 +108,7 @@ export function enemyCountForLevel(level: number): number {
 export function ParryGame({
   character, enemy, level, onEnd,
   enemyCountOverride, hpMul = 1, dmgMul = 1, speedMul = 1, cdBonusMs = 0,
-  hudLabel = "Level", hideAbandon = false,
+  hudLabel = "Level", hideAbandon = false, startHpOverride,
 }: Props) {
   // Upgrades (stackable)
   const hpUpCount = getUpgradeCount("hp-up");
@@ -123,7 +126,11 @@ export function ParryGame({
 
 
   const [state, setState] = useState<GameState>("playing");
-  const [playerHp, setPlayerHp] = useState(playerMaxHp);
+  const [playerHp, setPlayerHp] = useState(() =>
+    Math.max(0, Math.min(playerMaxHp, startHpOverride ?? playerMaxHp))
+  );
+  const playerHpRef = useRef(0);
+  playerHpRef.current = playerHp;
   const [flashes, setFlashes] = useState<Flash[]>([]);
   const [log, setLog] = useState<string>("* The battle begins.");
   const [paused, setPaused] = useState(false);
@@ -185,7 +192,11 @@ export function ParryGame({
     if (stateRef.current !== "playing") return;
     const fightMs = performance.now() - fightStartRef.current;
     setState(result);
-    (endFight as any)._payload = { result, fightMs };
+    (endFight as any)._payload = {
+      result,
+      fightMs,
+      playerHpRemaining: result === "victory" ? playerHpRef.current : 0,
+    };
   }, []);
 
   const pushFlash = useCallback((kind: Flash["kind"]) => {
@@ -198,8 +209,11 @@ export function ParryGame({
     if (state === "playing") return;
     const payload = (endFight as any)._payload as FightResult | undefined;
     const t = setTimeout(
-      () => onEnd(payload ?? { result: state === "victory" ? "victory" : "defeat",
-        fightMs: performance.now() - fightStartRef.current }),
+      () => onEnd(payload ?? {
+        result: state === "victory" ? "victory" : "defeat",
+        fightMs: performance.now() - fightStartRef.current,
+        playerHpRemaining: state === "victory" ? playerHpRef.current : 0,
+      }),
       1100,
     );
     return () => clearTimeout(t);
@@ -530,7 +544,7 @@ export function ParryGame({
           <div className="w-[80px]" />
         ) : (
           <button
-            onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current })}
+            onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current, playerHpRemaining: 0 })}
             className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
           >
             ← Abandon
@@ -719,7 +733,7 @@ export function ParryGame({
                 ▶ Continue
               </button>
               <button
-                onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current })}
+                onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current, playerHpRemaining: 0 })}
                 className="border-2 border-border bg-background px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background"
               >
                 ✕ Abandon
