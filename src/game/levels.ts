@@ -9,7 +9,7 @@ const mk = (
   id, kind, windupMs, parryWindowMs, damage: 1, reflect: 1,
 });
 
-export const TOTAL_LEVELS = 10;
+export const TOTAL_LEVELS = 30;
 
 export const DEFAULT_CHARACTER: CharacterDef = {
   id: "hero",
