@@ -64,6 +64,14 @@ export function GameShell() {
     }
   };
 
+  if (!ready) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-background p-6 font-pixel text-foreground">
+        <div className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Loading…</div>
+      </div>
+    );
+  }
+
   if (!user) {
     return <AuthScreen onAuthed={(n) => setUser(n)} />;
   }
