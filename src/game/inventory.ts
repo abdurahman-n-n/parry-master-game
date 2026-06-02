@@ -20,10 +20,10 @@ export const STORE_ITEMS: StoreItem[] = [
   { id: "instakill", kind: "ability", name: "Insta Kill", desc: "Unlocks [Q] — instantly kills the enemy. Costs 5 gems per use.", creditCost: 50, hotkey: "Q" },
   { id: "dash",      kind: "ability", name: "Dash",       desc: "Unlocks [E] — dashes away from the enemy. Free to use.",      creditCost: 25, hotkey: "E" },
 
-  // Skins
-  { id: "skin-crimson", kind: "skin", name: "Crimson",    desc: "A bloody red tint for your hero.",      creditCost: 30, color: "oklch(0.65 0.22 25)" },
-  { id: "skin-mint",    kind: "skin", name: "Mint",       desc: "Cool mint glow.",                        creditCost: 30, color: "oklch(0.85 0.15 165)" },
-  { id: "skin-gold",    kind: "skin", name: "Gold",       desc: "Pure gold. The mark of a champion.",     creditCost: 80, color: "oklch(0.85 0.17 90)" },
+  // Weapon Effects
+  { id: "skin-crimson", kind: "skin", name: "Crimson Edge", desc: "Wreathes your blade in a bloody red aura.",   creditCost: 30, color: "oklch(0.65 0.22 25)" },
+  { id: "skin-mint",    kind: "skin", name: "Mint Pulse",   desc: "A cool mint glow trails every swing.",         creditCost: 30, color: "oklch(0.85 0.15 165)" },
+  { id: "skin-gold",    kind: "skin", name: "Gold Aura",    desc: "A radiant gold halo — the mark of a champion.", creditCost: 80, color: "oklch(0.85 0.17 90)" },
 
   // Upgrades
   { id: "hp-up",   kind: "upgrade", name: "Vitality",      desc: "+1 max HP.",                         creditCost: 60 },

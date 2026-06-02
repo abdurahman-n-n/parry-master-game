@@ -9,7 +9,7 @@ import { CurrencyHUD, getCredits, getGems } from "./Currency";
 
 const SECTIONS: { kind: ItemKind; title: string }[] = [
   { kind: "ability", title: "Abilities" },
-  { kind: "skin",    title: "Skins" },
+  { kind: "skin",    title: "Weapon Effects" },
   { kind: "upgrade", title: "Upgrades" },
 ];
 

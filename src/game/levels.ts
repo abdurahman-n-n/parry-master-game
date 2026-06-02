@@ -13,7 +13,7 @@ export const TOTAL_LEVELS = 100;
 
 export const DEFAULT_CHARACTER: CharacterDef = {
   id: "hero",
-  name: "The Kid",
+  name: "Sword Master",
   maxHp: 1,
   color: "oklch(0.97 0.01 280)",
   ability: { name: "Determination", description: "One soul. One chance." },
