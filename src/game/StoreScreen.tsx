@@ -17,8 +17,8 @@ export function StoreScreen({ onBack }: { onBack: () => void }) {
   const credits = getCredits();
   const gems = getGems();
 
-  const handleBuy = (id: string) => {
-    const r = buyItem(id);
+  const handleBuy = (id: string, currency?: "credits" | "gems") => {
+    const r = buyItem(id, currency);
     if (r.ok) {
       setFeedback(`Purchased!`);
     } else {
