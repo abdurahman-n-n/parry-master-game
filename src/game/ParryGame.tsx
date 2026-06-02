@@ -23,6 +23,7 @@ type Flash = { uid: number; kind: "parry" | "hit" | "perfect" | "dodge" | "dash"
 export interface FightResult {
   result: "victory" | "defeat";
   fightMs: number;
+  playerHpRemaining: number;
 }
 
 interface Props {
