@@ -84,18 +84,31 @@ export type BuyResult =
   | { ok: true }
   | { ok: false; reason: "owned" | "missing" | "credits" | "gems" };
 
-export function buyItem(id: string): BuyResult {
+export function buyItem(id: string, currency?: "credits" | "gems"): BuyResult {
   const item = findItem(id);
   if (!item) return { ok: false, reason: "missing" };
   const isUpgrade = item.kind === "upgrade";
   if (!isUpgrade && isOwned(id)) return { ok: false, reason: "owned" };
-  const price = isUpgrade ? getUpgradePrice(item) : item.creditCost;
-  const gemPrice = getUpgradeGemCost(item);
-  if (getCredits() < price) return { ok: false, reason: "credits" };
-  if (gemPrice > 0 && getGems() < gemPrice) return { ok: false, reason: "gems" };
 
-  if (price > 0 && !spendCredits(price)) return { ok: false, reason: "credits" };
-  if (gemPrice > 0 && !spendGems(gemPrice)) return { ok: false, reason: "gems" };
+  if (isUpgrade) {
+    const pay = currency ?? "credits";
+    if (pay === "gems") {
+      const gemPrice = getUpgradeGemCost(item);
+      if (getGems() < gemPrice) return { ok: false, reason: "gems" };
+      if (!spendGems(gemPrice)) return { ok: false, reason: "gems" };
+    } else {
+      const price = getUpgradePrice(item);
+      if (getCredits() < price) return { ok: false, reason: "credits" };
+      if (price > 0 && !spendCredits(price)) return { ok: false, reason: "credits" };
+    }
+  } else {
+    const price = item.creditCost;
+    const gemPrice = item.gemCost ?? 0;
+    if (getCredits() < price) return { ok: false, reason: "credits" };
+    if (gemPrice > 0 && getGems() < gemPrice) return { ok: false, reason: "gems" };
+    if (price > 0 && !spendCredits(price)) return { ok: false, reason: "credits" };
+    if (gemPrice > 0 && !spendGems(gemPrice)) return { ok: false, reason: "gems" };
+  }
 
   if (isUpgrade) {
     const counts = readUpgradeCounts();
