@@ -80,6 +80,7 @@ export function GameShell() {
   if (screen === "settings")  return <SettingsScreen onBack={() => setScreen("menu")} />;
   if (screen === "store")     return <StoreScreen onBack={() => setScreen("menu")} />;
   if (screen === "inventory") return <InventoryScreen onBack={() => setScreen("menu")} />;
+  if (screen === "leaderboard") return <LeaderboardScreen onBack={() => setScreen("menu")} />;
 
   if (screen === "levels") {
     return (
