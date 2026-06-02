@@ -61,6 +61,28 @@ const BOSS_TEMPLATES = [
   },
 ];
 
+/** One unique minion type per boss tier (10/20/30). */
+const MINION_TEMPLATES = [
+  {
+    id: "squire", name: "Squire", title: "Boss minion",
+    color: "oklch(0.62 0.14 35)", shape: "triangle" as const,
+    attacks: [mk("sq-slash", "slash", 620, 140), mk("sq-thrust", "thrust", 480, 120)],
+    cadenceMs: [850, 1300] as [number, number],
+  },
+  {
+    id: "shade", name: "Shade", title: "Boss minion",
+    color: "oklch(0.55 0.18 305)", shape: "diamond" as const,
+    attacks: [mk("sh-thrust", "thrust", 400, 110), mk("sh-slash", "slash", 520, 130)],
+    cadenceMs: [700, 1150] as [number, number],
+  },
+  {
+    id: "herald", name: "Herald", title: "Boss minion",
+    color: "oklch(0.60 0.18 80)", shape: "star" as const,
+    attacks: [mk("h-slash", "slash", 560, 130), mk("h-heavy", "heavy", 900, 160)],
+    cadenceMs: [750, 1200] as [number, number],
+  },
+];
+
 /** Levels are 1-indexed. Every 10th level is a boss. */
 export function enemyForLevel(level: number): EnemyDef {
   const tier = Math.floor((level - 1) / 10); // 0 for levels 1..10
@@ -84,10 +106,10 @@ export function enemyForLevel(level: number): EnemyDef {
   };
 }
 
-/** Minion that accompanies the boss in a boss fight. */
+/** Minion that accompanies the boss in a boss fight. Unique per boss tier. */
 export function minionForLevel(level: number): EnemyDef {
   const tier = Math.floor((level - 1) / 10);
-  const tpl = REGULAR_TEMPLATES[(level - 1) % REGULAR_TEMPLATES.length];
+  const tpl = MINION_TEMPLATES[Math.min(MINION_TEMPLATES.length - 1, tier)];
   return {
     ...tpl,
     maxHp: 2 + tier,
