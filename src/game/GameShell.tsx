@@ -13,14 +13,13 @@ import {
 } from "./Currency";
 import type { EnemyDef } from "./types";
 import { AuthScreen, getCurrentUser, logout } from "./AuthScreen";
+import { LeaderboardScreen } from "./LeaderboardScreen";
 
-type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory";
+type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
-  const [user, setUser] = useState<string | null>(() =>
-    typeof window !== "undefined" ? getCurrentUser() : null
-  );
+  const [user, setUser] = useState<string | null>(null);
   const [level, setLevel] = useState(1);
   const [enemy, setEnemy] = useState<EnemyDef>(() => enemyForLevel(1));
   const [credits, setCredits] = useState(0);
@@ -28,6 +27,10 @@ export function GameShell() {
   const [beaten, setBeaten] = useState<Set<number>>(new Set());
   const [lastReward, setLastReward] = useState<{ credits: number; gems: number } | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, []);
 
   useEffect(() => {
     applyAccent(getSavedAccent());
@@ -77,6 +80,7 @@ export function GameShell() {
   if (screen === "settings")  return <SettingsScreen onBack={() => setScreen("menu")} />;
   if (screen === "store")     return <StoreScreen onBack={() => setScreen("menu")} />;
   if (screen === "inventory") return <InventoryScreen onBack={() => setScreen("menu")} />;
+  if (screen === "leaderboard") return <LeaderboardScreen onBack={() => setScreen("menu")} />;
 
   if (screen === "levels") {
     return (
@@ -209,6 +213,12 @@ export function GameShell() {
           className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
         >
           Inventory
+        </button>
+        <button
+          onClick={() => setScreen("leaderboard")}
+          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+        >
+          🏆 Leaderboard
         </button>
         <button
           onClick={() => setScreen("settings")}
