@@ -8,7 +8,13 @@ const CURRENT_KEY = "parry.currentUser";
 function loadAccounts(): Account[] {
   try {
     const raw = localStorage.getItem(ACCOUNTS_KEY);
-    return raw ? (JSON.parse(raw) as Account[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((a): a is Partial<Account> => !!a && typeof a === "object" && "nickname" in a)
+      .map((a) => ({ nickname: String(a.nickname ?? "").trim(), password: String(a.password ?? "") }))
+      .filter((a) => a.nickname);
   } catch {
     return [];
   }
@@ -50,10 +56,14 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
       accounts.push({ nickname: nick, password });
       saveAccounts(accounts);
     } else {
-      const found = accounts.find(
-        (a) => a.nickname.toLowerCase() === nick.toLowerCase() && a.password === password,
-      );
+      const found = accounts.find((a) => a.nickname.toLowerCase() === nick.toLowerCase());
       if (!found) {
+        accounts.push({ nickname: nick, password });
+        saveAccounts(accounts);
+      } else if (!found.password) {
+        found.password = password;
+        saveAccounts(accounts);
+      } else if (found.password !== password) {
         setError("Invalid nickname or password");
         return;
       }
