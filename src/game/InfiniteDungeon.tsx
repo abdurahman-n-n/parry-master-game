@@ -139,6 +139,9 @@ export function InfiniteDungeon({ onExit }: Props) {
         <div className="text-[12px] uppercase tracking-widest text-accent">
           {cleared} wave{cleared === 1 ? "" : "s"} cleared
         </div>
+        <div className="text-[10px] uppercase tracking-widest text-foreground">
+          Earned: {coinsEarned} ◈ · {gemsEarned} 💎
+        </div>
         {isPB && cleared > 0 && (
           <div className="text-[9px] uppercase tracking-widest text-accent">★ New personal best</div>
         )}
