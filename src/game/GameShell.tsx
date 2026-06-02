@@ -27,6 +27,7 @@ export function GameShell() {
   const [gems, setGems] = useState(0);
   const [beaten, setBeaten] = useState<Set<number>>(new Set());
   const [lastReward, setLastReward] = useState<{ credits: number; gems: number } | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     applyAccent(getSavedAccent());
@@ -222,15 +223,39 @@ export function GameShell() {
       <div className="flex items-center gap-3 text-[9px] uppercase tracking-widest text-muted-foreground">
         <span>Logged in as {user}</span>
         <button
-          onClick={() => {
-            logout();
-            setUser(null);
-          }}
+          onClick={() => setShowLogoutConfirm(true)}
           className="border border-border px-2 py-1 hover:bg-foreground hover:text-background"
         >
           Logout
         </button>
       </div>
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6 font-pixel">
+          <div className="flex w-full max-w-sm flex-col items-center gap-4 border-2 border-border bg-background p-6 text-center">
+            <div className="text-[12px] uppercase tracking-[0.2em] text-foreground">
+              Are you sure you want to logout?
+            </div>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 border-2 border-border bg-background px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  logout();
+                  setShowLogoutConfirm(false);
+                  setUser(null);
+                }}
+                className="flex-1 border-2 border-border bg-foreground px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
