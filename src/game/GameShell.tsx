@@ -215,6 +215,12 @@ export function GameShell() {
           Inventory
         </button>
         <button
+          onClick={() => setScreen("leaderboard")}
+          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+        >
+          🏆 Leaderboard
+        </button>
+        <button
           onClick={() => setScreen("settings")}
           className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
         >
