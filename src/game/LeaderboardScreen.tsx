@@ -38,13 +38,14 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           {entries.map((e, i) => {
             const isMe =
               me && e.nickname.toLowerCase() === me.toLowerCase();
-            const date = e.firstGemAt
-              ? new Date(e.firstGemAt).toLocaleDateString(undefined, {
-                  year: "2-digit",
-                  month: "short",
-                  day: "numeric",
-                })
-              : "—";
+            let date = "—";
+            if (e.firstGemAt) {
+              const d = new Date(e.firstGemAt);
+              const dd = String(d.getDate()).padStart(2, "0");
+              const mm = String(d.getMonth() + 1).padStart(2, "0");
+              const yy = String(d.getFullYear()).slice(-2);
+              date = `${dd}/${mm}/${yy}`;
+            }
             return (
               <div
                 key={e.nickname}
