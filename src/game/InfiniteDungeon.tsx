@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DEFAULT_CHARACTER, enemyForLevel } from "./levels";
 import { ParryGame, type FightResult } from "./ParryGame";
 import { getCurrentUser } from "./AuthScreen";
+import { addCredits, addGems } from "./Currency";
 import {
   getBestWaveFor, getInfiniteLeaderboard, recordInfiniteRun,
 } from "./InfiniteLeaderboard";
@@ -15,7 +16,9 @@ type Buffs = {
   cdBonusMs: number;
 };
 
-const BASE_ENEMIES = 25;
+const BASE_ENEMIES = 1;
+const COINS_PER_WAVE = 50;
+const GEMS_PER_WAVE = 1;
 function enemyCountForWave(wave: number) {
   return BASE_ENEMIES + Math.floor((wave - 1) / 5);
 }
@@ -30,12 +33,16 @@ export function InfiniteDungeon({ onExit }: Props) {
   const [phase, setPhase] = useState<Phase>("intro");
   const [wave, setWave] = useState(1);
   const [buffs, setBuffs] = useState<Buffs>(INITIAL_BUFFS);
+  const [coinsEarned, setCoinsEarned] = useState(0);
+  const [gemsEarned, setGemsEarned] = useState(0);
   const me = getCurrentUser() ?? "";
   const best = getBestWaveFor(me);
 
   const startRun = () => {
     setWave(1);
     setBuffs(INITIAL_BUFFS);
+    setCoinsEarned(0);
+    setGemsEarned(0);
     setPhase("fight");
   };
 
@@ -45,7 +52,12 @@ export function InfiniteDungeon({ onExit }: Props) {
       setPhase("gameover");
       return;
     }
-    // Victory — every 20 waves prompt a buff before next wave.
+    // Wave cleared — reward immediately.
+    addCredits(COINS_PER_WAVE);
+    addGems(GEMS_PER_WAVE);
+    setCoinsEarned((c) => c + COINS_PER_WAVE);
+    setGemsEarned((g) => g + GEMS_PER_WAVE);
+    // Every 20 waves prompt a buff before next wave.
     if (wave % 20 === 0) {
       setPhase("buff");
     } else {
@@ -53,6 +65,7 @@ export function InfiniteDungeon({ onExit }: Props) {
       setPhase("fight");
     }
   };
+
 
   const pickBuff = (kind: "hp" | "dmg" | "speed") => {
     setBuffs((b) => {
@@ -126,6 +139,9 @@ export function InfiniteDungeon({ onExit }: Props) {
         <div className="text-[12px] uppercase tracking-widest text-accent">
           {cleared} wave{cleared === 1 ? "" : "s"} cleared
         </div>
+        <div className="text-[10px] uppercase tracking-widest text-foreground">
+          Earned: {coinsEarned} ◈ · {gemsEarned} 💎
+        </div>
         {isPB && cleared > 0 && (
           <div className="text-[9px] uppercase tracking-widest text-accent">★ New personal best</div>
         )}
@@ -168,10 +184,11 @@ export function InfiniteDungeon({ onExit }: Props) {
         Endless waves · pick a buff every 20
       </div>
       <ul className="mt-2 flex w-full flex-col gap-1 border-2 border-border p-3 text-left text-[9px] uppercase tracking-widest text-muted-foreground">
-        <li>· Wave 1 starts with {BASE_ENEMIES} enemies</li>
+        <li>· Wave 1 starts with {BASE_ENEMIES} enemy</li>
         <li>· +1 enemy every 5 waves</li>
         <li>· Boss every 10 waves</li>
         <li>· Choose a buff every 20 waves</li>
+        <li>· Each wave clear: +{COINS_PER_WAVE} ◈ · +{GEMS_PER_WAVE} 💎</li>
         <li>· Next wave starts automatically</li>
         <li>· Press [Esc] to pause / abandon</li>
       </ul>
