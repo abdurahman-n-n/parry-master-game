@@ -37,6 +37,8 @@ export function InfiniteDungeon({ onExit }: Props) {
   const [gemsEarned, setGemsEarned] = useState(0);
   const [currentHp, setCurrentHp] = useState<number | null>(null);
   const me = getCurrentUser() ?? "";
+  const beatenCount = typeof window === "undefined" ? 0 : getBeatenLevels().size;
+  const canPlay = beatenCount >= TOTAL_LEVELS;
   const best = getBestWaveFor(me);
 
   const startRun = () => {
