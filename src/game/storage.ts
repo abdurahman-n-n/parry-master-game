@@ -1,8 +1,14 @@
-// Per-user localStorage namespace.
+// Per-user localStorage namespace + cloud mirroring.
 // Each account gets its own bucket so progress, currency, inventory,
-// settings, and level data don't bleed between accounts.
+// settings, and level data don't bleed between accounts. Writes are
+// also mirrored to the backend so accounts work across devices.
+
+import { pushSave, pullSaves } from "@/lib/cloudSave.functions";
 
 let activeUser: string | null = null;
+let activeToken: string | null = null;
+
+const TOKEN_KEY = "parry.sessionToken";
 
 export function setActiveUser(nickname: string | null) {
   activeUser = nickname;
@@ -12,14 +18,116 @@ export function getActiveUser(): string | null {
   return activeUser;
 }
 
+export function setSessionToken(token: string | null) {
+  activeToken = token;
+  if (typeof window === "undefined") return;
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+}
+
+export function getSessionToken(): string | null {
+  if (activeToken) return activeToken;
+  if (typeof window === "undefined") return null;
+  activeToken = localStorage.getItem(TOKEN_KEY);
+  return activeToken;
+}
+
 // Build a per-user key. If no user is active we fall back to the bare key
 // so the unscoped legacy data is still readable (used only for migration).
 export function lsKey(base: string): string {
   return activeUser ? `${base}::user::${activeUser.toLowerCase()}` : base;
 }
 
-// Keys that get migrated from the unscoped/legacy bucket into the first
-// account that logs in after the multi-user system was added.
+// Per-user keys we sync to the cloud. We store under the base key on the
+// server (no per-user suffix needed — the account_id scopes it already).
+const SYNCED_BASES = new Set<string>([
+  "parry-credits",
+  "parry-gems",
+  "parry.inventory",
+  "parry.equippedSkin",
+  "parry.equippedAbility",
+  "parry.upgradeCounts",
+  "parry.beatenLevels",
+  "parry-accent-rgb",
+  "parry.infinite.bestWave",
+]);
+
+// Debounced cloud push per key.
+const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+function schedulePush(base: string, value: string | null) {
+  const token = getSessionToken();
+  if (!token) return;
+  const existing = pendingTimers.get(base);
+  if (existing) clearTimeout(existing);
+  const t = setTimeout(() => {
+    pendingTimers.delete(base);
+    pushSave({ data: { token, key: base, value } }).catch(() => {
+      /* best-effort; local copy is still saved */
+    });
+  }, 400);
+  pendingTimers.set(base, t);
+}
+
+// Install a one-time interceptor on localStorage so any setItem/removeItem
+// on a synced per-user key also pushes to the cloud.
+let installed = false;
+function installMirror() {
+  if (installed || typeof window === "undefined") return;
+  installed = true;
+  const ls = window.localStorage;
+  const origSet = ls.setItem.bind(ls);
+  const origRemove = ls.removeItem.bind(ls);
+
+  ls.setItem = (k: string, v: string) => {
+    origSet(k, v);
+    const base = parseBase(k);
+    if (base && SYNCED_BASES.has(base)) schedulePush(base, v);
+  };
+  ls.removeItem = (k: string) => {
+    origRemove(k);
+    const base = parseBase(k);
+    if (base && SYNCED_BASES.has(base)) schedulePush(base, null);
+  };
+}
+
+function parseBase(scopedKey: string): string | null {
+  const idx = scopedKey.indexOf("::user::");
+  if (idx === -1) return null;
+  return scopedKey.slice(0, idx);
+}
+
+// Called on login: pull cloud saves and write them into the local per-user
+// bucket. The mirror is suppressed during hydration to avoid push loops.
+let hydrating = false;
+export async function hydrateFromCloud(nickname: string, token: string) {
+  if (typeof window === "undefined") return;
+  installMirror();
+  setActiveUser(nickname);
+  setSessionToken(token);
+  try {
+    const res = await pullSaves({ data: { token } });
+    const saves = res.saves ?? {};
+    hydrating = true;
+    for (const [base, value] of Object.entries(saves)) {
+      if (!SYNCED_BASES.has(base)) continue;
+      const k = `${base}::user::${nickname.toLowerCase()}`;
+      // Write directly through the original (un-mirrored) setter by
+      // briefly clearing the pending timer for this key to avoid echoing.
+      window.localStorage.setItem(k, value);
+      const pending = pendingTimers.get(base);
+      if (pending) {
+        clearTimeout(pending);
+        pendingTimers.delete(base);
+      }
+    }
+  } catch {
+    // Offline / first-time: nothing to hydrate, keep whatever's local.
+  } finally {
+    hydrating = false;
+  }
+}
+
+// Legacy keys carried over from the original local-only auth flow.
 const LEGACY_KEYS = [
   "parry-credits",
   "parry-gems",
@@ -34,8 +142,7 @@ const LEGACY_KEYS = [
 const MIGRATION_FLAG = "parry.legacyMigrated";
 
 // One-time migration: copy any legacy (unscoped) progress into the given
-// nickname's bucket the first time anyone logs in. Subsequent accounts
-// start from zero.
+// nickname's bucket the first time anyone logs in.
 export function migrateLegacyIfNeeded(nickname: string) {
   if (typeof window === "undefined") return;
   if (localStorage.getItem(MIGRATION_FLAG)) return;
