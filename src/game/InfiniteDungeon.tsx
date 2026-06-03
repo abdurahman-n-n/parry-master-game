@@ -265,7 +265,7 @@ function InfiniteLeaderboardView({ me, onBack }: { me: string; onBack: () => voi
         .catch(() => {});
     };
     load();
-    const id = setInterval(load, 60_000);
+    const id = setInterval(load, 1_000);
     return () => { alive = false; clearInterval(id); };
   }, [fetchLb]);
   return (

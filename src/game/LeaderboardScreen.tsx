@@ -17,7 +17,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
         .catch(() => {});
     };
     load();
-    const id = setInterval(load, 60_000);
+    const id = setInterval(load, 1_000);
     return () => { alive = false; clearInterval(id); };
   }, [fetchLb]);
 
@@ -35,7 +35,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
-        Ranked by gems · refreshes every minute
+        Ranked by gems · refreshes every second
       </div>
 
       {entries.length === 0 ? (
