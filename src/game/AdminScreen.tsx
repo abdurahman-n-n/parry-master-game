@@ -7,18 +7,11 @@ const ACCOUNTS_KEY = "parry.accounts";
 const LB_KEY = "parry.leaderboard";
 
 type Account = { nickname: string; password: string };
-type LBEntry = { nickname: string; gems: number };
 
 function loadAccounts(): Account[] {
   try {
     const raw = localStorage.getItem(ACCOUNTS_KEY);
     return raw ? (JSON.parse(raw) as Account[]) : [];
-  } catch { return []; }
-}
-function loadLeaderboard(): LBEntry[] {
-  try {
-    const raw = localStorage.getItem(LB_KEY);
-    return raw ? (JSON.parse(raw) as LBEntry[]) : [];
   } catch { return []; }
 }
 
@@ -46,20 +39,8 @@ function writeUpgrades(nick: string, counts: Record<string, number>) {
   localStorage.setItem(userKey("parry.upgradeCounts", nick), JSON.stringify(counts));
 }
 
-function syncGemsToLeaderboard(nick: string, gems: number) {
-  const lb = loadLeaderboard();
-  const idx = lb.findIndex((e) => e.nickname.toLowerCase() === nick.toLowerCase());
-  if (idx >= 0) {
-    lb[idx].gems = gems;
-  } else if (gems > 0) {
-    lb.push({ nickname: nick, gems });
-  }
-  localStorage.setItem(LB_KEY, JSON.stringify(lb));
-}
-
 export function AdminScreen({ onBack }: { onBack: () => void }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LBEntry[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [target, setTarget] = useState<string>("");
   const [credits, setCredits] = useState(0);
@@ -73,7 +54,6 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     const accs = loadAccounts();
     setAccounts(accs);
-    setLeaderboard(loadLeaderboard());
     if (accs.length && !target) setTarget(accs[0].nickname);
   }, []);
 
@@ -96,8 +76,6 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
     const v = Math.max(0, Math.floor(n));
     writeNum("parry-gems", target, v);
     setGems(v);
-    syncGemsToLeaderboard(target, v);
-    setLeaderboard(loadLeaderboard());
     flash(`Set gems to ${v}`);
   };
   const toggleItem = (id: string) => {
@@ -146,7 +124,6 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
     }
     for (const k of toRemove) localStorage.removeItem(k);
     localStorage.removeItem(LB_KEY);
-    setLeaderboard([]);
     setConfirmReset(false);
     flash("New season started");
   };
@@ -290,38 +267,16 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
 
 
       <div className="w-full max-w-2xl border-2 border-border bg-background p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="text-[11px] uppercase tracking-[0.3em]">Leaderboard</div>
-          <button
-            onClick={() => setConfirmReset(true)}
-            className="border border-destructive px-3 py-1 text-[8px] uppercase tracking-widest text-destructive hover:bg-destructive hover:text-destructive-foreground"
-          >
-            Start New Season
-          </button>
-        </div>
+        <div className="mb-3 text-[11px] uppercase tracking-[0.3em]">Season</div>
         <div className="mb-2 text-[8px] uppercase tracking-widest text-muted-foreground">
           Wipes all players' lifetime gems &amp; best waves
         </div>
-        <div className="flex flex-col gap-1">
-          {leaderboard
-            .sort((a, b) => b.gems - a.gems)
-            .map((e, i) => (
-              <div key={e.nickname} className="flex items-center justify-between border border-border p-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-6 text-center text-[10px] text-muted-foreground">{i + 1}</div>
-                  <div className="text-[10px] uppercase tracking-widest">{e.nickname}</div>
-                </div>
-                <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
-                  {e.gems} gem{e.gems !== 1 ? "s" : ""}
-                </div>
-              </div>
-            ))}
-          {leaderboard.length === 0 && (
-            <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-              No leaderboard entries
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => setConfirmReset(true)}
+          className="border border-destructive px-3 py-1 text-[8px] uppercase tracking-widest text-destructive hover:bg-destructive hover:text-destructive-foreground"
+        >
+          Start New Season
+        </button>
       </div>
 
       {confirmDelete && (
