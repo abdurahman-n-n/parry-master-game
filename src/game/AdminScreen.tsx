@@ -325,11 +325,14 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
         <div className="mb-3 flex items-center justify-between">
           <div className="text-[11px] uppercase tracking-[0.3em]">Leaderboard</div>
           <button
-            onClick={resetLeaderboard}
+            onClick={() => setConfirmReset(true)}
             className="border border-destructive px-3 py-1 text-[8px] uppercase tracking-widest text-destructive hover:bg-destructive hover:text-destructive-foreground"
           >
-            Reset
+            Start New Season
           </button>
+        </div>
+        <div className="mb-2 text-[8px] uppercase tracking-widest text-muted-foreground">
+          Wipes all players' lifetime gems &amp; best waves
         </div>
         <div className="flex flex-col gap-1">
           {leaderboard
