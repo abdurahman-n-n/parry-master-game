@@ -44,26 +44,17 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
         </div>
       ) : (
         <div className="flex w-full max-w-xl flex-col gap-1">
-          <div className="grid grid-cols-[40px_1fr_80px_120px] gap-2 border-b-2 border-border px-3 py-2 text-[9px] uppercase tracking-widest text-muted-foreground">
+          <div className="grid grid-cols-[40px_1fr_80px] gap-2 border-b-2 border-border px-3 py-2 text-[9px] uppercase tracking-widest text-muted-foreground">
             <div>#</div>
             <div>Player</div>
             <div className="text-right">Gems</div>
-            <div className="text-right">First Gem</div>
           </div>
           {entries.map((e: GemRow, i: number) => {
             const isMe = me && e.nickname.toLowerCase() === me.toLowerCase();
-            let date = "—";
-            if (e.firstGemAt) {
-              const d = new Date(e.firstGemAt);
-              const dd = String(d.getDate()).padStart(2, "0");
-              const mm = String(d.getMonth() + 1).padStart(2, "0");
-              const yy = String(d.getFullYear()).slice(-2);
-              date = `${dd}/${mm}/${yy}`;
-            }
             return (
               <div
                 key={e.nickname}
-                className={`grid grid-cols-[40px_1fr_80px_120px] items-center gap-2 border-2 px-3 py-2 text-[10px] uppercase tracking-widest ${
+                className={`grid grid-cols-[40px_1fr_80px] items-center gap-2 border-2 px-3 py-2 text-[10px] uppercase tracking-widest ${
                   isMe
                     ? "border-accent bg-foreground text-background"
                     : "border-border bg-background text-foreground"
@@ -75,7 +66,6 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
                   <GemIcon size={12} />
                   <span>{e.gems}</span>
                 </div>
-                <div className="text-right text-[9px]">{date}</div>
               </div>
             );
           })}
