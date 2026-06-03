@@ -202,12 +202,19 @@ export function InfiniteDungeon({ onExit }: Props) {
       <div className="text-[10px] uppercase tracking-widest text-accent">
         Your best: {best} wave{best === 1 ? "" : "s"}
       </div>
+      {!canPlay && (
+        <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
+          🔒 Clear all {TOTAL_LEVELS} levels to play ({beatenCount}/{TOTAL_LEVELS})
+        </div>
+      )}
       <div className="mt-2 flex w-full gap-2">
         <button
-          onClick={startRun}
-          className="flex-1 border-2 border-border bg-foreground px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent"
+          onClick={() => canPlay && startRun()}
+          disabled={!canPlay}
+          title={canPlay ? "Start a run" : `Clear all ${TOTAL_LEVELS} levels to unlock`}
+          className="flex-1 border-2 border-border bg-foreground px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-foreground"
         >
-          ▶ Start Run
+          {canPlay ? "▶ Start Run" : "🔒 Locked"}
         </button>
         <button
           onClick={() => setPhase("leaderboard")}
