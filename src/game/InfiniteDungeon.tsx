@@ -294,7 +294,7 @@ function InfiniteLeaderboardView({ me, onBack }: { me: string; onBack: () => voi
             <div>Player</div>
             <div className="text-right">Best Wave</div>
           </div>
-          {entries.map((e, i) => {
+          {entries.map((e: WaveRow, i: number) => {
             const isMe = me && e.nickname.toLowerCase() === me.toLowerCase();
             return (
               <div
