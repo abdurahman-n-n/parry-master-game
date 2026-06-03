@@ -76,8 +76,6 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
     const v = Math.max(0, Math.floor(n));
     writeNum("parry-gems", target, v);
     setGems(v);
-    syncGemsToLeaderboard(target, v);
-    setLeaderboard(loadLeaderboard());
     flash(`Set gems to ${v}`);
   };
   const toggleItem = (id: string) => {
@@ -126,7 +124,6 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
     }
     for (const k of toRemove) localStorage.removeItem(k);
     localStorage.removeItem(LB_KEY);
-    setLeaderboard([]);
     setConfirmReset(false);
     flash("New season started");
   };
@@ -270,38 +267,16 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
 
 
       <div className="w-full max-w-2xl border-2 border-border bg-background p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="text-[11px] uppercase tracking-[0.3em]">Leaderboard</div>
-          <button
-            onClick={() => setConfirmReset(true)}
-            className="border border-destructive px-3 py-1 text-[8px] uppercase tracking-widest text-destructive hover:bg-destructive hover:text-destructive-foreground"
-          >
-            Start New Season
-          </button>
-        </div>
+        <div className="mb-3 text-[11px] uppercase tracking-[0.3em]">Season</div>
         <div className="mb-2 text-[8px] uppercase tracking-widest text-muted-foreground">
           Wipes all players' lifetime gems &amp; best waves
         </div>
-        <div className="flex flex-col gap-1">
-          {leaderboard
-            .sort((a, b) => b.gems - a.gems)
-            .map((e, i) => (
-              <div key={e.nickname} className="flex items-center justify-between border border-border p-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-6 text-center text-[10px] text-muted-foreground">{i + 1}</div>
-                  <div className="text-[10px] uppercase tracking-widest">{e.nickname}</div>
-                </div>
-                <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
-                  {e.gems} gem{e.gems !== 1 ? "s" : ""}
-                </div>
-              </div>
-            ))}
-          {leaderboard.length === 0 && (
-            <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-              No leaderboard entries
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => setConfirmReset(true)}
+          className="border border-destructive px-3 py-1 text-[8px] uppercase tracking-widest text-destructive hover:bg-destructive hover:text-destructive-foreground"
+        >
+          Start New Season
+        </button>
       </div>
 
       {confirmDelete && (
