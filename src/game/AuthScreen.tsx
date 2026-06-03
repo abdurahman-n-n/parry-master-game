@@ -1,35 +1,27 @@
 import { useState } from "react";
-import { setActiveUser, migrateLegacyIfNeeded } from "./storage";
+import { useServerFn } from "@tanstack/react-start";
+import { setActiveUser, setSessionToken, getSessionToken, hydrateFromCloud, migrateLegacyIfNeeded } from "./storage";
+import { registerAccount, loginAccount } from "@/lib/cloudSave.functions";
 
-type Account = { nickname: string; password: string };
-const ACCOUNTS_KEY = "parry.accounts";
 const CURRENT_KEY = "parry.currentUser";
 
-function loadAccounts(): Account[] {
-  try {
-    const raw = localStorage.getItem(ACCOUNTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((a): a is Partial<Account> => !!a && typeof a === "object" && "nickname" in a)
-      .map((a) => ({ nickname: String(a.nickname ?? "").trim(), password: String(a.password ?? "") }))
-      .filter((a) => a.nickname);
-  } catch {
-    return [];
-  }
-}
-function saveAccounts(a: Account[]) {
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a));
-}
 export function getCurrentUser(): string | null {
+  if (typeof window === "undefined") return null;
   const nick = localStorage.getItem(CURRENT_KEY);
-  if (nick) setActiveUser(nick);
-  return nick;
+  const token = getSessionToken();
+  if (nick && token) {
+    setActiveUser(nick);
+    // Refresh cloud → local in the background on each session start.
+    hydrateFromCloud(nick, token).catch(() => {});
+    return nick;
+  }
+  return null;
 }
+
 export function logout() {
-  localStorage.removeItem(CURRENT_KEY);
+  if (typeof window !== "undefined") localStorage.removeItem(CURRENT_KEY);
   setActiveUser(null);
+  setSessionToken(null);
 }
 
 export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void }) {
@@ -37,8 +29,12 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const register = useServerFn(registerAccount);
+  const login = useServerFn(loginAccount);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     const nick = nickname.trim();
@@ -46,33 +42,22 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
       setError("Nickname and password required");
       return;
     }
-    const accounts = loadAccounts();
-
-    if (mode === "register") {
-      if (accounts.some((a) => a.nickname.toLowerCase() === nick.toLowerCase())) {
-        setError("Nickname already taken");
-        return;
-      }
-      accounts.push({ nickname: nick, password });
-      saveAccounts(accounts);
-    } else {
-      const found = accounts.find((a) => a.nickname.toLowerCase() === nick.toLowerCase());
-      if (!found) {
-        accounts.push({ nickname: nick, password });
-        saveAccounts(accounts);
-      } else if (!found.password) {
-        found.password = password;
-        saveAccounts(accounts);
-      } else if (found.password !== password) {
-        setError("Invalid nickname or password");
-        return;
-      }
+    setBusy(true);
+    try {
+      const fn = mode === "register" ? register : login;
+      const res = await fn({ data: { nickname: nick, password } });
+      localStorage.setItem(CURRENT_KEY, res.nickname);
+      setActiveUser(res.nickname);
+      setSessionToken(res.token);
+      migrateLegacyIfNeeded(res.nickname);
+      await hydrateFromCloud(res.nickname, res.token);
+      onAuthed(res.nickname);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      setError(msg.replace(/^Error:\s*/, ""));
+    } finally {
+      setBusy(false);
     }
-
-    localStorage.setItem(CURRENT_KEY, nick);
-    setActiveUser(nick);
-    migrateLegacyIfNeeded(nick);
-    onAuthed(nick);
   };
 
   return (
@@ -101,9 +86,10 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
         {error && <div className="text-[10px] uppercase tracking-widest text-destructive">{error}</div>}
         <button
           type="submit"
-          className="mt-1 w-full border-2 border-border bg-foreground px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent"
+          disabled={busy}
+          className="mt-1 w-full border-2 border-border bg-foreground px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent disabled:opacity-50"
         >
-          {mode === "login" ? "▶ Login" : "▶ Register"}
+          {busy ? "…" : mode === "login" ? "▶ Login" : "▶ Register"}
         </button>
         <button
           type="button"
