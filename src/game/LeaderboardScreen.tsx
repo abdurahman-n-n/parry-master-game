@@ -1,10 +1,25 @@
-import { getLeaderboard } from "./Leaderboard";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { getCloudLeaderboards, type GemRow } from "@/lib/cloudSave.functions";
 import { GemIcon } from "./Currency";
 import { getCurrentUser } from "./AuthScreen";
 
 export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
-  const entries = getLeaderboard();
+  const fetchLb = useServerFn(getCloudLeaderboards);
+  const [entries, setEntries] = useState<GemRow[]>([]);
   const me = getCurrentUser();
+
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      fetchLb()
+        .then((r) => { if (alive) setEntries(r.gems); })
+        .catch(() => {});
+    };
+    load();
+    const id = setInterval(load, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, [fetchLb]);
 
   return (
     <div className="flex h-full w-full flex-col items-center gap-4 overflow-auto bg-background p-6 font-pixel text-foreground">
@@ -20,7 +35,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
-        Ranked by gems · earlier earners win ties
+        Ranked by gems · refreshes every minute
       </div>
 
       {entries.length === 0 ? (
@@ -35,9 +50,8 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             <div className="text-right">Gems</div>
             <div className="text-right">First Gem</div>
           </div>
-          {entries.map((e, i) => {
-            const isMe =
-              me && e.nickname.toLowerCase() === me.toLowerCase();
+          {entries.map((e: GemRow, i: number) => {
+            const isMe = me && e.nickname.toLowerCase() === me.toLowerCase();
             let date = "—";
             if (e.firstGemAt) {
               const d = new Date(e.firstGemAt);

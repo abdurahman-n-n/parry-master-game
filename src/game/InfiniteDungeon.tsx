@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { DEFAULT_CHARACTER, enemyForLevel } from "./levels";
 import { ParryGame, type FightResult } from "./ParryGame";
 import { getCurrentUser } from "./AuthScreen";
 import { addCredits, addGems } from "./Currency";
-import {
-  getBestWaveFor, getInfiniteLeaderboard, recordInfiniteRun,
-} from "./InfiniteLeaderboard";
+import { getBestWaveFor, recordInfiniteRun } from "./InfiniteLeaderboard";
+import { getCloudLeaderboards, type WaveRow } from "@/lib/cloudSave.functions";
 
 type Phase = "intro" | "fight" | "buff" | "gameover" | "leaderboard";
 
@@ -255,7 +255,19 @@ function BuffStats({ buffs }: { buffs: Buffs }) {
 }
 
 function InfiniteLeaderboardView({ me, onBack }: { me: string; onBack: () => void }) {
-  const entries = getInfiniteLeaderboard();
+  const fetchLb = useServerFn(getCloudLeaderboards);
+  const [entries, setEntries] = useState<WaveRow[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      fetchLb()
+        .then((r) => { if (alive) setEntries(r.waves); })
+        .catch(() => {});
+    };
+    load();
+    const id = setInterval(load, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, [fetchLb]);
   return (
     <div className="flex h-full w-full flex-col items-center gap-4 overflow-auto bg-background p-6 font-pixel text-foreground">
       <div className="flex w-full max-w-xl items-center justify-between">
@@ -282,7 +294,7 @@ function InfiniteLeaderboardView({ me, onBack }: { me: string; onBack: () => voi
             <div>Player</div>
             <div className="text-right">Best Wave</div>
           </div>
-          {entries.map((e, i) => {
+          {entries.map((e: WaveRow, i: number) => {
             const isMe = me && e.nickname.toLowerCase() === me.toLowerCase();
             return (
               <div

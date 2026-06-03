@@ -1,51 +1,28 @@
-// Per-account best wave reached in the Infinite Dungeon.
+// Per-account best wave tracking. The leaderboard itself is read from the
+// cloud (see getCloudLeaderboards in cloudSave.functions.ts); this module
+// only records the local per-user best wave + timestamp, which mirror to
+// the cloud automatically via storage.ts.
 
-export type InfiniteEntry = {
-  nickname: string;
-  bestWave: number;
-  achievedAt: number;
-};
+const BEST_KEY = "parry.infinite.bestWave";
+const BEST_AT_KEY = "parry.infinite.bestWaveAt";
 
-const LB_KEY = "parry.infiniteLeaderboard";
-
-function load(): InfiniteEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(LB_KEY);
-    return raw ? (JSON.parse(raw) as InfiniteEntry[]) : [];
-  } catch {
-    return [];
-  }
-}
-function save(list: InfiniteEntry[]) {
-  localStorage.setItem(LB_KEY, JSON.stringify(list));
+function userKey(base: string, nickname: string) {
+  return `${base}::user::${nickname.toLowerCase()}`;
 }
 
-/** Record a run's final cleared-wave count. Keeps the highest per account. */
 export function recordInfiniteRun(nickname: string, wavesCleared: number) {
+  if (typeof window === "undefined") return;
   if (!nickname || wavesCleared <= 0) return;
-  const list = load();
-  const idx = list.findIndex(
-    (e) => e.nickname.toLowerCase() === nickname.toLowerCase(),
-  );
-  if (idx === -1) {
-    list.push({ nickname, bestWave: wavesCleared, achievedAt: Date.now() });
-  } else if (wavesCleared > list[idx].bestWave) {
-    list[idx] = { ...list[idx], bestWave: wavesCleared, achievedAt: Date.now() };
+  const bk = userKey(BEST_KEY, nickname);
+  const ak = userKey(BEST_AT_KEY, nickname);
+  const prev = Number(localStorage.getItem(bk) ?? 0) || 0;
+  if (wavesCleared > prev) {
+    localStorage.setItem(bk, String(wavesCleared));
+    localStorage.setItem(ak, String(Date.now()));
   }
-  save(list);
 }
 
 export function getBestWaveFor(nickname: string): number {
-  if (!nickname) return 0;
-  const list = load();
-  const e = list.find((x) => x.nickname.toLowerCase() === nickname.toLowerCase());
-  return e?.bestWave ?? 0;
-}
-
-export function getInfiniteLeaderboard(): InfiniteEntry[] {
-  return load()
-    .filter((e) => e.bestWave > 0)
-    .sort((a, b) => b.bestWave - a.bestWave || a.achievedAt - b.achievedAt)
-    .slice(0, 100);
+  if (typeof window === "undefined" || !nickname) return 0;
+  return Number(localStorage.getItem(userKey(BEST_KEY, nickname)) ?? 0) || 0;
 }
