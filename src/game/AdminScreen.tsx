@@ -125,9 +125,29 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
     if (target.toLowerCase() === nickname.toLowerCase()) setTarget(updated[0]?.nickname ?? "");
   };
 
-  const resetLeaderboard = () => {
+  const startNewSeason = async () => {
+    try {
+      await resetSeasonFn();
+    } catch (e) {
+      flash("Failed to start new season");
+      return;
+    }
+    // Wipe local mirrors so existing devices don't push old totals back up.
+    const prefixes = [
+      "parry.lifetimeGems::user::",
+      "parry.infinite.bestWave::user::",
+      "parry.infinite.bestWaveAt::user::",
+    ];
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && prefixes.some((p) => k.startsWith(p))) toRemove.push(k);
+    }
+    for (const k of toRemove) localStorage.removeItem(k);
     localStorage.removeItem(LB_KEY);
     setLeaderboard([]);
+    setConfirmReset(false);
+    flash("New season started");
   };
 
   const skins = STORE_ITEMS.filter((i) => i.kind === "skin");
