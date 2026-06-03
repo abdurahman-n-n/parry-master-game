@@ -139,6 +139,10 @@ export async function hydrateFromCloud(nickname: string, token: string) {
           clearTimeout(pending);
           pendingTimers.delete(base);
         }
+      } else if (SEASON_RESET_BASES.has(base)) {
+        // Cloud is absent for a season-reset key: the season was reset.
+        // Clear the local mirror so we don't push stale data back up.
+        if (localValue !== null) window.localStorage.removeItem(scopedKey);
       } else if (localValue !== null) {
         // First-time sync on this account: upload the local value.
         schedulePush(base, localValue);
