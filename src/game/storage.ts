@@ -96,8 +96,10 @@ function parseBase(scopedKey: string): string | null {
   return scopedKey.slice(0, idx);
 }
 
-// Called on login: pull cloud saves and write them into the local per-user
-// bucket. The mirror is suppressed during hydration to avoid push loops.
+// Called on login: merge cloud + local progress.
+// - If the cloud has a value for a key, write it into the local per-user bucket.
+// - If the cloud doesn't have it but local does, push the local value up so
+//   progress made before signing into the cloud isn't lost.
 let hydrating = false;
 export async function hydrateFromCloud(nickname: string, token: string) {
   if (typeof window === "undefined") return;
@@ -108,24 +110,33 @@ export async function hydrateFromCloud(nickname: string, token: string) {
     const res = await pullSaves({ data: { token } });
     const saves = res.saves ?? {};
     hydrating = true;
-    for (const [base, value] of Object.entries(saves)) {
-      if (!SYNCED_BASES.has(base)) continue;
-      const k = `${base}::user::${nickname.toLowerCase()}`;
-      // Write directly through the original (un-mirrored) setter by
-      // briefly clearing the pending timer for this key to avoid echoing.
-      window.localStorage.setItem(k, value);
-      const pending = pendingTimers.get(base);
-      if (pending) {
-        clearTimeout(pending);
-        pendingTimers.delete(base);
+    const nickLower = nickname.toLowerCase();
+
+    for (const base of SYNCED_BASES) {
+      const scopedKey = `${base}::user::${nickLower}`;
+      const cloudValue = saves[base];
+      const localValue = window.localStorage.getItem(scopedKey);
+
+      if (cloudValue !== undefined) {
+        // Cloud wins — overwrite local copy.
+        window.localStorage.setItem(scopedKey, cloudValue);
+        const pending = pendingTimers.get(base);
+        if (pending) {
+          clearTimeout(pending);
+          pendingTimers.delete(base);
+        }
+      } else if (localValue !== null) {
+        // First-time sync on this account: upload the local value.
+        schedulePush(base, localValue);
       }
     }
   } catch {
-    // Offline / first-time: nothing to hydrate, keep whatever's local.
+    // Offline: keep whatever's local. The mirror will retry on next write.
   } finally {
     hydrating = false;
   }
 }
+
 
 // Legacy keys carried over from the original local-only auth flow.
 const LEGACY_KEYS = [
