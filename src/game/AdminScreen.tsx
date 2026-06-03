@@ -67,6 +67,8 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
   const [owned, setOwned] = useState<string[]>([]);
   const [upgrades, setUpgrades] = useState<Record<string, number>>({});
   const [msg, setMsg] = useState<string>("");
+  const [confirmReset, setConfirmReset] = useState(false);
+  const resetSeasonFn = useServerFn(resetSeason);
 
   useEffect(() => {
     const accs = loadAccounts();
