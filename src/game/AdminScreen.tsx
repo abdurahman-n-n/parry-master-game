@@ -288,39 +288,6 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
         </>
       )}
 
-      {/* Accounts list */}
-      <div className="w-full max-w-2xl border-2 border-border bg-background p-4">
-        <div className="mb-3 text-[11px] uppercase tracking-[0.3em]">Registered Accounts</div>
-        <div className="flex flex-col gap-2">
-          {accounts.length === 0 && (
-            <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-              No accounts registered
-            </div>
-          )}
-          {accounts.map((a) => (
-            <div key={a.nickname} className="flex items-center justify-between border border-border bg-background p-2">
-              <div className="text-[11px] uppercase tracking-widest">{a.nickname}</div>
-              <div className="flex items-center gap-2">
-                <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
-                  {leaderboard.find((l) => l.nickname.toLowerCase() === a.nickname.toLowerCase())?.gems ?? 0} gems
-                </div>
-                <button
-                  onClick={() => setTarget(a.nickname)}
-                  className="border border-border px-2 py-1 text-[8px] uppercase tracking-widest hover:bg-foreground hover:text-background"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(a.nickname)}
-                  className="border border-destructive px-2 py-1 text-[8px] uppercase tracking-widest text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <div className="w-full max-w-2xl border-2 border-border bg-background p-4">
         <div className="mb-3 flex items-center justify-between">
