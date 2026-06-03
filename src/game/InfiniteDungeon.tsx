@@ -255,7 +255,19 @@ function BuffStats({ buffs }: { buffs: Buffs }) {
 }
 
 function InfiniteLeaderboardView({ me, onBack }: { me: string; onBack: () => void }) {
-  const entries = getInfiniteLeaderboard();
+  const fetchLb = useServerFn(getCloudLeaderboards);
+  const [entries, setEntries] = useState<WaveRow[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      fetchLb()
+        .then((r) => { if (alive) setEntries(r.waves); })
+        .catch(() => {});
+    };
+    load();
+    const id = setInterval(load, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, [fetchLb]);
   return (
     <div className="flex h-full w-full flex-col items-center gap-4 overflow-auto bg-background p-6 font-pixel text-foreground">
       <div className="flex w-full max-w-xl items-center justify-between">
