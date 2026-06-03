@@ -54,6 +54,18 @@ const SYNCED_BASES = new Set<string>([
   "parry.lifetimeGems",
 ]);
 
+// Keys wiped on "Start New Season". For these, a missing cloud value is
+// authoritative — clear local instead of re-uploading stale local data
+// (which would otherwise undo the season reset for everyone else).
+const SEASON_RESET_BASES = new Set<string>([
+  "parry-gems",
+  "parry.lifetimeGems",
+  "parry.infinite.bestWave",
+  "parry.infinite.bestWaveAt",
+]);
+
+
+
 // Debounced cloud push per key.
 const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function schedulePush(base: string, value: string | null) {
@@ -127,6 +139,10 @@ export async function hydrateFromCloud(nickname: string, token: string) {
           clearTimeout(pending);
           pendingTimers.delete(base);
         }
+      } else if (SEASON_RESET_BASES.has(base)) {
+        // Cloud is absent for a season-reset key: the season was reset.
+        // Clear the local mirror so we don't push stale data back up.
+        if (localValue !== null) window.localStorage.removeItem(scopedKey);
       } else if (localValue !== null) {
         // First-time sync on this account: upload the local value.
         schedulePush(base, localValue);
