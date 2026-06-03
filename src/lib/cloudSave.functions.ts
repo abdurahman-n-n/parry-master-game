@@ -131,6 +131,7 @@ const LEADERBOARD_KEYS = [
   "parry.lifetimeGems",
   "parry.infinite.bestWave",
   "parry.infinite.bestWaveAt",
+  "parry-gems",
 ];
 
 export type GemRow = { nickname: string; gems: number };
@@ -157,7 +158,11 @@ export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
     const waves: WaveRow[] = [];
     for (const a of accounts ?? []) {
       const m = byAcct.get(a.id) ?? {};
-      const g = Number(m["parry.lifetimeGems"] ?? 0) || 0;
+      const lifetime = Number(m["parry.lifetimeGems"] ?? 0) || 0;
+      const current = Number(m["parry-gems"] ?? 0) || 0;
+      // Fall back to current balance for accounts created before lifetime
+      // tracking was added.
+      const g = Math.max(lifetime, current);
       if (g > 0) gems.push({ nickname: a.nickname, gems: g });
       const bw = Number(m["parry.infinite.bestWave"] ?? 0) || 0;
       const at = Number(m["parry.infinite.bestWaveAt"] ?? 0) || 0;
