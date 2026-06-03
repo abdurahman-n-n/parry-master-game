@@ -173,12 +173,19 @@ export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
   },
 );
 
+const SEASON_RESET_KEYS = [
+  "parry.lifetimeGems",
+  "parry.infinite.bestWave",
+  "parry.infinite.bestWaveAt",
+  "parry-gems",
+];
+
 export const resetSeason = createServerFn({ method: "POST" }).handler(
   async () => {
     await supabaseAdmin
       .from("game_saves")
       .delete()
-      .in("key", LEADERBOARD_KEYS);
+      .in("key", SEASON_RESET_KEYS);
     return { ok: true };
   },
 );
