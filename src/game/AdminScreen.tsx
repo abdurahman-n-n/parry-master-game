@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { resetSeason } from "@/lib/cloudSave.functions";
 import { STORE_ITEMS } from "./inventory";
 
 const ACCOUNTS_KEY = "parry.accounts";
@@ -65,6 +67,8 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
   const [owned, setOwned] = useState<string[]>([]);
   const [upgrades, setUpgrades] = useState<Record<string, number>>({});
   const [msg, setMsg] = useState<string>("");
+  const [confirmReset, setConfirmReset] = useState(false);
+  const resetSeasonFn = useServerFn(resetSeason);
 
   useEffect(() => {
     const accs = loadAccounts();
@@ -121,9 +125,29 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
     if (target.toLowerCase() === nickname.toLowerCase()) setTarget(updated[0]?.nickname ?? "");
   };
 
-  const resetLeaderboard = () => {
+  const startNewSeason = async () => {
+    try {
+      await resetSeasonFn();
+    } catch (e) {
+      flash("Failed to start new season");
+      return;
+    }
+    // Wipe local mirrors so existing devices don't push old totals back up.
+    const prefixes = [
+      "parry.lifetimeGems::user::",
+      "parry.infinite.bestWave::user::",
+      "parry.infinite.bestWaveAt::user::",
+    ];
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && prefixes.some((p) => k.startsWith(p))) toRemove.push(k);
+    }
+    for (const k of toRemove) localStorage.removeItem(k);
     localStorage.removeItem(LB_KEY);
     setLeaderboard([]);
+    setConfirmReset(false);
+    flash("New season started");
   };
 
   const skins = STORE_ITEMS.filter((i) => i.kind === "skin");
@@ -301,11 +325,14 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
         <div className="mb-3 flex items-center justify-between">
           <div className="text-[11px] uppercase tracking-[0.3em]">Leaderboard</div>
           <button
-            onClick={resetLeaderboard}
+            onClick={() => setConfirmReset(true)}
             className="border border-destructive px-3 py-1 text-[8px] uppercase tracking-widest text-destructive hover:bg-destructive hover:text-destructive-foreground"
           >
-            Reset
+            Start New Season
           </button>
+        </div>
+        <div className="mb-2 text-[8px] uppercase tracking-widest text-muted-foreground">
+          Wipes all players' lifetime gems &amp; best waves
         </div>
         <div className="flex flex-col gap-1">
           {leaderboard
@@ -350,6 +377,33 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
                 className="flex-1 border-2 border-border bg-destructive px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-destructive-foreground hover:bg-destructive/80"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6 font-pixel">
+          <div className="flex w-full max-w-sm flex-col items-center gap-4 border-2 border-border bg-background p-6 text-center">
+            <div className="text-[12px] uppercase tracking-[0.2em] text-foreground">
+              Start a new season?
+            </div>
+            <div className="text-[9px] uppercase tracking-widest text-destructive">
+              All players' lifetime gems and best waves will be reset. This cannot be undone.
+            </div>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => setConfirmReset(false)}
+                className="flex-1 border-2 border-border bg-background px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={startNewSeason}
+                className="flex-1 border-2 border-border bg-destructive px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-destructive-foreground hover:bg-destructive/80"
+              >
+                Start
               </button>
             </div>
           </div>
