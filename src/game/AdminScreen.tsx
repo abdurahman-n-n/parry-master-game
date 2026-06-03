@@ -7,18 +7,11 @@ const ACCOUNTS_KEY = "parry.accounts";
 const LB_KEY = "parry.leaderboard";
 
 type Account = { nickname: string; password: string };
-type LBEntry = { nickname: string; gems: number };
 
 function loadAccounts(): Account[] {
   try {
     const raw = localStorage.getItem(ACCOUNTS_KEY);
     return raw ? (JSON.parse(raw) as Account[]) : [];
-  } catch { return []; }
-}
-function loadLeaderboard(): LBEntry[] {
-  try {
-    const raw = localStorage.getItem(LB_KEY);
-    return raw ? (JSON.parse(raw) as LBEntry[]) : [];
   } catch { return []; }
 }
 
@@ -44,17 +37,6 @@ function readUpgrades(nick: string): Record<string, number> {
 }
 function writeUpgrades(nick: string, counts: Record<string, number>) {
   localStorage.setItem(userKey("parry.upgradeCounts", nick), JSON.stringify(counts));
-}
-
-function syncGemsToLeaderboard(nick: string, gems: number) {
-  const lb = loadLeaderboard();
-  const idx = lb.findIndex((e) => e.nickname.toLowerCase() === nick.toLowerCase());
-  if (idx >= 0) {
-    lb[idx].gems = gems;
-  } else if (gems > 0) {
-    lb.push({ nickname: nick, gems });
-  }
-  localStorage.setItem(LB_KEY, JSON.stringify(lb));
 }
 
 export function AdminScreen({ onBack }: { onBack: () => void }) {
