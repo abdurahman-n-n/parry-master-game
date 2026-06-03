@@ -309,7 +309,7 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
         </div>
         <div className="flex flex-col gap-1">
           {leaderboard
-            .sort((a, b) => b.gems - a.gems || a.firstGemAt - b.firstGemAt)
+            .sort((a, b) => b.gems - a.gems)
             .map((e, i) => (
               <div key={e.nickname} className="flex items-center justify-between border border-border p-2">
                 <div className="flex items-center gap-3">
