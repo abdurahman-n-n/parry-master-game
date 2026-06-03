@@ -382,6 +382,33 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
           </div>
         </div>
       )}
+
+      {confirmReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6 font-pixel">
+          <div className="flex w-full max-w-sm flex-col items-center gap-4 border-2 border-border bg-background p-6 text-center">
+            <div className="text-[12px] uppercase tracking-[0.2em] text-foreground">
+              Start a new season?
+            </div>
+            <div className="text-[9px] uppercase tracking-widest text-destructive">
+              All players' lifetime gems and best waves will be reset. This cannot be undone.
+            </div>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => setConfirmReset(false)}
+                className="flex-1 border-2 border-border bg-background px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={startNewSeason}
+                className="flex-1 border-2 border-border bg-destructive px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-destructive-foreground hover:bg-destructive/80"
+              >
+                Start
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
