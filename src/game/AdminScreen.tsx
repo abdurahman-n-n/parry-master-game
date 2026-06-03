@@ -54,7 +54,6 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     const accs = loadAccounts();
     setAccounts(accs);
-    setLeaderboard(loadLeaderboard());
     if (accs.length && !target) setTarget(accs[0].nickname);
   }, []);
 
