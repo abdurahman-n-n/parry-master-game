@@ -1,0 +1,107 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
+
+const NickPass = z.object({
+  nickname: z.string().trim().min(1).max(32),
+  password: z.string().min(1).max(200),
+});
+
+function hashPassword(password: string, salt: string): string {
+  return createHash("sha256").update(`${salt}:${password}`).digest("hex");
+}
+function makeHash(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  return `${salt}$${hashPassword(password, salt)}`;
+}
+function verify(password: string, stored: string): boolean {
+  const [salt, hash] = stored.split("$");
+  if (!salt || !hash) return false;
+  const a = Buffer.from(hash, "hex");
+  const b = Buffer.from(hashPassword(password, salt), "hex");
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+export const registerAccount = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => NickPass.parse(d))
+  .handler(async ({ data }) => {
+    const nick = data.nickname.trim();
+    const lower = nick.toLowerCase();
+    const { data: existing } = await supabaseAdmin
+      .from("game_accounts")
+      .select("id")
+      .eq("nickname_lower", lower)
+      .maybeSingle();
+    if (existing) throw new Error("Nickname already taken");
+    const { data: acct, error } = await supabaseAdmin
+      .from("game_accounts")
+      .insert({ nickname: nick, nickname_lower: lower, password_hash: makeHash(data.password) })
+      .select("id")
+      .single();
+    if (error || !acct) throw new Error("Could not create account");
+    const token = randomBytes(32).toString("hex");
+    await supabaseAdmin.from("game_sessions").insert({ token, account_id: acct.id });
+    return { token, nickname: nick };
+  });
+
+export const loginAccount = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => NickPass.parse(d))
+  .handler(async ({ data }) => {
+    const lower = data.nickname.trim().toLowerCase();
+    const { data: acct } = await supabaseAdmin
+      .from("game_accounts")
+      .select("id, nickname, password_hash")
+      .eq("nickname_lower", lower)
+      .maybeSingle();
+    if (!acct || !verify(data.password, acct.password_hash)) {
+      throw new Error("Invalid nickname or password");
+    }
+    const token = randomBytes(32).toString("hex");
+    await supabaseAdmin.from("game_sessions").insert({ token, account_id: acct.id });
+    return { token, nickname: acct.nickname };
+  });
+
+async function accountFromToken(token: string): Promise<string> {
+  const { data } = await supabaseAdmin
+    .from("game_sessions")
+    .select("account_id")
+    .eq("token", token)
+    .maybeSingle();
+  if (!data) throw new Error("Session expired, please log in again");
+  return data.account_id;
+}
+
+export const pullSaves = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const accountId = await accountFromToken(data.token);
+    const { data: rows } = await supabaseAdmin
+      .from("game_saves")
+      .select("key, value")
+      .eq("account_id", accountId);
+    const map: Record<string, string> = {};
+    for (const r of rows ?? []) map[r.key] = r.value;
+    return { saves: map };
+  });
+
+export const pushSave = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({
+      token: z.string().min(1),
+      key: z.string().min(1).max(120),
+      value: z.string().max(200_000).nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const accountId = await accountFromToken(data.token);
+    if (data.value === null) {
+      await supabaseAdmin.from("game_saves").delete().eq("account_id", accountId).eq("key", data.key);
+    } else {
+      await supabaseAdmin
+        .from("game_saves")
+        .upsert({ account_id: accountId, key: data.key, value: data.value, updated_at: new Date().toISOString() });
+    }
+    return { ok: true };
+  });
