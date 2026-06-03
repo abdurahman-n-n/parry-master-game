@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { DEFAULT_CHARACTER, enemyForLevel } from "./levels";
+import { DEFAULT_CHARACTER, enemyForLevel, getBeatenLevels, TOTAL_LEVELS } from "./levels";
 import { ParryGame, type FightResult } from "./ParryGame";
 import { getCurrentUser } from "./AuthScreen";
 import { addCredits, addGems } from "./Currency";
@@ -37,6 +37,8 @@ export function InfiniteDungeon({ onExit }: Props) {
   const [gemsEarned, setGemsEarned] = useState(0);
   const [currentHp, setCurrentHp] = useState<number | null>(null);
   const me = getCurrentUser() ?? "";
+  const beatenCount = typeof window === "undefined" ? 0 : getBeatenLevels().size;
+  const canPlay = beatenCount >= TOTAL_LEVELS;
   const best = getBestWaveFor(me);
 
   const startRun = () => {
@@ -200,12 +202,19 @@ export function InfiniteDungeon({ onExit }: Props) {
       <div className="text-[10px] uppercase tracking-widest text-accent">
         Your best: {best} wave{best === 1 ? "" : "s"}
       </div>
+      {!canPlay && (
+        <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
+          🔒 Clear all {TOTAL_LEVELS} levels to play ({beatenCount}/{TOTAL_LEVELS})
+        </div>
+      )}
       <div className="mt-2 flex w-full gap-2">
         <button
-          onClick={startRun}
-          className="flex-1 border-2 border-border bg-foreground px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent"
+          onClick={() => canPlay && startRun()}
+          disabled={!canPlay}
+          title={canPlay ? "Start a run" : `Clear all ${TOTAL_LEVELS} levels to unlock`}
+          className="flex-1 border-2 border-border bg-foreground px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-foreground"
         >
-          ▶ Start Run
+          {canPlay ? "▶ Start Run" : "🔒 Locked"}
         </button>
         <button
           onClick={() => setPhase("leaderboard")}
