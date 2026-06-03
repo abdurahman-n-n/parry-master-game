@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { DEFAULT_CHARACTER, enemyForLevel } from "./levels";
 import { ParryGame, type FightResult } from "./ParryGame";
 import { getCurrentUser } from "./AuthScreen";
 import { addCredits, addGems } from "./Currency";
-import {
-  getBestWaveFor, getInfiniteLeaderboard, recordInfiniteRun,
-} from "./InfiniteLeaderboard";
+import { getBestWaveFor, recordInfiniteRun } from "./InfiniteLeaderboard";
+import { getCloudLeaderboards, type WaveRow } from "@/lib/cloudSave.functions";
 
 type Phase = "intro" | "fight" | "buff" | "gameover" | "leaderboard";
 
