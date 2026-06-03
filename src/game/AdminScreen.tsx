@@ -137,6 +137,7 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
       "parry.lifetimeGems::user::",
       "parry.infinite.bestWave::user::",
       "parry.infinite.bestWaveAt::user::",
+      "parry-gems::user::",
     ];
     const toRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
