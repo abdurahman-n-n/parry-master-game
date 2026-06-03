@@ -5,7 +5,7 @@ const ACCOUNTS_KEY = "parry.accounts";
 const LB_KEY = "parry.leaderboard";
 
 type Account = { nickname: string; password: string };
-type LBEntry = { nickname: string; gems: number; firstGemAt: number };
+type LBEntry = { nickname: string; gems: number };
 
 function loadAccounts(): Account[] {
   try {
@@ -49,9 +49,8 @@ function syncGemsToLeaderboard(nick: string, gems: number) {
   const idx = lb.findIndex((e) => e.nickname.toLowerCase() === nick.toLowerCase());
   if (idx >= 0) {
     lb[idx].gems = gems;
-    if (gems > 0 && !lb[idx].firstGemAt) lb[idx].firstGemAt = Date.now();
   } else if (gems > 0) {
-    lb.push({ nickname: nick, gems, firstGemAt: Date.now() });
+    lb.push({ nickname: nick, gems });
   }
   localStorage.setItem(LB_KEY, JSON.stringify(lb));
 }
@@ -310,7 +309,7 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
         </div>
         <div className="flex flex-col gap-1">
           {leaderboard
-            .sort((a, b) => b.gems - a.gems || a.firstGemAt - b.firstGemAt)
+            .sort((a, b) => b.gems - a.gems)
             .map((e, i) => (
               <div key={e.nickname} className="flex items-center justify-between border border-border p-2">
                 <div className="flex items-center gap-3">

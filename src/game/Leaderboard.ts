@@ -4,7 +4,6 @@
 // the cloud automatically via storage.ts.
 
 const LIFETIME_KEY = "parry.lifetimeGems";
-const FIRST_KEY = "parry.firstGemAt";
 
 function userKey(base: string, nickname: string) {
   return `${base}::user::${nickname.toLowerCase()}`;
@@ -14,10 +13,6 @@ export function recordGemGain(nickname: string, gained: number) {
   if (typeof window === "undefined") return;
   if (!nickname || gained <= 0) return;
   const lk = userKey(LIFETIME_KEY, nickname);
-  const fk = userKey(FIRST_KEY, nickname);
   const prev = Number(localStorage.getItem(lk) ?? 0) || 0;
   localStorage.setItem(lk, String(prev + gained));
-  if (!localStorage.getItem(fk)) {
-    localStorage.setItem(fk, String(Date.now()));
-  }
 }

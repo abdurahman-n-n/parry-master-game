@@ -129,12 +129,11 @@ export const pushSave = createServerFn({ method: "POST" })
 
 const LEADERBOARD_KEYS = [
   "parry.lifetimeGems",
-  "parry.firstGemAt",
   "parry.infinite.bestWave",
   "parry.infinite.bestWaveAt",
 ];
 
-export type GemRow = { nickname: string; gems: number; firstGemAt: number };
+export type GemRow = { nickname: string; gems: number };
 export type WaveRow = { nickname: string; bestWave: number; achievedAt: number };
 
 export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
@@ -159,19 +158,13 @@ export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
     for (const a of accounts ?? []) {
       const m = byAcct.get(a.id) ?? {};
       const g = Number(m["parry.lifetimeGems"] ?? 0) || 0;
-      const first = Number(m["parry.firstGemAt"] ?? 0) || 0;
-      if (g > 0) gems.push({ nickname: a.nickname, gems: g, firstGemAt: first });
+      if (g > 0) gems.push({ nickname: a.nickname, gems: g });
       const bw = Number(m["parry.infinite.bestWave"] ?? 0) || 0;
       const at = Number(m["parry.infinite.bestWaveAt"] ?? 0) || 0;
       if (bw > 0) waves.push({ nickname: a.nickname, bestWave: bw, achievedAt: at });
     }
 
-    gems.sort((a, b) => {
-      if (b.gems !== a.gems) return b.gems - a.gems;
-      const ax = a.firstGemAt || Number.MAX_SAFE_INTEGER;
-      const bx = b.firstGemAt || Number.MAX_SAFE_INTEGER;
-      return ax - bx;
-    });
+    gems.sort((a, b) => b.gems - a.gems);
     waves.sort(
       (a, b) => b.bestWave - a.bestWave || (a.achievedAt || 0) - (b.achievedAt || 0),
     );
