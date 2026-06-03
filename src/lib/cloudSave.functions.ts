@@ -172,3 +172,13 @@ export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
     return { gems: gems.slice(0, 100), waves: waves.slice(0, 100) };
   },
 );
+
+export const resetSeason = createServerFn({ method: "POST" }).handler(
+  async () => {
+    await supabaseAdmin
+      .from("game_saves")
+      .delete()
+      .in("key", LEADERBOARD_KEYS);
+    return { ok: true };
+  },
+);
