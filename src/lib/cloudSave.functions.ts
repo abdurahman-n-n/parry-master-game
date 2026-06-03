@@ -126,3 +126,56 @@ export const pushSave = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+const LEADERBOARD_KEYS = [
+  "parry.lifetimeGems",
+  "parry.firstGemAt",
+  "parry.infinite.bestWave",
+  "parry.infinite.bestWaveAt",
+];
+
+export type GemRow = { nickname: string; gems: number; firstGemAt: number };
+export type WaveRow = { nickname: string; bestWave: number; achievedAt: number };
+
+export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const { data: accounts } = await supabaseAdmin
+      .from("game_accounts")
+      .select("id, nickname");
+    const { data: saves } = await supabaseAdmin
+      .from("game_saves")
+      .select("account_id, key, value")
+      .in("key", LEADERBOARD_KEYS);
+
+    const byAcct = new Map<string, Record<string, string>>();
+    for (const r of saves ?? []) {
+      const m = byAcct.get(r.account_id) ?? {};
+      m[r.key] = r.value;
+      byAcct.set(r.account_id, m);
+    }
+
+    const gems: GemRow[] = [];
+    const waves: WaveRow[] = [];
+    for (const a of accounts ?? []) {
+      const m = byAcct.get(a.id) ?? {};
+      const g = Number(m["parry.lifetimeGems"] ?? 0) || 0;
+      const first = Number(m["parry.firstGemAt"] ?? 0) || 0;
+      if (g > 0) gems.push({ nickname: a.nickname, gems: g, firstGemAt: first });
+      const bw = Number(m["parry.infinite.bestWave"] ?? 0) || 0;
+      const at = Number(m["parry.infinite.bestWaveAt"] ?? 0) || 0;
+      if (bw > 0) waves.push({ nickname: a.nickname, bestWave: bw, achievedAt: at });
+    }
+
+    gems.sort((a, b) => {
+      if (b.gems !== a.gems) return b.gems - a.gems;
+      const ax = a.firstGemAt || Number.MAX_SAFE_INTEGER;
+      const bx = b.firstGemAt || Number.MAX_SAFE_INTEGER;
+      return ax - bx;
+    });
+    waves.sort(
+      (a, b) => b.bestWave - a.bestWave || (a.achievedAt || 0) - (b.achievedAt || 0),
+    );
+
+    return { gems: gems.slice(0, 100), waves: waves.slice(0, 100) };
+  },
+);
