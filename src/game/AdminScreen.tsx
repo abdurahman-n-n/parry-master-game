@@ -41,7 +41,6 @@ function writeUpgrades(nick: string, counts: Record<string, number>) {
 
 export function AdminScreen({ onBack }: { onBack: () => void }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LBEntry[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [target, setTarget] = useState<string>("");
   const [credits, setCredits] = useState(0);
