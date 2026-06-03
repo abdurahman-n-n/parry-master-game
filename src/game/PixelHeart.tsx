@@ -28,38 +28,56 @@ export function PixelHeart({ size = 24, color = "oklch(0.65 0.25 25)" }: { size?
   return cellsToSvg(cells, size, color);
 }
 
-// 10x10 sword pointing up-right
-export function PixelSword({ size = 36, color = "oklch(0.97 0.01 280)" }: { size?: number; color?: string }) {
-  const blade: [number, number][] = [
-    [7, 1], [8, 1],
-    [6, 2], [7, 2],
-    [5, 3], [6, 3],
-    [4, 4], [5, 4],
-    [3, 5], [4, 5],
-    [2, 6], [3, 6],
+// 10x10 sword pointing up-right — steel blade, gold guard, dark handle
+export function PixelSword({ size = 36, color }: { size?: number; color?: string }) {
+  const bladeMain: [number, number][] = [
+    [7, 0], [8, 0],
+    [6, 1], [7, 1], [8, 1],
+    [5, 2], [6, 2], [7, 2],
+    [4, 3], [5, 3], [6, 3],
+    [3, 4], [4, 4], [5, 4],
+    [2, 5], [3, 5], [4, 5],
+  ];
+  const bladeEdge: [number, number][] = [
+    [8, 0],
+    [8, 1],
+    [7, 2],
+    [6, 3],
+    [5, 4],
   ];
   const guard: [number, number][] = [
-    [1, 6], [4, 6],
-    [1, 7], [2, 7], [3, 7], [4, 7],
-    [1, 8], [4, 8],
+    [1, 5], [5, 5],
+    [0, 6], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6], [6, 6],
   ];
   const handle: [number, number][] = [
+    [2, 7], [3, 7],
     [2, 8], [3, 8],
     [2, 9], [3, 9],
   ];
-  const guardColor = "oklch(0.70 0.18 285)";
-  const handleColor = "oklch(0.45 0.14 285)";
+  const pommel: [number, number][] = [
+    [1, 9], [4, 9],
+  ];
+  const bladeColor = color ?? "oklch(0.85 0.06 220)";
+  const edgeColor = "oklch(0.95 0.02 220)";
+  const guardColor = "oklch(0.72 0.14 80)";
+  const handleColor = "oklch(0.35 0.10 45)";
   const p = size / 10;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} shapeRendering="crispEdges">
-      {blade.map(([x, y], i) => (
-        <rect key={`b${i}`} x={x * p} y={y * p} width={p} height={p} fill={color} />
+      {bladeMain.map(([x, y], i) => (
+        <rect key={`bm${i}`} x={x * p} y={y * p} width={p} height={p} fill={bladeColor} />
+      ))}
+      {bladeEdge.map(([x, y], i) => (
+        <rect key={`be${i}`} x={x * p} y={y * p} width={p} height={p} fill={edgeColor} />
       ))}
       {guard.map(([x, y], i) => (
         <rect key={`g${i}`} x={x * p} y={y * p} width={p} height={p} fill={guardColor} />
       ))}
       {handle.map(([x, y], i) => (
         <rect key={`h${i}`} x={x * p} y={y * p} width={p} height={p} fill={handleColor} />
+      ))}
+      {pommel.map(([x, y], i) => (
+        <rect key={`p${i}`} x={x * p} y={y * p} width={p} height={p} fill={guardColor} />
       ))}
     </svg>
   );
