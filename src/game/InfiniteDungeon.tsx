@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { DEFAULT_CHARACTER, enemyForLevel } from "./levels";
+import { DEFAULT_CHARACTER, enemyForLevel, getBeatenLevels, TOTAL_LEVELS } from "./levels";
 import { ParryGame, type FightResult } from "./ParryGame";
 import { getCurrentUser } from "./AuthScreen";
 import { addCredits, addGems } from "./Currency";
