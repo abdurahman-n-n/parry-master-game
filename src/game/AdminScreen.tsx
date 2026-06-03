@@ -49,9 +49,8 @@ function syncGemsToLeaderboard(nick: string, gems: number) {
   const idx = lb.findIndex((e) => e.nickname.toLowerCase() === nick.toLowerCase());
   if (idx >= 0) {
     lb[idx].gems = gems;
-    if (gems > 0 && !lb[idx].firstGemAt) lb[idx].firstGemAt = Date.now();
   } else if (gems > 0) {
-    lb.push({ nickname: nick, gems, firstGemAt: Date.now() });
+    lb.push({ nickname: nick, gems });
   }
   localStorage.setItem(LB_KEY, JSON.stringify(lb));
 }
