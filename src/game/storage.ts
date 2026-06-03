@@ -54,6 +54,18 @@ const SYNCED_BASES = new Set<string>([
   "parry.lifetimeGems",
 ]);
 
+// Keys wiped on "Start New Season". For these, a missing cloud value is
+// authoritative — clear local instead of re-uploading stale local data
+// (which would otherwise undo the season reset for everyone else).
+const SEASON_RESET_BASES = new Set<string>([
+  "parry-gems",
+  "parry.lifetimeGems",
+  "parry.infinite.bestWave",
+  "parry.infinite.bestWaveAt",
+]);
+
+
+
 // Debounced cloud push per key.
 const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function schedulePush(base: string, value: string | null) {
