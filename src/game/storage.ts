@@ -52,7 +52,6 @@ const SYNCED_BASES = new Set<string>([
   "parry.infinite.bestWave",
   "parry.infinite.bestWaveAt",
   "parry.lifetimeGems",
-  "parry.firstGemAt",
 ]);
 
 // Debounced cloud push per key.

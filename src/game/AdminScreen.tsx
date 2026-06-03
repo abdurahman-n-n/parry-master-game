@@ -5,7 +5,7 @@ const ACCOUNTS_KEY = "parry.accounts";
 const LB_KEY = "parry.leaderboard";
 
 type Account = { nickname: string; password: string };
-type LBEntry = { nickname: string; gems: number; firstGemAt: number };
+type LBEntry = { nickname: string; gems: number };
 
 function loadAccounts(): Account[] {
   try {
