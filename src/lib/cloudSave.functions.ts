@@ -49,18 +49,39 @@ export const registerAccount = createServerFn({ method: "POST" })
 export const loginAccount = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => NickPass.parse(d))
   .handler(async ({ data }) => {
-    const lower = data.nickname.trim().toLowerCase();
+    const nick = data.nickname.trim();
+    const lower = nick.toLowerCase();
     const { data: acct } = await supabaseAdmin
       .from("game_accounts")
       .select("id, nickname, password_hash")
       .eq("nickname_lower", lower)
       .maybeSingle();
-    if (!acct || !verify(data.password, acct.password_hash)) {
-      throw new Error("Invalid nickname or password");
+
+    let accountId: string;
+    let nickname: string;
+
+    if (!acct) {
+      // No account exists yet — auto-create on first login (matches the
+      // previous local-only flow so players aren't locked out).
+      const { data: created, error } = await supabaseAdmin
+        .from("game_accounts")
+        .insert({ nickname: nick, nickname_lower: lower, password_hash: makeHash(data.password) })
+        .select("id, nickname")
+        .single();
+      if (error || !created) throw new Error("Could not create account");
+      accountId = created.id;
+      nickname = created.nickname;
+    } else {
+      if (!verify(data.password, acct.password_hash)) {
+        throw new Error("Invalid nickname or password");
+      }
+      accountId = acct.id;
+      nickname = acct.nickname;
     }
+
     const token = randomBytes(32).toString("hex");
-    await supabaseAdmin.from("game_sessions").insert({ token, account_id: acct.id });
-    return { token, nickname: acct.nickname };
+    await supabaseAdmin.from("game_sessions").insert({ token, account_id: accountId });
+    return { token, nickname };
   });
 
 async function accountFromToken(token: string): Promise<string> {
