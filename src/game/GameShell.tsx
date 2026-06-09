@@ -16,10 +16,11 @@ import { AuthScreen, forgetAuthedUser, logout, rememberAuthedUser } from "./Auth
 import { LeaderboardScreen } from "./LeaderboardScreen";
 import { AdminScreen } from "./AdminScreen";
 import { InfiniteDungeon } from "./InfiniteDungeon";
+import { AiDuel } from "./AiDuel";
 import { supabase } from "@/integrations/supabase/client";
 import { hydrateFromCloud, migrateLegacyIfNeeded } from "./storage";
 
-type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite";
+type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite" | "ai-duel";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
@@ -164,6 +165,7 @@ export function GameShell() {
   if (screen === "leaderboard") return <LeaderboardScreen onBack={() => setScreen("menu")} />;
   if (screen === "admin")     return <AdminScreen onBack={() => setScreen("menu")} />;
   if (screen === "infinite")  return <InfiniteDungeon onExit={() => setScreen("menu")} />;
+  if (screen === "ai-duel")   return <AiDuel onExit={() => setScreen("menu")} />;
 
   if (screen === "levels") {
     return (
@@ -291,6 +293,13 @@ export function GameShell() {
           className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
         >
           ∞ Infinite Dungeon
+        </button>
+        <button
+          onClick={() => setScreen("ai-duel")}
+          title="Gemini generated 1v1 opponent"
+          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+        >
+          AI Duel
         </button>
         <button
           onClick={() => setScreen("store")}
