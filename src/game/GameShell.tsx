@@ -12,11 +12,12 @@ import {
   CurrencyHUD, addCredits, addGems, getCredits, getGems,
 } from "./Currency";
 import type { EnemyDef } from "./types";
-import { AuthScreen, getCurrentUser, logout, rememberAuthedUser } from "./AuthScreen";
+import { AuthScreen, forgetAuthedUser, logout, rememberAuthedUser } from "./AuthScreen";
 import { LeaderboardScreen } from "./LeaderboardScreen";
 import { AdminScreen } from "./AdminScreen";
 import { InfiniteDungeon } from "./InfiniteDungeon";
 import { supabase } from "@/integrations/supabase/client";
+import { hydrateFromCloud, migrateLegacyIfNeeded } from "./storage";
 
 type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite";
 
@@ -33,25 +34,72 @@ export function GameShell() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
-    const cached = getCurrentUser();
-    if (cached) setUser(cached);
-    supabase.auth.getSession().then(({ data }) => {
-      const email = data.session?.user.email ?? null;
+    let alive = true;
+    let unsubscribe: (() => void) | undefined;
+
+    const finish = (email: string | null) => {
+      if (!alive) return;
       if (email) {
         rememberAuthedUser(email);
+        migrateLegacyIfNeeded(email);
+        hydrateFromCloud(email).catch(() => {});
         setUser(email);
       } else {
+        forgetAuthedUser();
         setUser(null);
       }
-      setReady(true);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const email = session?.user.email ?? null;
-      if (email) rememberAuthedUser(email);
-      else if (typeof window !== "undefined") localStorage.removeItem("parry.currentUserEmail");
-      setUser(email);
-    });
-    return () => listener.subscription.unsubscribe();
+    };
+
+    const cleanAuthUrl = () => {
+      if (typeof window === "undefined") return;
+      const url = new URL(window.location.href);
+      url.searchParams.delete("code");
+      url.searchParams.delete("state");
+      url.searchParams.delete("error");
+      url.searchParams.delete("error_code");
+      url.searchParams.delete("error_description");
+      window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+    };
+
+    const completeOAuthRedirect = async () => {
+      if (typeof window === "undefined") return null;
+      const code = new URLSearchParams(window.location.search).get("code");
+      if (!code) return null;
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      cleanAuthUrl();
+      if (error) throw error;
+      return data.session?.user.email ?? null;
+    };
+
+    const init = async () => {
+      try {
+        const callbackEmail = await completeOAuthRedirect();
+        if (callbackEmail) {
+          finish(callbackEmail);
+        } else {
+          const { data } = await supabase.auth.getSession();
+          finish(data.session?.user.email ?? null);
+        }
+      } catch (error) {
+        console.error(error);
+        finish(null);
+      } finally {
+        if (alive) setReady(true);
+      }
+
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!alive) return;
+        finish(session?.user.email ?? null);
+      });
+      unsubscribe = () => listener.subscription.unsubscribe();
+    };
+
+    init();
+
+    return () => {
+      alive = false;
+      unsubscribe?.();
+    };
   }, []);
 
   useEffect(() => {

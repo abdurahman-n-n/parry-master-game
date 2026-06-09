@@ -14,6 +14,11 @@ export function rememberAuthedUser(email: string) {
   setActiveUser(email);
 }
 
+export function forgetAuthedUser() {
+  if (typeof window !== "undefined") localStorage.removeItem(CURRENT_KEY);
+  setActiveUser(null);
+}
+
 export function getCurrentUser(): string | null {
   if (typeof window === "undefined") return null;
   const email = localStorage.getItem(CURRENT_KEY);
@@ -27,8 +32,7 @@ export function getCurrentUser(): string | null {
 
 export async function logout() {
   await supabase.auth.signOut();
-  if (typeof window !== "undefined") localStorage.removeItem(CURRENT_KEY);
-  setActiveUser(null);
+  forgetAuthedUser();
 }
 
 export function AuthScreen({ onAuthed }: { onAuthed: (email: string) => void }) {
