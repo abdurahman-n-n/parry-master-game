@@ -6,30 +6,13 @@
 import { pushSave, pullSaves } from "@/lib/cloudSave.functions";
 
 let activeUser: string | null = null;
-let activeToken: string | null = null;
 
-const TOKEN_KEY = "parry.sessionToken";
-
-export function setActiveUser(nickname: string | null) {
-  activeUser = nickname;
+export function setActiveUser(email: string | null) {
+  activeUser = email;
 }
 
 export function getActiveUser(): string | null {
   return activeUser;
-}
-
-export function setSessionToken(token: string | null) {
-  activeToken = token;
-  if (typeof window === "undefined") return;
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
-}
-
-export function getSessionToken(): string | null {
-  if (activeToken) return activeToken;
-  if (typeof window === "undefined") return null;
-  activeToken = localStorage.getItem(TOKEN_KEY);
-  return activeToken;
 }
 
 // Build a per-user key. If no user is active we fall back to the bare key
@@ -69,13 +52,12 @@ const SEASON_RESET_BASES = new Set<string>([
 // Debounced cloud push per key.
 const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function schedulePush(base: string, value: string | null) {
-  const token = getSessionToken();
-  if (!token) return;
+  if (!activeUser) return;
   const existing = pendingTimers.get(base);
   if (existing) clearTimeout(existing);
   const t = setTimeout(() => {
     pendingTimers.delete(base);
-    pushSave({ data: { token, key: base, value } }).catch(() => {
+    pushSave({ data: { key: base, value } }).catch(() => {
       /* best-effort; local copy is still saved */
     });
   }, 400);
@@ -115,19 +97,18 @@ function parseBase(scopedKey: string): string | null {
 // - If the cloud doesn't have it but local does, push the local value up so
 //   progress made before signing into the cloud isn't lost.
 let hydrating = false;
-export async function hydrateFromCloud(nickname: string, token: string) {
+export async function hydrateFromCloud(email: string) {
   if (typeof window === "undefined") return;
   installMirror();
-  setActiveUser(nickname);
-  setSessionToken(token);
+  setActiveUser(email);
   try {
-    const res = await pullSaves({ data: { token } });
+    const res = await pullSaves({ data: {} });
     const saves = res.saves ?? {};
     hydrating = true;
-    const nickLower = nickname.toLowerCase();
+    const userKey = email.toLowerCase();
 
     for (const base of SYNCED_BASES) {
-      const scopedKey = `${base}::user::${nickLower}`;
+      const scopedKey = `${base}::user::${userKey}`;
       const cloudValue = saves[base];
       const localValue = window.localStorage.getItem(scopedKey);
 
@@ -171,15 +152,15 @@ const LEGACY_KEYS = [
 const MIGRATION_FLAG = "parry.legacyMigrated";
 
 // One-time migration: copy any legacy (unscoped) progress into the given
-// nickname's bucket the first time anyone logs in.
-export function migrateLegacyIfNeeded(nickname: string) {
+// user's bucket the first time anyone logs in.
+export function migrateLegacyIfNeeded(email: string) {
   if (typeof window === "undefined") return;
   if (localStorage.getItem(MIGRATION_FLAG)) return;
-  const nick = nickname.toLowerCase();
+  const userKey = email.toLowerCase();
   for (const base of LEGACY_KEYS) {
     const legacy = localStorage.getItem(base);
     if (legacy === null) continue;
-    const scoped = `${base}::user::${nick}`;
+    const scoped = `${base}::user::${userKey}`;
     if (localStorage.getItem(scoped) === null) {
       localStorage.setItem(scoped, legacy);
     }

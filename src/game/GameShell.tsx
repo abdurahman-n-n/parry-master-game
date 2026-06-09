@@ -12,10 +12,11 @@ import {
   CurrencyHUD, addCredits, addGems, getCredits, getGems,
 } from "./Currency";
 import type { EnemyDef } from "./types";
-import { AuthScreen, getCurrentUser, logout } from "./AuthScreen";
+import { AuthScreen, getCurrentUser, logout, rememberAuthedUser } from "./AuthScreen";
 import { LeaderboardScreen } from "./LeaderboardScreen";
 import { AdminScreen } from "./AdminScreen";
 import { InfiniteDungeon } from "./InfiniteDungeon";
+import { supabase } from "@/integrations/supabase/client";
 
 type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite";
 
@@ -32,8 +33,25 @@ export function GameShell() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
-    setUser(getCurrentUser());
-    setReady(true);
+    const cached = getCurrentUser();
+    if (cached) setUser(cached);
+    supabase.auth.getSession().then(({ data }) => {
+      const email = data.session?.user.email ?? null;
+      if (email) {
+        rememberAuthedUser(email);
+        setUser(email);
+      } else {
+        setUser(null);
+      }
+      setReady(true);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const email = session?.user.email ?? null;
+      if (email) rememberAuthedUser(email);
+      else if (typeof window !== "undefined") localStorage.removeItem("parry.currentUserEmail");
+      setUser(email);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -247,7 +265,7 @@ export function GameShell() {
         >
           ⚙ Settings
         </button>
-        {user?.toLowerCase() === "abdurahman" && (
+        {user?.toLowerCase().startsWith("abdurahman") && (
           <button
             onClick={() => setScreen("admin")}
             className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
@@ -282,8 +300,8 @@ export function GameShell() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  logout();
+                onClick={async () => {
+                  await logout();
                   setShowLogoutConfirm(false);
                   setUser(null);
                 }}

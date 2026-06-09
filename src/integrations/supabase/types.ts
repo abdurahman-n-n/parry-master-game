@@ -14,114 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
-      auth_codes: {
+      game_profiles: {
         Row: {
-          attempts: number
-          code_hash: string
-          created_at: string
           email: string
-          expires_at: string
-          last_sent_at: string
-          purpose: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          attempts?: number
-          code_hash: string
-          created_at?: string
           email: string
-          expires_at: string
-          last_sent_at?: string
-          purpose: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          attempts?: number
-          code_hash?: string
-          created_at?: string
           email?: string
-          expires_at?: string
-          last_sent_at?: string
-          purpose?: string
-        }
-        Relationships: []
-      }
-      game_accounts: {
-        Row: {
-          created_at: string
-          id: string
-          nickname: string
-          nickname_lower: string
-          password_hash: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          nickname: string
-          nickname_lower: string
-          password_hash: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          nickname?: string
-          nickname_lower?: string
-          password_hash?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
       game_saves: {
         Row: {
-          account_id: string
           key: string
           updated_at: string
+          user_id: string
           value: string
         }
         Insert: {
-          account_id: string
           key: string
           updated_at?: string
+          user_id: string
           value: string
         }
         Update: {
-          account_id?: string
           key?: string
           updated_at?: string
+          user_id?: string
           value?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "game_saves_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "game_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      game_sessions: {
-        Row: {
-          account_id: string
-          created_at: string
-          token: string
-        }
-        Insert: {
-          account_id: string
-          created_at?: string
-          token: string
-        }
-        Update: {
-          account_id?: string
-          created_at?: string
-          token?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "game_sessions_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "game_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

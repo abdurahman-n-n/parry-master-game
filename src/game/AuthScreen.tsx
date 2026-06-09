@@ -1,61 +1,89 @@
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { setActiveUser, setSessionToken, getSessionToken, hydrateFromCloud, migrateLegacyIfNeeded } from "./storage";
-import { registerAccount, loginAccount } from "@/lib/cloudSave.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { setActiveUser, hydrateFromCloud, migrateLegacyIfNeeded } from "./storage";
 
-const CURRENT_KEY = "parry.currentUser";
+const CURRENT_KEY = "parry.currentUserEmail";
+
+function getAuthRedirectUrl() {
+  if (typeof window === "undefined") return undefined;
+  return window.location.origin;
+}
+
+export function rememberAuthedUser(email: string) {
+  if (typeof window !== "undefined") localStorage.setItem(CURRENT_KEY, email);
+  setActiveUser(email);
+}
 
 export function getCurrentUser(): string | null {
   if (typeof window === "undefined") return null;
-  const nick = localStorage.getItem(CURRENT_KEY);
-  const token = getSessionToken();
-  if (nick && token) {
-    setActiveUser(nick);
-    // Refresh cloud → local in the background on each session start.
-    hydrateFromCloud(nick, token).catch(() => {});
-    return nick;
+  const email = localStorage.getItem(CURRENT_KEY);
+  if (email) {
+    setActiveUser(email);
+    hydrateFromCloud(email).catch(() => {});
+    return email;
   }
   return null;
 }
 
-export function logout() {
+export async function logout() {
+  await supabase.auth.signOut();
   if (typeof window !== "undefined") localStorage.removeItem(CURRENT_KEY);
   setActiveUser(null);
-  setSessionToken(null);
 }
 
-export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void }) {
+export function AuthScreen({ onAuthed }: { onAuthed: (email: string) => void }) {
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [nickname, setNickname] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const register = useServerFn(registerAccount);
-  const login = useServerFn(loginAccount);
+  const finishAuth = async (nextEmail: string) => {
+    rememberAuthedUser(nextEmail);
+    migrateLegacyIfNeeded(nextEmail);
+    await hydrateFromCloud(nextEmail);
+    onAuthed(nextEmail);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const nick = nickname.trim();
-    if (!nick || !password) {
-      setError("Nickname and password required");
+    const nextEmail = email.trim();
+    if (!nextEmail || !password) {
+      setError("Email and password required");
       return;
     }
     setBusy(true);
     try {
-      const fn = mode === "register" ? register : login;
-      const res = await fn({ data: { nickname: nick, password } });
-      localStorage.setItem(CURRENT_KEY, res.nickname);
-      setActiveUser(res.nickname);
-      setSessionToken(res.token);
-      migrateLegacyIfNeeded(res.nickname);
-      await hydrateFromCloud(res.nickname, res.token);
-      onAuthed(res.nickname);
+      const result = mode === "register"
+        ? await supabase.auth.signUp({ email: nextEmail, password })
+        : await supabase.auth.signInWithPassword({ email: nextEmail, password });
+
+      if (result.error) throw result.error;
+      const authedEmail = result.data.user?.email ?? result.data.session?.user.email ?? nextEmail;
+      await finishAuth(authedEmail);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       setError(msg.replace(/^Error:\s*/, ""));
     } finally {
+      setBusy(false);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: getAuthRedirectUrl(),
+        },
+      });
+      if (oauthError) throw oauthError;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      setError(msg.replace(/^Error:\s*/, ""));
       setBusy(false);
     }
   };
@@ -68,10 +96,10 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
       >
         <div className="text-2xl tracking-[0.3em]">{mode === "login" ? "LOGIN" : "REGISTER"}</div>
         <input
-          type="text"
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          placeholder="NICKNAME"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="EMAIL"
           autoComplete="username"
           className="w-full border-2 border-border bg-background px-3 py-2 text-[11px] uppercase tracking-widest text-foreground outline-none focus:border-accent"
         />
@@ -89,7 +117,15 @@ export function AuthScreen({ onAuthed }: { onAuthed: (nickname: string) => void 
           disabled={busy}
           className="mt-1 w-full border-2 border-border bg-foreground px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-background hover:bg-accent disabled:opacity-50"
         >
-          {busy ? "…" : mode === "login" ? "▶ Login" : "▶ Register"}
+          {busy ? "..." : mode === "login" ? "> Login" : "> Register"}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={loginWithGoogle}
+          className="w-full border-2 border-border bg-background px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-foreground hover:bg-foreground hover:text-background disabled:opacity-50"
+        >
+          Continue with Google
         </button>
         <button
           type="button"

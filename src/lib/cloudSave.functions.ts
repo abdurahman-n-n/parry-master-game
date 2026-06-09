@@ -1,131 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { createHash, randomBytes, timingSafeEqual } from "crypto";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 
-const NickPass = z.object({
-  nickname: z.string().trim().min(1).max(32),
-  password: z.string().min(1).max(200),
+const SaveKey = z.object({
+  key: z.string().min(1).max(120),
+  value: z.string().max(200_000).nullable(),
 });
-
-function hashPassword(password: string, salt: string): string {
-  return createHash("sha256").update(`${salt}:${password}`).digest("hex");
-}
-function makeHash(password: string): string {
-  const salt = randomBytes(16).toString("hex");
-  return `${salt}$${hashPassword(password, salt)}`;
-}
-function verify(password: string, stored: string): boolean {
-  const [salt, hash] = stored.split("$");
-  if (!salt || !hash) return false;
-  const a = Buffer.from(hash, "hex");
-  const b = Buffer.from(hashPassword(password, salt), "hex");
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
-export const registerAccount = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => NickPass.parse(d))
-  .handler(async ({ data }) => {
-    const nick = data.nickname.trim();
-    const lower = nick.toLowerCase();
-    const { data: existing } = await supabaseAdmin
-      .from("game_accounts")
-      .select("id")
-      .eq("nickname_lower", lower)
-      .maybeSingle();
-    if (existing) throw new Error("Nickname already taken");
-    const { data: acct, error } = await supabaseAdmin
-      .from("game_accounts")
-      .insert({ nickname: nick, nickname_lower: lower, password_hash: makeHash(data.password) })
-      .select("id")
-      .single();
-    if (error || !acct) throw new Error("Could not create account");
-    const token = randomBytes(32).toString("hex");
-    await supabaseAdmin.from("game_sessions").insert({ token, account_id: acct.id });
-    return { token, nickname: nick };
-  });
-
-export const loginAccount = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => NickPass.parse(d))
-  .handler(async ({ data }) => {
-    const nick = data.nickname.trim();
-    const lower = nick.toLowerCase();
-    const { data: acct } = await supabaseAdmin
-      .from("game_accounts")
-      .select("id, nickname, password_hash")
-      .eq("nickname_lower", lower)
-      .maybeSingle();
-
-    let accountId: string;
-    let nickname: string;
-
-    if (!acct) {
-      // No account exists yet — auto-create on first login (matches the
-      // previous local-only flow so players aren't locked out).
-      const { data: created, error } = await supabaseAdmin
-        .from("game_accounts")
-        .insert({ nickname: nick, nickname_lower: lower, password_hash: makeHash(data.password) })
-        .select("id, nickname")
-        .single();
-      if (error || !created) throw new Error("Could not create account");
-      accountId = created.id;
-      nickname = created.nickname;
-    } else {
-      if (!verify(data.password, acct.password_hash)) {
-        throw new Error("Invalid nickname or password");
-      }
-      accountId = acct.id;
-      nickname = acct.nickname;
-    }
-
-    const token = randomBytes(32).toString("hex");
-    await supabaseAdmin.from("game_sessions").insert({ token, account_id: accountId });
-    return { token, nickname };
-  });
-
-async function accountFromToken(token: string): Promise<string> {
-  const { data } = await supabaseAdmin
-    .from("game_sessions")
-    .select("account_id")
-    .eq("token", token)
-    .maybeSingle();
-  if (!data) throw new Error("Session expired, please log in again");
-  return data.account_id;
-}
-
-export const pullSaves = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ token: z.string().min(1) }).parse(d))
-  .handler(async ({ data }) => {
-    const accountId = await accountFromToken(data.token);
-    const { data: rows } = await supabaseAdmin
-      .from("game_saves")
-      .select("key, value")
-      .eq("account_id", accountId);
-    const map: Record<string, string> = {};
-    for (const r of rows ?? []) map[r.key] = r.value;
-    return { saves: map };
-  });
-
-export const pushSave = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({
-      token: z.string().min(1),
-      key: z.string().min(1).max(120),
-      value: z.string().max(200_000).nullable(),
-    }).parse(d),
-  )
-  .handler(async ({ data }) => {
-    const accountId = await accountFromToken(data.token);
-    if (data.value === null) {
-      await supabaseAdmin.from("game_saves").delete().eq("account_id", accountId).eq("key", data.key);
-    } else {
-      await supabaseAdmin
-        .from("game_saves")
-        .upsert({ account_id: accountId, key: data.key, value: data.value, updated_at: new Date().toISOString() });
-    }
-    return { ok: true };
-  });
 
 const LEADERBOARD_KEYS = [
   "parry.lifetimeGems",
@@ -134,63 +16,145 @@ const LEADERBOARD_KEYS = [
   "parry-gems",
 ];
 
+type AuthedContext = {
+  supabase: SupabaseClient<Database>;
+  userId: string;
+  claims?: { email?: string };
+};
+
+function authed(context: unknown): AuthedContext {
+  return context as AuthedContext;
+}
+
+function createPublicSupabaseClient() {
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    const missing = [
+      ...(!SUPABASE_URL ? ["SUPABASE_URL"] : []),
+      ...(!SUPABASE_PUBLISHABLE_KEY ? ["SUPABASE_PUBLISHABLE_KEY"] : []),
+    ];
+    throw new Error(`Missing Supabase environment variable(s): ${missing.join(", ")}`);
+  }
+
+  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      storage: undefined,
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+async function upsertProfile(context: AuthedContext) {
+  const email = context.claims?.email;
+  if (!email) return;
+  await context.supabase
+    .from("game_profiles")
+    .upsert({ user_id: context.userId, email, updated_at: new Date().toISOString() });
+}
+
+export const pullSaves = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => z.object({}).parse(d ?? {}))
+  .handler(async ({ context }) => {
+    const auth = authed(context);
+    await upsertProfile(auth);
+    const { data: rows, error } = await auth.supabase
+      .from("game_saves")
+      .select("key, value")
+      .eq("user_id", auth.userId);
+    if (error) throw new Error(error.message);
+    const map: Record<string, string> = {};
+    for (const r of rows ?? []) map[r.key] = r.value;
+    return { saves: map };
+  });
+
+export const pushSave = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => SaveKey.parse(d))
+  .handler(async ({ data, context }) => {
+    const auth = authed(context);
+    await upsertProfile(auth);
+    if (data.value === null) {
+      const { error } = await auth.supabase
+        .from("game_saves")
+        .delete()
+        .eq("user_id", auth.userId)
+        .eq("key", data.key);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await auth.supabase
+        .from("game_saves")
+        .upsert({
+          user_id: auth.userId,
+          key: data.key,
+          value: data.value,
+          updated_at: new Date().toISOString(),
+        });
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
 export type GemRow = { nickname: string; gems: number };
 export type WaveRow = { nickname: string; bestWave: number; achievedAt: number };
 
 export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
   async () => {
-    const { data: accounts } = await supabaseAdmin
-      .from("game_accounts")
-      .select("id, nickname");
-    const { data: saves } = await supabaseAdmin
-      .from("game_saves")
-      .select("account_id, key, value")
-      .in("key", LEADERBOARD_KEYS);
+    const supabase = createPublicSupabaseClient();
+    const { data: profiles, error: profileError } = await supabase
+      .from("game_profiles")
+      .select("user_id, email");
+    if (profileError) throw new Error(profileError.message);
 
-    const byAcct = new Map<string, Record<string, string>>();
+    const { data: saves, error: savesError } = await supabase
+      .from("game_saves")
+      .select("user_id, key, value")
+      .in("key", LEADERBOARD_KEYS);
+    if (savesError) throw new Error(savesError.message);
+
+    const emailByUser = new Map((profiles ?? []).map((p) => [p.user_id, p.email]));
+    const byUser = new Map<string, Record<string, string>>();
     for (const r of saves ?? []) {
-      const m = byAcct.get(r.account_id) ?? {};
+      const m = byUser.get(r.user_id) ?? {};
       m[r.key] = r.value;
-      byAcct.set(r.account_id, m);
+      byUser.set(r.user_id, m);
     }
 
     const gems: GemRow[] = [];
     const waves: WaveRow[] = [];
-    for (const a of accounts ?? []) {
-      const m = byAcct.get(a.id) ?? {};
+    for (const [userId, m] of byUser) {
+      const nickname = emailByUser.get(userId) ?? userId.slice(0, 8);
       const lifetime = Number(m["parry.lifetimeGems"] ?? 0) || 0;
       const current = Number(m["parry-gems"] ?? 0) || 0;
-      // Fall back to current balance for accounts created before lifetime
-      // tracking was added.
       const g = Math.max(lifetime, current);
-      if (g > 0) gems.push({ nickname: a.nickname, gems: g });
+      if (g > 0) gems.push({ nickname, gems: g });
       const bw = Number(m["parry.infinite.bestWave"] ?? 0) || 0;
       const at = Number(m["parry.infinite.bestWaveAt"] ?? 0) || 0;
-      if (bw > 0) waves.push({ nickname: a.nickname, bestWave: bw, achievedAt: at });
+      if (bw > 0) waves.push({ nickname, bestWave: bw, achievedAt: at });
     }
 
     gems.sort((a, b) => b.gems - a.gems);
-    waves.sort(
-      (a, b) => b.bestWave - a.bestWave || (a.achievedAt || 0) - (b.achievedAt || 0),
-    );
+    waves.sort((a, b) => b.bestWave - a.bestWave || (a.achievedAt || 0) - (b.achievedAt || 0));
 
     return { gems: gems.slice(0, 100), waves: waves.slice(0, 100) };
   },
 );
 
-const SEASON_RESET_KEYS = [
-  "parry.lifetimeGems",
-  "parry.infinite.bestWave",
-  "parry.infinite.bestWaveAt",
-  "parry-gems",
-];
-
-export const resetSeason = createServerFn({ method: "POST" }).handler(
-  async () => {
-    await supabaseAdmin
+export const resetSeason = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const auth = authed(context);
+    const email = auth.claims?.email ?? "";
+    if (!email.toLowerCase().startsWith("abdurahman")) {
+      throw new Error("Unauthorized");
+    }
+    const { error } = await auth.supabase
       .from("game_saves")
       .delete()
-      .in("key", SEASON_RESET_KEYS);
+      .in("key", LEADERBOARD_KEYS);
+    if (error) throw new Error(error.message);
     return { ok: true };
-  },
-);
+  });
