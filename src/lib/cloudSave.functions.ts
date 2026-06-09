@@ -56,7 +56,7 @@ async function upsertProfile(context: AuthedContext) {
 }
 
 export const pullSaves = createServerFn({ method: "POST" })
-  .validator((d: unknown) => z.object({}).parse(d ?? {}))
+  .inputValidator((d: unknown) => z.object({}).parse(d ?? {}))
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const auth = authed(context);
@@ -72,7 +72,7 @@ export const pullSaves = createServerFn({ method: "POST" })
   });
 
 export const pushSave = createServerFn({ method: "POST" })
-  .validator((d: unknown) => SaveKey.parse(d))
+  .inputValidator((d: unknown) => SaveKey.parse(d))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data, context }) => {
     const auth = authed(context);
