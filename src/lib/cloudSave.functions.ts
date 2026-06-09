@@ -104,10 +104,19 @@ export type WaveRow = { nickname: string; bestWave: number; achievedAt: number }
 export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
   async () => {
     const supabase = createPublicSupabaseClient();
-    const { data: profiles, error: profileError } = await supabase
+    let profiles: { user_id: string; email: string; nickname?: string | null }[] = [];
+    const profilesWithNicknames = await supabase
       .from("game_profiles")
-      .select("user_id, email");
-    if (profileError) throw new Error(profileError.message);
+      .select("user_id, email, nickname");
+    if (profilesWithNicknames.error) {
+      const profilesWithoutNicknames = await supabase
+        .from("game_profiles")
+        .select("user_id, email");
+      if (profilesWithoutNicknames.error) throw new Error(profilesWithoutNicknames.error.message);
+      profiles = profilesWithoutNicknames.data ?? [];
+    } else {
+      profiles = profilesWithNicknames.data ?? [];
+    }
 
     const { data: saves, error: savesError } = await supabase
       .from("game_saves")
@@ -115,7 +124,9 @@ export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
       .in("key", LEADERBOARD_KEYS);
     if (savesError) throw new Error(savesError.message);
 
-    const emailByUser = new Map((profiles ?? []).map((p) => [p.user_id, p.email]));
+    const nameByUser = new Map(
+      (profiles ?? []).map((p) => [p.user_id, p.nickname?.trim() || p.email]),
+    );
     const byUser = new Map<string, Record<string, string>>();
     for (const r of saves ?? []) {
       const m = byUser.get(r.user_id) ?? {};
@@ -126,7 +137,7 @@ export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
     const gems: GemRow[] = [];
     const waves: WaveRow[] = [];
     for (const [userId, m] of byUser) {
-      const nickname = emailByUser.get(userId) ?? userId.slice(0, 8);
+      const nickname = nameByUser.get(userId) ?? userId.slice(0, 8);
       const lifetime = Number(m["parry.lifetimeGems"] ?? 0) || 0;
       const current = Number(m["parry-gems"] ?? 0) || 0;
       const g = Math.max(lifetime, current);

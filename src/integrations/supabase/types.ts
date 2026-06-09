@@ -17,16 +17,19 @@ export type Database = {
       game_profiles: {
         Row: {
           email: string
+          nickname: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           email: string
+          nickname?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           email?: string
+          nickname?: string | null
           updated_at?: string
           user_id?: string
         }
