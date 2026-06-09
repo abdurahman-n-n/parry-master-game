@@ -24,7 +24,6 @@ export function getCurrentUser(): string | null {
   const email = localStorage.getItem(CURRENT_KEY);
   if (email) {
     setActiveUser(email);
-    hydrateFromCloud(email).catch(() => {});
     return email;
   }
   return null;

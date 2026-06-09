@@ -67,7 +67,10 @@ export function GameShell() {
       if (!code) return null;
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
       cleanAuthUrl();
-      if (error) throw error;
+      if (error) {
+        console.error(error);
+        return null;
+      }
       return data.session?.user.email ?? null;
     };
 
