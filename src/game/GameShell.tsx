@@ -328,8 +328,8 @@ const PLAYER_SIZE = 54;
 const STATION_W = 126;
 const STATION_H = 58;
 const PRACTICE_BOTS = [
-  { id: "left", name: "Garden Bot", x: 510, y: 410, offset: 0, color: "oklch(0.72 0.16 160)" },
-  { id: "right", name: "Timing Bot", x: 770, y: 410, offset: 980, color: "oklch(0.78 0.14 85)" },
+  { id: "left", name: "Garden Bot", x: 510, y: 410, offset: 0, maxHp: 5, color: "oklch(0.72 0.16 160)" },
+  { id: "right", name: "Timing Bot", x: 770, y: 410, offset: 980, maxHp: 6, color: "oklch(0.78 0.14 85)" },
 ];
 
 type LobbyStation = {
@@ -364,10 +364,17 @@ function LobbyMap({
   const [walking, setWalking] = useState(false);
   const [lobbyTime, setLobbyTime] = useState(0);
   const [parryPop, setParryPop] = useState<{ x: number; y: number; at: number } | null>(null);
+  const [hitPop, setHitPop] = useState<{ x: number; y: number; at: number; label: string } | null>(null);
+  const [swingAt, setSwingAt] = useState(0);
+  const [practiceHp, setPracticeHp] = useState<Record<string, number>>(() =>
+    Object.fromEntries(PRACTICE_BOTS.map((bot) => [bot.id, bot.maxHp]))
+  );
   const playerRef = useRef(player);
   const lobbyTimeRef = useRef(lobbyTime);
+  const practiceHpRef = useRef(practiceHp);
   playerRef.current = player;
   lobbyTimeRef.current = lobbyTime;
+  practiceHpRef.current = practiceHp;
   const isAdmin = isAdminEmail(user);
   const title = getEquippedTitle();
 
@@ -414,6 +421,36 @@ function LobbyMap({
     setParryPop({ x: bot.x, y: bot.y - 44, at: performance.now() });
   };
 
+  const tryPracticeStrike = (targetId?: string) => {
+    const target = PRACTICE_BOTS
+      .filter((bot) => !targetId || bot.id === targetId)
+      .map((bot) => ({
+        bot,
+        dist: Math.hypot(playerRef.current.x - bot.x, playerRef.current.y - bot.y),
+      }))
+      .filter(({ bot, dist }) => dist < 104 && (practiceHpRef.current[bot.id] ?? bot.maxHp) > 0)
+      .sort((a, b) => a.dist - b.dist)[0]?.bot;
+
+    setSwingAt(performance.now());
+    if (!target) return;
+
+    const currentHp = practiceHpRef.current[target.id] ?? target.maxHp;
+    const nextHp = Math.max(0, currentHp - 1);
+    setPracticeHp((hp) => ({ ...hp, [target.id]: nextHp }));
+    setHitPop({
+      x: target.x,
+      y: target.y - 54,
+      at: performance.now(),
+      label: nextHp === 0 ? "DOWN!" : "HIT!",
+    });
+
+    if (nextHp === 0) {
+      window.setTimeout(() => {
+        setPracticeHp((hp) => ({ ...hp, [target.id]: target.maxHp }));
+      }, 1400);
+    }
+  };
+
   useEffect(() => {
     const updateViewport = () => {
       setViewport({ width: window.innerWidth, height: window.innerHeight });
@@ -442,6 +479,10 @@ function LobbyMap({
       if (key === "q" || key === "f") {
         event.preventDefault();
         tryPracticeParry();
+      }
+      if (event.code === "Space") {
+        event.preventDefault();
+        tryPracticeStrike();
       }
     };
     const up = (event: KeyboardEvent) => {
@@ -495,6 +536,7 @@ function LobbyMap({
   const mapHeight = LOBBY_VIEW_H * scale;
   const cameraX = Math.max(0, Math.min(LOBBY_W - LOBBY_VIEW_W, player.x - LOBBY_VIEW_W / 2));
   const cameraY = Math.max(0, Math.min(LOBBY_H - LOBBY_VIEW_H, player.y - LOBBY_VIEW_H / 2));
+  const playerPose = swingAt > 0 && lobbyTime - swingAt < 220 ? "strike" : walking ? "walk" : "idle";
 
   const holdMove = (key: string, pressed: boolean) => {
     setKeys((current) => ({ ...current, [key]: pressed }));
@@ -505,6 +547,11 @@ function LobbyMap({
       <div
         className="relative overflow-hidden border-4 border-border"
         style={{ width: mapWidth, height: mapHeight }}
+        onMouseDown={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (target?.closest("button")) return;
+          if (event.button === 0) tryPracticeStrike();
+        }}
       >
         <div className="pointer-events-none absolute left-2 top-2 z-20 flex flex-col gap-2 text-[8px] uppercase tracking-widest text-muted-foreground">
           <CurrencyHUD credits={credits} gems={gems} />
@@ -514,7 +561,7 @@ function LobbyMap({
           <div className="bg-background/85 px-2 py-1">{levelsCleared}/{TOTAL_LEVELS} levels cleared</div>
         </div>
         <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 border-2 border-border bg-background/85 px-3 py-2 text-center text-[8px] uppercase tracking-widest text-muted-foreground">
-          WASD / arrows to walk · E near station · Q/F in garden
+          WASD / arrows · E near station · Space/click hit · Q/F parry
         </div>
         <div
           className="relative overflow-hidden"
@@ -542,11 +589,50 @@ function LobbyMap({
           </div>
           <div className="absolute left-[152px] top-[226px] h-24 w-[980px] border-t-2 border-dashed border-border/70" />
           <div className="absolute left-[640px] top-[160px] h-[620px] border-l-2 border-dashed border-border/70" />
-          <div className="absolute left-[356px] top-[294px] h-[280px] w-[568px] border-2 border-[oklch(0.42_0.10_145)] bg-[oklch(0.24_0.07_145)]/70" />
+          <div
+            className="absolute left-[356px] top-[294px] h-[280px] w-[568px] border-4 border-[oklch(0.42_0.10_145)] bg-[oklch(0.24_0.07_145)]/80"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 18px 18px, oklch(0.34 0.09 145) 0 8px, transparent 9px), radial-gradient(circle at 58px 54px, oklch(0.30 0.08 150) 0 7px, transparent 8px)",
+              backgroundSize: "76px 76px",
+            }}
+          />
+          <div className="absolute left-[344px] top-[282px] h-4 w-[592px] bg-[oklch(0.48_0.08_55)]" />
+          <div className="absolute left-[344px] top-[574px] h-4 w-[592px] bg-[oklch(0.48_0.08_55)]" />
+          <div className="absolute left-[344px] top-[282px] h-[306px] w-4 bg-[oklch(0.48_0.08_55)]" />
+          <div className="absolute left-[922px] top-[282px] h-[306px] w-4 bg-[oklch(0.48_0.08_55)]" />
+          {[
+            [382, 308], [448, 308], [514, 308], [580, 308], [646, 308], [712, 308], [778, 308], [844, 308],
+            [382, 552], [448, 552], [514, 552], [580, 552], [646, 552], [712, 552], [778, 552], [844, 552],
+          ].map(([x, y], index) => (
+            <div key={`post-${index}`} className="absolute h-8 w-4 bg-[oklch(0.34_0.08_55)]" style={{ left: x, top: y }} />
+          ))}
           <div className="absolute left-[420px] top-[448px] h-20 w-[440px] border-t-2 border-dashed border-[oklch(0.58_0.12_120)]" />
           <div className="absolute left-[638px] top-[326px] h-[210px] border-l-2 border-dashed border-[oklch(0.58_0.12_120)]" />
-          <div className="absolute left-[426px] top-[322px] h-12 w-32 border-2 border-[oklch(0.55_0.10_220)] bg-[oklch(0.34_0.10_220)]" />
+          <div className="absolute left-[414px] top-[322px] h-16 w-36 border-2 border-[oklch(0.55_0.10_220)] bg-[oklch(0.34_0.10_220)] shadow-[inset_0_0_18px_rgba(255,255,255,0.18)]" />
           <div className="absolute left-[822px] top-[500px] h-14 w-24 border-2 border-[oklch(0.50_0.12_85)] bg-[oklch(0.33_0.12_85)]" />
+          {[
+            [370, 326], [890, 326], [370, 530], [890, 530],
+          ].map(([x, y], index) => (
+            <div key={`tree-${index}`}>
+              <div className="absolute h-8 w-5 bg-[oklch(0.38_0.08_55)]" style={{ left: x + 13, top: y + 34 }} />
+              <div className="absolute h-16 w-16 rounded-[18px] border-2 border-[oklch(0.24_0.08_145)] bg-[oklch(0.34_0.12_145)]" style={{ left: x, top: y }} />
+              <div className="absolute h-8 w-8 rounded-[10px] bg-[oklch(0.42_0.14_145)]" style={{ left: x + 12, top: y + 10 }} />
+            </div>
+          ))}
+          {[
+            [482, 334, "oklch(0.78 0.14 85)"],
+            [722, 334, "oklch(0.74 0.18 320)"],
+            [472, 512, "oklch(0.76 0.16 35)"],
+            [748, 514, "oklch(0.72 0.16 160)"],
+          ].map(([x, y, color], index) => (
+            <div key={`bed-${index}`} className="absolute h-9 w-24 border-2 border-[oklch(0.35_0.10_55)] bg-[oklch(0.24_0.08_55)]" style={{ left: x, top: y }}>
+              <div className="absolute left-2 top-2 h-3 w-3" style={{ background: color }} />
+              <div className="absolute left-8 top-4 h-3 w-3" style={{ background: color }} />
+              <div className="absolute left-14 top-2 h-3 w-3" style={{ background: color }} />
+              <div className="absolute left-20 top-4 h-3 w-3" style={{ background: color }} />
+            </div>
+          ))}
           <div className="absolute left-[80px] top-[74px] h-20 w-24 border-2 border-[oklch(0.42_0.06_260)] bg-background/70" />
           <div className="absolute left-[1080px] top-[94px] h-20 w-28 border-2 border-danger bg-danger/10" />
           <div className="absolute left-[92px] top-[724px] h-20 w-24 border-2 border-[oklch(0.62_0.12_85)] bg-[oklch(0.25_0.06_85)]" />
@@ -606,6 +692,8 @@ function LobbyMap({
             const striking = phase >= 1200 && phase < 1550;
             const charge = Math.min(1, phase / 1200);
             const close = Math.hypot(player.x - bot.x, player.y - bot.y) < 118;
+            const hp = practiceHp[bot.id] ?? bot.maxHp;
+            const down = hp <= 0;
             return (
               <div key={bot.id}>
                 <div
@@ -620,14 +708,19 @@ function LobbyMap({
                 />
                 <div
                   className="absolute -translate-x-1/2 -translate-y-1/2 border-2 bg-background"
+                  onMouseDown={(event) => {
+                    event.stopPropagation();
+                    tryPracticeStrike(bot.id);
+                  }}
                   style={{
                     left: bot.x,
-                    top: bot.y,
+                    top: down ? bot.y + 14 : bot.y,
                     width: 44,
-                    height: 54,
-                    borderColor: striking ? "var(--color-danger)" : close ? "var(--color-accent)" : "var(--color-border)",
+                    height: down ? 24 : 54,
+                    opacity: down ? 0.55 : 1,
+                    borderColor: !down && striking ? "var(--color-danger)" : close ? "var(--color-accent)" : "var(--color-border)",
                     boxShadow: striking ? "0 0 18px var(--color-danger)" : close ? "0 0 12px var(--color-accent)" : undefined,
-                    transform: `translate(-50%, -50%) ${windup ? `rotate(${charge * -8}deg)` : striking ? "translateX(8px)" : ""}`,
+                    transform: `translate(-50%, -50%) ${down ? "rotate(90deg)" : windup ? `rotate(${charge * -8}deg)` : striking ? "translateX(8px)" : ""}`,
                   }}
                 >
                   <div className="absolute left-3 top-2 h-2 w-2" style={{ background: bot.color }} />
@@ -650,7 +743,10 @@ function LobbyMap({
                 >
                   {bot.name}
                 </div>
-                {striking && (
+                <div className="absolute h-2 w-16 -translate-x-1/2 border border-border bg-background" style={{ left: bot.x, top: bot.y + 48 }}>
+                  <div className="h-full bg-accent" style={{ width: `${(hp / bot.maxHp) * 100}%` }} />
+                </div>
+                {!down && striking && (
                   <div
                     className="pointer-events-none absolute h-16 w-28 -translate-x-1/2 -translate-y-1/2 border-2 border-danger bg-danger/20"
                     style={{ left: bot.x + 50, top: bot.y + 4 }}
@@ -659,6 +755,20 @@ function LobbyMap({
               </div>
             );
           })}
+
+          {hitPop && performance.now() - hitPop.at < 520 && (
+            <div
+              className="pointer-events-none absolute -translate-x-1/2 text-xl uppercase tracking-[0.22em] text-foreground"
+              style={{
+                left: hitPop.x,
+                top: hitPop.y,
+                textShadow: "0 0 12px var(--color-accent), 2px 2px 0 var(--color-background)",
+                animation: "lobbyHitPop 520ms ease-out forwards",
+              }}
+            >
+              {hitPop.label}
+            </div>
+          )}
 
           {parryPop && performance.now() - parryPop.at < 700 && (
             <div
@@ -697,13 +807,18 @@ function LobbyMap({
             className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
             style={{ left: player.x, top: player.y }}
           >
-            <PixelCharacter skinId="kid:default" size={PLAYER_SIZE} pose={walking ? "walk" : "idle"} />
+            <PixelCharacter skinId="kid:default" size={PLAYER_SIZE} pose={playerPose} />
           </div>
           <style>{`
             @keyframes lobbyParryPop {
               0% { opacity: 0; transform: translate(-50%, 8px) scale(0.72); }
               18% { opacity: 1; transform: translate(-50%, -4px) scale(1.22); }
               100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
+            }
+            @keyframes lobbyHitPop {
+              0% { opacity: 0; transform: translate(-50%, 6px) scale(0.8); }
+              25% { opacity: 1; transform: translate(-50%, -3px) scale(1.1); }
+              100% { opacity: 0; transform: translate(-50%, -24px) scale(1); }
             }
           `}</style>
         </div>
@@ -730,6 +845,12 @@ function LobbyMap({
         className="border-2 border-accent bg-background px-4 py-2 text-[9px] uppercase tracking-widest text-accent sm:hidden"
       >
         Parry
+      </button>
+      <button
+        onClick={() => tryPracticeStrike()}
+        className="border-2 border-border bg-foreground px-4 py-2 text-[9px] uppercase tracking-widest text-background sm:hidden"
+      >
+        Attack
       </button>
     </div>
   );
