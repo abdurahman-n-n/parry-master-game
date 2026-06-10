@@ -458,7 +458,7 @@ function LobbyMap({
     { id: "settings", label: "Settings", hint: "Profile", x: 1010, y: 430, screen: "settings", accent: "oklch(0.72 0.08 300)" },
     { id: "stats", label: "Stats", hint: "Progress", x: 580, y: 430, screen: "stats", accent: "oklch(0.78 0.14 85)" },
     ...(isAdmin
-      ? [{ id: "admin", label: "Admin", hint: "Research", x: 144, y: 430, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
+      ? [{ id: "admin", label: "Admin", hint: "Panel", x: 144, y: 430, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
       : []),
   ];
 
@@ -471,7 +471,7 @@ function LobbyMap({
     },
     { station: null, dist: Infinity }
   );
-  const activeStation = nearest.dist < 92 ? nearest.station : null;
+  const activeStation = nearest.dist < 110 ? nearest.station : null;
 
   const useStation = (station: LobbyStation | null) => {
     if (!station) return;
@@ -581,8 +581,8 @@ function LobbyMap({
       if (moving) {
         const len = Math.hypot(dx, dy) || 1;
         setPlayer((p) => ({
-          x: Math.max(38, Math.min(LOBBY_W - 38, p.x + (dx / len) * 190 * dt)),
-          y: Math.max(72, Math.min(LOBBY_H - 42, p.y + (dy / len) * 190 * dt)),
+          x: Math.max(38, Math.min(LOBBY_W - 38, p.x + (dx / len) * 290 * dt)),
+          y: Math.max(72, Math.min(LOBBY_H - 42, p.y + (dy / len) * 290 * dt)),
         }));
       }
 
@@ -850,15 +850,15 @@ function LobbyMap({
           ].map(([x, y], index) => (
             <div key={`tree-${index}`}>
               <div
-                className="absolute h-11 w-8 border-2 border-[oklch(0.24_0.08_55)] bg-[oklch(0.46_0.12_55)]"
+                className="absolute h-12 w-7 border-2 border-[oklch(0.24_0.08_55)] bg-[oklch(0.46_0.12_55)]"
                 style={{
-                  left: x + 12,
-                  top: y + 34,
+                  left: x + 18,
+                  top: y + 42,
                   backgroundImage: "linear-gradient(90deg, transparent 0 35%, oklch(0.30 0.09 55) 35% 45%, transparent 45% 70%, oklch(0.32 0.08 55) 70% 78%, transparent 78%)",
                 }}
               />
-              <div className="absolute h-16 w-16 rounded-[18px] border-2 border-[oklch(0.24_0.08_145)] bg-[oklch(0.34_0.12_145)]" style={{ left: x, top: y }} />
-              <div className="absolute h-8 w-8 rounded-[10px] bg-[oklch(0.42_0.14_145)]" style={{ left: x + 12, top: y + 10 }} />
+              <div className="absolute h-16 w-16 border-2 border-[oklch(0.24_0.08_145)] bg-[oklch(0.34_0.12_145)]" style={{ left: x, top: y }} />
+              <div className="absolute h-8 w-8 bg-[oklch(0.42_0.14_145)]" style={{ left: x + 14, top: y + 10 }} />
             </div>
           ))}
           {[
@@ -904,35 +904,20 @@ function LobbyMap({
             Door
           </button>
 
-          {stations.map((station) => {
-            const active = activeStation?.id === station.id;
-            return (
-              <button
-                key={station.id}
-                onClick={() => useStation(station)}
-                className={`absolute flex flex-col items-center justify-center gap-1 border-2 bg-background/95 p-1 text-center uppercase transition-colors ${
-                  active
-                    ? "border-accent text-accent"
-                    : "border-border text-foreground hover:border-foreground"
-                }`}
-                style={{
-                  left: station.x,
-                  top: station.y,
-                  width: STATION_W,
-                  height: STATION_H,
-                  boxShadow: active ? `0 0 18px ${station.accent}` : undefined,
-                }}
-              >
-                {stationIcon(station)}
-                <span className="max-w-full text-[8px] tracking-[0.12em]">{station.label}</span>
-                <span className="text-[7px] tracking-widest text-muted-foreground">{station.hint}</span>
-                <span
-                  className="absolute bottom-0 left-0 h-1 w-full"
-                  style={{ background: station.accent }}
-                />
-              </button>
-            );
-          })}
+          {activeStation && (
+            <div
+              className="pointer-events-none absolute z-20 flex -translate-x-1/2 flex-col items-center gap-1 border-2 border-accent bg-background/95 px-3 py-2 text-center uppercase text-accent"
+              style={{
+                left: activeStation.x + STATION_W / 2,
+                top: activeStation.y - 54,
+                boxShadow: `0 0 18px ${activeStation.accent}`,
+              }}
+            >
+              <span className="text-[9px] tracking-[0.18em]">{activeStation.label}</span>
+              <span className="text-[7px] tracking-widest text-muted-foreground">{activeStation.hint}</span>
+              <span className="text-[7px] tracking-widest">Press E / Use</span>
+            </div>
+          )}
 
           {PRACTICE_BOTS.map((bot) => {
             const phase = (lobbyTime + bot.offset) % 2600;
@@ -1074,14 +1059,6 @@ function LobbyMap({
             </>
           )}
 
-          {activeStation && (
-            <div
-              className="pointer-events-none absolute -translate-x-1/2 border border-accent bg-background px-2 py-1 text-[8px] uppercase tracking-widest text-accent"
-              style={{ left: player.x, top: player.y - 86 }}
-            >
-              Press E: {activeStation.label}
-            </div>
-          )}
           {title && (
             <div
               className="pointer-events-none absolute -translate-x-1/2 border border-accent bg-background/95 px-2 py-1 text-[8px] uppercase tracking-widest text-accent"
