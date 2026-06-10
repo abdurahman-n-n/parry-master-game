@@ -39,6 +39,10 @@ export function applyAccent(rgb: [number, number, number]) {
   root.setProperty("--border", border);
 }
 
+function saveAccent(rgb: [number, number, number]) {
+  localStorage.setItem(lsKey(STORAGE_KEY), JSON.stringify(rgb));
+}
+
 export function SettingsScreen({ onBack }: { onBack: () => void }) {
   const [rgb, setRgb] = useState<[number, number, number]>(() => getSavedAccent());
   const [email, setEmail] = useState("");
@@ -76,14 +80,20 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
     const next = [...rgb] as [number, number, number];
     next[idx] = Math.max(0, Math.min(255, v | 0));
     setRgb(next);
+    applyAccent(next);
+    saveAccent(next);
   };
 
   const save = () => {
-    localStorage.setItem(lsKey(STORAGE_KEY), JSON.stringify(rgb));
+    saveAccent(rgb);
     onBack();
   };
 
-  const reset = () => setRgb(DEFAULT_RGB);
+  const reset = () => {
+    setRgb(DEFAULT_RGB);
+    applyAccent(DEFAULT_RGB);
+    saveAccent(DEFAULT_RGB);
+  };
 
   const saveNickname = async () => {
     setProfileMessage("");
@@ -276,7 +286,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
             onClick={save}
             className="flex-1 border-2 border-border bg-foreground px-3 py-2 text-[10px] uppercase tracking-widest text-background hover:bg-accent"
           >
-            Save
+            Done
           </button>
         </div>
       </div>
