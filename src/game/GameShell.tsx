@@ -23,6 +23,7 @@ import { hydrateFromCloud, migrateLegacyIfNeeded } from "./storage";
 import { installButtonSfx } from "./sfx";
 import { getEquippedTitle, TITLES } from "./achievements";
 import { isAdminEmail } from "@/lib/admin";
+import { PixelCharacter } from "./PixelCharacters";
 
 type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite" | "ai-duel" | "achievements";
 
@@ -279,91 +280,15 @@ export function GameShell() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-start gap-4 overflow-auto bg-background p-4 font-pixel text-foreground sm:justify-center sm:gap-6 sm:p-6">
-      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-        <PixelShield size={40} />
-        <h1 className="text-3xl tracking-[0.18em] sm:text-6xl sm:tracking-[0.3em]">PARRY!</h1>
-        <PixelSword size={40} />
-      </div>
-      <CurrencyHUD credits={credits} gems={gems} />
-      <p className="max-w-md text-center text-[9px] uppercase leading-relaxed tracking-widest text-muted-foreground sm:text-[10px]">
-        WASD to move · F to block · Space / Click to strike · E to use equipped ability
-      </p>
-      <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <button
-          onClick={() => setScreen("levels")}
-          className="border-2 border-border bg-foreground px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-background transition-colors hover:bg-accent sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
-        >
-          ▶ Play
-        </button>
-        <button
-          onClick={() => setScreen("infinite")}
-          title="Endless waves"
-          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
-        >
-          ∞ Infinite Dungeon
-        </button>
-        <button
-          onClick={() => setScreen("ai-duel")}
-          title="Late-game 1v1 boss"
-          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
-        >
-          Duel
-        </button>
-        <button
-          onClick={() => setScreen("achievements")}
-          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
-        >
-          Achievements
-        </button>
-        <button
-          onClick={() => setScreen("store")}
-          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
-        >
-          🛒 Store
-        </button>
-        <button
-          onClick={() => setScreen("inventory")}
-          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
-        >
-          Inventory
-        </button>
-        <button
-          onClick={() => setScreen("leaderboard")}
-          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
-        >
-          🏆 Leaderboard
-        </button>
-        <button
-          onClick={() => setScreen("settings")}
-          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
-        >
-          ⚙ Settings
-        </button>
-        {isAdminEmail(user) && (
-          <button
-            onClick={() => setScreen("admin")}
-            className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
-          >
-            🔧 Admin
-          </button>
-        )}
-      </div>
-      <div className="text-[8px] uppercase tracking-widest text-muted-foreground">
-        v0.6 · {beaten.size}/{TOTAL_LEVELS} levels cleared
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-3 text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-        <span className="max-w-full truncate">
-          Logged in as {user}
-          {getEquippedTitle() ? ` · ${TITLES[getEquippedTitle()!]}` : ""}
-        </span>
-        <button
-          onClick={() => setShowLogoutConfirm(true)}
-          className="border border-border px-2 py-1 hover:bg-foreground hover:text-background"
-        >
-          Logout
-        </button>
-      </div>
+    <div className="h-full w-full bg-background font-pixel text-foreground">
+      <LobbyMap
+        user={user}
+        credits={credits}
+        gems={gems}
+        levelsCleared={beaten.size}
+        onNavigate={setScreen}
+        onLogout={() => setShowLogoutConfirm(true)}
+      />
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6 font-pixel">
           <div className="flex w-full max-w-sm flex-col items-center gap-4 border-2 border-border bg-background p-6 text-center">
@@ -392,6 +317,290 @@ export function GameShell() {
         </div>
       )}
     </div>
+  );
+}
+
+const LOBBY_W = 760;
+const LOBBY_H = 480;
+const PLAYER_SIZE = 54;
+const STATION_W = 126;
+const STATION_H = 58;
+
+type LobbyStation = {
+  id: string;
+  label: string;
+  hint: string;
+  x: number;
+  y: number;
+  screen?: Screen;
+  action?: () => void;
+  accent: string;
+};
+
+function LobbyMap({
+  user,
+  credits,
+  gems,
+  levelsCleared,
+  onNavigate,
+  onLogout,
+}: {
+  user: string;
+  credits: number;
+  gems: number;
+  levelsCleared: number;
+  onNavigate: (screen: Screen) => void;
+  onLogout: () => void;
+}) {
+  const [player, setPlayer] = useState({ x: LOBBY_W / 2, y: LOBBY_H - 92 });
+  const [keys, setKeys] = useState<Record<string, boolean>>({});
+  const [viewport, setViewport] = useState({ width: LOBBY_W + 40, height: LOBBY_H + 40 });
+  const [walking, setWalking] = useState(false);
+  const isAdmin = isAdminEmail(user);
+  const title = getEquippedTitle();
+
+  const stations: LobbyStation[] = [
+    { id: "levels", label: "Play", hint: "Level gate", x: 318, y: 54, screen: "levels", accent: "var(--color-accent)" },
+    { id: "infinite", label: "Infinite", hint: "Wave door", x: 78, y: 124, screen: "infinite", accent: "oklch(0.72 0.16 160)" },
+    { id: "duel", label: "Duel", hint: "1v1 arena", x: 556, y: 124, screen: "ai-duel", accent: "var(--color-danger)" },
+    { id: "achievements", label: "Awards", hint: "Titles", x: 78, y: 304, screen: "achievements", accent: "oklch(0.78 0.14 85)" },
+    { id: "store", label: "Store", hint: "Buy gear", x: 238, y: 336, screen: "store", accent: "oklch(0.76 0.15 35)" },
+    { id: "inventory", label: "Inventory", hint: "Equip", x: 396, y: 336, screen: "inventory", accent: "oklch(0.70 0.13 250)" },
+    { id: "leaderboard", label: "Board", hint: "Rankings", x: 556, y: 304, screen: "leaderboard", accent: "oklch(0.80 0.13 120)" },
+    { id: "settings", label: "Settings", hint: "Profile", x: 556, y: 214, screen: "settings", accent: "oklch(0.72 0.08 300)" },
+    ...(isAdmin
+      ? [{ id: "admin", label: "Admin", hint: "Panel", x: 78, y: 214, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
+      : []),
+    { id: "logout", label: "Logout", hint: "Exit", x: 318, y: 214, action: onLogout, accent: "oklch(0.66 0.06 260)" },
+  ];
+
+  const nearest = stations.reduce<{ station: LobbyStation | null; dist: number }>(
+    (best, station) => {
+      const cx = station.x + STATION_W / 2;
+      const cy = station.y + STATION_H / 2;
+      const dist = Math.hypot(player.x - cx, player.y - cy);
+      return dist < best.dist ? { station, dist } : best;
+    },
+    { station: null, dist: Infinity }
+  );
+  const activeStation = nearest.dist < 92 ? nearest.station : null;
+
+  const useStation = (station: LobbyStation | null) => {
+    if (!station) return;
+    if (station.screen) onNavigate(station.screen);
+    station.action?.();
+  };
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    window.addEventListener("orientationchange", updateViewport);
+    return () => {
+      window.removeEventListener("resize", updateViewport);
+      window.removeEventListener("orientationchange", updateViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    const down = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if (["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"].includes(key)) {
+        event.preventDefault();
+        setKeys((current) => ({ ...current, [key]: true }));
+      }
+      if (key === "e" || key === "enter") {
+        event.preventDefault();
+        useStation(activeStation);
+      }
+    };
+    const up = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      setKeys((current) => ({ ...current, [key]: false }));
+    };
+
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, [activeStation]);
+
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+
+    const frame = (time: number) => {
+      const dt = Math.min(0.033, (time - last) / 1000);
+      last = time;
+      const left = keys.a || keys.arrowleft;
+      const right = keys.d || keys.arrowright;
+      const up = keys.w || keys.arrowup;
+      const down = keys.s || keys.arrowdown;
+      const dx = (right ? 1 : 0) - (left ? 1 : 0);
+      const dy = (down ? 1 : 0) - (up ? 1 : 0);
+      const moving = dx !== 0 || dy !== 0;
+      setWalking(moving);
+
+      if (moving) {
+        const len = Math.hypot(dx, dy) || 1;
+        setPlayer((p) => ({
+          x: Math.max(38, Math.min(LOBBY_W - 38, p.x + (dx / len) * 190 * dt)),
+          y: Math.max(74, Math.min(LOBBY_H - 42, p.y + (dy / len) * 190 * dt)),
+        }));
+      }
+
+      raf = requestAnimationFrame(frame);
+    };
+
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [keys]);
+
+  const scale = Math.max(0.44, Math.min(1, (viewport.width - 24) / LOBBY_W, (viewport.height - 24) / LOBBY_H));
+  const mapWidth = LOBBY_W * scale;
+  const mapHeight = LOBBY_H * scale;
+
+  const holdMove = (key: string, pressed: boolean) => {
+    setKeys((current) => ({ ...current, [key]: pressed }));
+  };
+
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 overflow-auto bg-background p-3">
+      <div
+        className="relative overflow-hidden border-4 border-border"
+        style={{ width: mapWidth, height: mapHeight }}
+      >
+        <div
+          className="relative overflow-hidden"
+          style={{
+            width: LOBBY_W,
+            height: LOBBY_H,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            background:
+              "linear-gradient(180deg, oklch(0.20 0.03 260), oklch(0.15 0.02 260))",
+          }}
+        >
+          <div
+            className="absolute inset-0 opacity-70"
+            style={{
+              backgroundImage:
+                "linear-gradient(oklch(0.28 0.02 260) 2px, transparent 2px), linear-gradient(90deg, oklch(0.28 0.02 260) 2px, transparent 2px)",
+              backgroundSize: "40px 40px",
+            }}
+          />
+          <div className="absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-3">
+            <PixelShield size={34} />
+            <div className="text-3xl tracking-[0.32em] text-foreground">PARRY!</div>
+            <PixelSword size={34} />
+          </div>
+          <div className="absolute left-4 top-4 flex flex-col gap-2 text-[8px] uppercase tracking-widest text-muted-foreground">
+            <CurrencyHUD credits={credits} gems={gems} />
+            <div className="max-w-72 truncate">
+              {user}{title ? ` · ${TITLES[title]}` : ""}
+            </div>
+            <div>{levelsCleared}/{TOTAL_LEVELS} levels cleared</div>
+          </div>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 border-2 border-border bg-background/85 px-3 py-2 text-center text-[8px] uppercase tracking-widest text-muted-foreground">
+            WASD / arrows to walk · E / Enter near a station
+          </div>
+
+          <div className="absolute left-24 top-80 h-24 w-[560px] border-t-2 border-dashed border-border/70" />
+          <div className="absolute left-[378px] top-96 h-28 border-l-2 border-dashed border-border/70" />
+
+          {stations.map((station) => {
+            const active = activeStation?.id === station.id;
+            return (
+              <button
+                key={station.id}
+                onClick={() => useStation(station)}
+                className={`absolute flex flex-col items-center justify-center gap-1 border-2 bg-background/95 p-2 text-center uppercase transition-colors ${
+                  active
+                    ? "border-accent text-accent"
+                    : "border-border text-foreground hover:border-foreground"
+                }`}
+                style={{
+                  left: station.x,
+                  top: station.y,
+                  width: STATION_W,
+                  height: STATION_H,
+                  boxShadow: active ? `0 0 18px ${station.accent}` : undefined,
+                }}
+              >
+                <span className="text-[10px] tracking-[0.18em]">{station.label}</span>
+                <span className="text-[7px] tracking-widest text-muted-foreground">{station.hint}</span>
+                <span
+                  className="absolute bottom-0 left-0 h-1 w-full"
+                  style={{ background: station.accent }}
+                />
+              </button>
+            );
+          })}
+
+          {activeStation && (
+            <div
+              className="pointer-events-none absolute -translate-x-1/2 border border-accent bg-background px-2 py-1 text-[8px] uppercase tracking-widest text-accent"
+              style={{ left: player.x, top: player.y - 68 }}
+            >
+              Press E: {activeStation.label}
+            </div>
+          )}
+
+          <div
+            className="pointer-events-none absolute -translate-x-1/2 rounded-[50%]"
+            style={{
+              left: player.x,
+              top: player.y + 24,
+              width: 54,
+              height: 12,
+              background: "radial-gradient(ellipse, rgba(0,0,0,0.55), rgba(0,0,0,0))",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+            style={{ left: player.x, top: player.y }}
+          >
+            <PixelCharacter skinId="kid:default" size={PLAYER_SIZE} pose={walking ? "walk" : "idle"} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-1 sm:hidden">
+        <div />
+        <PadButton label="W" onDown={() => holdMove("w", true)} onUp={() => holdMove("w", false)} />
+        <div />
+        <PadButton label="A" onDown={() => holdMove("a", true)} onUp={() => holdMove("a", false)} />
+        <button
+          onClick={() => useStation(activeStation)}
+          className="border-2 border-border bg-foreground px-3 py-2 text-[9px] uppercase tracking-widest text-background"
+        >
+          E
+        </button>
+        <PadButton label="D" onDown={() => holdMove("d", true)} onUp={() => holdMove("d", false)} />
+        <div />
+        <PadButton label="S" onDown={() => holdMove("s", true)} onUp={() => holdMove("s", false)} />
+        <div />
+      </div>
+    </div>
+  );
+}
+
+function PadButton({ label, onDown, onUp }: { label: string; onDown: () => void; onUp: () => void }) {
+  return (
+    <button
+      onPointerDown={onDown}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      onPointerLeave={onUp}
+      className="border-2 border-border bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-foreground"
+    >
+      {label}
+    </button>
   );
 }
 
