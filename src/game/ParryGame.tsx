@@ -65,11 +65,15 @@ const RIPOSTE_MS = 900;
 const BLOCK_RAISE_MS = 380;
 const BASE_BLOCK_COOLDOWN_MS = 2000;
 const BASE_STRIKE_COOLDOWN_MS = 180;
+const WEAPON_SPECIAL_COOLDOWN_MS = 10000;
+const MACE_SPECIAL_MS = 5000;
+const DAGGER_RAIN_MS = 10000;
 
 type Zone =
   | { kind: "slash"; cx: number; cy: number; w: number; h: number; aim: number }
   | { kind: "thrust"; cx: number; cy: number; w: number; h: number; aim: number }
   | { kind: "heavy"; cx: number; cy: number; r: number; aim: number };
+type WeaponSpecialKind = "mace" | "daggers" | null;
 
 function zoneFor(attack: AttackPattern, ex: number, ey: number, aim: number): Zone {
   const cos = Math.cos(aim), sin = Math.sin(aim);
@@ -158,6 +162,10 @@ export function ParryGame({
   const [viewport, setViewport] = useState({ width: ARENA_W + 32, height: ARENA_H + 260 });
   const [dashEffectUntil, setDashEffectUntil] = useState(0);
   const [instakillEyeUntil, setInstakillEyeUntil] = useState(0);
+  const [weaponSpecialCooldownUntil, setWeaponSpecialCooldownUntil] = useState(0);
+  const [weaponSpecialUntil, setWeaponSpecialUntil] = useState(0);
+  const [weaponSpecialKind, setWeaponSpecialKind] = useState<WeaponSpecialKind>(null);
+  const [heavySlashUntil, setHeavySlashUntil] = useState(0);
 
   // Ability cooldowns
   const [cdInsta, setCdInsta] = useState(0);
@@ -169,6 +177,11 @@ export function ParryGame({
   const keysRef = useRef<Record<string, boolean>>({});
   const blockHeldRef = useRef(false);
   const [, tick] = useState(0);
+  const weaponSpecialCooldownRef = useRef(0);
+  const weaponSpecialUntilRef = useRef(0);
+  const weaponSpecialKindRef = useRef<WeaponSpecialKind>(null);
+  const lastMaceSpecialHitRef = useRef(0);
+  const lastDaggerRainHitRef = useRef(0);
 
   const blockUntilRef = useRef(0);
   const blockStartedAtRef = useRef(0);
@@ -186,6 +199,9 @@ export function ParryGame({
   stateRef.current = state;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  weaponSpecialCooldownRef.current = weaponSpecialCooldownUntil;
+  weaponSpecialUntilRef.current = weaponSpecialUntil;
+  weaponSpecialKindRef.current = weaponSpecialKind;
 
   useEffect(() => {
     const updateViewport = () => {
@@ -316,6 +332,68 @@ export function ParryGame({
     }
   }, [damageEnemy, weaponDamage, weaponIsRanged]);
 
+  const useWeaponSpecial = useCallback(() => {
+    if (stateRef.current !== "playing" || pausedRef.current) return;
+    const now = performance.now();
+    if (now < weaponSpecialCooldownRef.current || now < weaponSpecialUntilRef.current) {
+      const remaining = Math.max(0, Math.ceil((Math.max(weaponSpecialCooldownRef.current, weaponSpecialUntilRef.current) - now) / 1000));
+      setLog(`* Weapon special cooling down: ${remaining}s.`);
+      return;
+    }
+
+    if (weaponId === "weapon-mace") {
+      const endAt = now + MACE_SPECIAL_MS;
+      weaponSpecialUntilRef.current = endAt;
+      weaponSpecialCooldownRef.current = endAt + WEAPON_SPECIAL_COOLDOWN_MS;
+      setWeaponSpecialKind("mace");
+      setWeaponSpecialUntil(endAt);
+      setWeaponSpecialCooldownUntil(weaponSpecialCooldownRef.current);
+      setPose("strike");
+      setLog("* Mace cyclone! Faster movement for 5s.");
+      playSfx("dash");
+      return;
+    }
+
+    if (weaponId === "weapon-daggers") {
+      const endAt = now + DAGGER_RAIN_MS;
+      weaponSpecialUntilRef.current = endAt;
+      weaponSpecialCooldownRef.current = endAt + WEAPON_SPECIAL_COOLDOWN_MS;
+      setWeaponSpecialKind("daggers");
+      setWeaponSpecialUntil(endAt);
+      setWeaponSpecialCooldownUntil(weaponSpecialCooldownRef.current);
+      setPose("strike");
+      setLog("* Dagger rain!");
+      playSfx("strike");
+      return;
+    }
+
+    if (weaponId === "weapon-heavy-sword") {
+      const p = playerRef.current;
+      let hit = false;
+      setHeavySlashUntil(now + 520);
+      setPose("strike");
+      for (const e of enemiesRef.current) {
+        if (e.hp <= 0) continue;
+        const dx = e.x - p.x;
+        const dy = e.y - p.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 230) continue;
+        hit = true;
+        damageEnemy(e.uid, 30, "Excalibur cleaves");
+        const len = dist || 1;
+        e.x = Math.max(ENEMY_RADIUS, Math.min(ARENA_W - ENEMY_RADIUS, e.x + (dx / len) * 90));
+        e.y = Math.max(ENEMY_RADIUS, Math.min(ARENA_H * 0.7, e.y + (dy / len) * 60));
+      }
+      weaponSpecialCooldownRef.current = now + 520 + WEAPON_SPECIAL_COOLDOWN_MS;
+      setWeaponSpecialCooldownUntil(weaponSpecialCooldownRef.current);
+      setLog(hit ? "* Excalibur shockwave!" : "* Excalibur missed.");
+      playSfx(hit ? "strike" : "dash");
+      return;
+    }
+
+    setLog("* Base sword has no weapon special.");
+  }, [damageEnemy, weaponId]);
+
   const triggerBlockTap = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
     const now = performance.now();
@@ -405,8 +483,7 @@ export function ParryGame({
       }
       if (k === "q") {
         e.preventDefault();
-        if (!blockHeldRef.current) triggerBlockTap();
-        blockHeldRef.current = true;
+        useWeaponSpecial();
         return;
       }
       if (k === "e" || (k === "r" && equippedAbility === "instakill")) {
@@ -430,7 +507,7 @@ export function ParryGame({
     const up = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       if (k === "w" || k === "a" || k === "s" || k === "d") keysRef.current[k] = false;
-      if (k === "q" || e.code === "Space") blockHeldRef.current = false;
+      if (e.code === "Space") blockHeldRef.current = false;
     };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
@@ -438,7 +515,7 @@ export function ParryGame({
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, [tryAttack, triggerBlockTap, useDash, useInstakill, equippedAbility]);
+  }, [tryAttack, triggerBlockTap, useDash, useInstakill, useWeaponSpecial, equippedAbility]);
 
   // Mouse click = attack
   useEffect(() => {
@@ -511,8 +588,9 @@ export function ParryGame({
           const len = Math.hypot(dx, dy);
           dx /= len; dy /= len;
           const p = playerRef.current;
-          p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * playerSpeed * dt));
-          p.y = Math.max(PLAYER_RADIUS, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * playerSpeed * dt));
+          const specialSpeed = weaponSpecialKindRef.current === "mace" && now < weaponSpecialUntilRef.current ? 1.65 : 1;
+          p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * playerSpeed * specialSpeed * dt));
+          p.y = Math.max(PLAYER_RADIUS, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * playerSpeed * specialSpeed * dt));
           setIsWalking(true);
         } else {
           setIsWalking(false);
@@ -520,6 +598,30 @@ export function ParryGame({
 
         const p = playerRef.current;
         const enemies = enemiesRef.current;
+
+        if (weaponSpecialKindRef.current === "mace" && now < weaponSpecialUntilRef.current && now - lastMaceSpecialHitRef.current > 480) {
+          lastMaceSpecialHitRef.current = now;
+          for (const en of enemies) {
+            if (en.hp <= 0) continue;
+            if (Math.hypot(p.x - en.x, p.y - en.y) <= 120) damageEnemy(en.uid, 20, "Mace cyclone hits");
+          }
+        }
+
+        if (weaponSpecialKindRef.current === "daggers" && now < weaponSpecialUntilRef.current && now - lastDaggerRainHitRef.current > 320) {
+          lastDaggerRainHitRef.current = now;
+          const alive = enemies.filter((en) => en.hp > 0);
+          if (alive.length > 0) {
+            const target = alive[Math.floor(Math.random() * alive.length)];
+            damageEnemy(target.uid, 2, "Dagger rain hits");
+          }
+        }
+
+        if (weaponSpecialKindRef.current && now >= weaponSpecialUntilRef.current) {
+          weaponSpecialKindRef.current = null;
+          setWeaponSpecialKind(null);
+          setWeaponSpecialUntil(0);
+          setPose("idle");
+        }
 
         // Per-enemy update: attack scheduling + resolution + chase
         for (const en of enemies) {
@@ -584,7 +686,7 @@ export function ParryGame({
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [resolveAttack]);
+  }, [resolveAttack, damageEnemy, playerSpeed]);
 
   const overlayFlash = flashes[flashes.length - 1];
   const now = performance.now();
@@ -604,6 +706,9 @@ export function ParryGame({
   const playerLabel = equippedTitle ? TITLES[equippedTitle].toUpperCase() : character.name.toUpperCase();
   const dashEffectActive = now < dashEffectUntil;
   const instakillEyeActive = now < instakillEyeUntil;
+  const weaponSpecialActive = now < weaponSpecialUntil;
+  const weaponSpecialReady = weaponId !== "weapon-sword" && now >= weaponSpecialCooldownUntil && !weaponSpecialActive;
+  const weaponSpecialRemaining = Math.max(0, Math.ceil((Math.max(weaponSpecialCooldownUntil, weaponSpecialUntil) - now) / 1000));
 
   const instaReady = now >= cdInsta;
   const dashReady = now >= cdDash;
@@ -734,6 +839,34 @@ export function ParryGame({
 
         })}
 
+        {weaponSpecialKind === "daggers" && weaponSpecialActive && (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            {Array.from({ length: 14 }, (_, i) => (
+              <div
+                key={`dagger-rain-${i}`}
+                className="absolute h-2 w-12 rotate-[68deg] bg-[oklch(0.90_0.02_250)] shadow-[0_0_10px_var(--color-accent)]"
+                style={{
+                  left: `${(i * 47) % ARENA_W}px`,
+                  top: -30,
+                  animation: `daggerRain ${720 + (i % 4) * 120}ms linear infinite`,
+                  animationDelay: `${i * 70}ms`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {now < heavySlashUntil && (
+          <div
+            className="pointer-events-none absolute left-1/2 top-1/2 h-28 w-[520px] -translate-x-1/2 -translate-y-1/2 border-y-4 border-accent"
+            style={{
+              background: "linear-gradient(90deg, transparent, color-mix(in oklab, var(--color-accent) 35%, transparent), transparent)",
+              boxShadow: "0 0 30px var(--color-accent)",
+              animation: "excaliburWave 520ms ease-out forwards",
+            }}
+          />
+        )}
+
         {equippedTitle && (
           <div
             className="pointer-events-none absolute -translate-x-1/2 border border-accent bg-background/95 px-2 py-1 text-[8px] uppercase tracking-widest text-accent"
@@ -794,7 +927,7 @@ export function ParryGame({
               </>
             )}
             {weaponId === "weapon-mace" && (
-              <div className="pointer-events-none absolute left-[36px] top-[8px] h-16 w-16" style={{ animation: `maceSpin ${effectivePose === "strike" ? "260ms" : "900ms"} linear infinite` }}>
+              <div className="pointer-events-none absolute left-[36px] top-[8px] h-16 w-16" style={{ animation: `maceSpin ${weaponSpecialActive ? "180ms" : effectivePose === "strike" ? "260ms" : "900ms"} linear infinite`, filter: weaponSpecialActive ? "drop-shadow(0 0 12px var(--color-accent))" : undefined }}>
                 <div className="absolute left-7 top-3 h-12 w-2 bg-[oklch(0.56_0.05_55)]" />
                 <div className="absolute left-[19px] top-0 h-5 w-5 border-2 border-border bg-[oklch(0.48_0.03_250)]" />
                 <div className="absolute left-[15px] top-1 h-2 w-3 bg-[oklch(0.75_0.02_250)]" />
@@ -817,6 +950,9 @@ export function ParryGame({
               redEyeSpark={instakillEyeActive}
               key={overlayFlash?.uid ?? effectivePose}
             />
+            {weaponSpecialKind === "mace" && weaponSpecialActive && (
+              <div className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-accent" style={{ animation: "maceCyclone 520ms linear infinite", boxShadow: "0 0 28px var(--color-accent), inset 0 0 18px var(--color-accent)" }} />
+            )}
           </div>
           {blockUp && (
             <div
@@ -929,13 +1065,20 @@ export function ParryGame({
         <StatusRow label={playerLabel} alive={playerHp > 0} color="var(--color-foreground)" hp={playerHp} maxHp={playerMaxHp} />
 
         <div className="flex items-center justify-between border-2 border-border bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-foreground">
-          <span>[Space/Q] Block</span>
+          <span>[Space] Block</span>
           <span className="text-muted-foreground">{blockReady ? "READY" : `${blockCdRem}s`}</span>
         </div>
 
         <div className="flex items-center justify-between border-2 border-border bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-foreground">
           <span>{weaponName}</span>
           <span className="text-muted-foreground">{(strikeCooldownMs / 1000).toFixed(1)}s · {weaponDamage} dmg</span>
+        </div>
+
+        <div className="flex items-center justify-between border-2 border-border bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-foreground">
+          <span>[Q] Weapon Special</span>
+          <span className="text-muted-foreground">
+            {weaponId === "weapon-sword" ? "NONE" : weaponSpecialReady ? "READY" : `${weaponSpecialRemaining}s`}
+          </span>
         </div>
 
         {/* Equipped ability */}
@@ -972,7 +1115,7 @@ export function ParryGame({
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ WASD ] Move &middot; [ Space / Q ] Block &middot; [ Click ] Strike &middot; [ E ] Ability &middot; [ Esc ] Pause
+          [ WASD ] Move &middot; [ Space ] Block &middot; [ Q ] Weapon &middot; [ Click ] Strike &middot; [ E ] Ability &middot; [ Esc ] Pause
         </div>
       </div>
 
@@ -987,10 +1130,24 @@ export function ParryGame({
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        @keyframes maceCyclone {
+          from { opacity: 0.85; transform: translate(-50%, -50%) rotate(0deg) scale(0.92); }
+          to { opacity: 0.35; transform: translate(-50%, -50%) rotate(360deg) scale(1.12); }
+        }
+        @keyframes daggerRain {
+          from { opacity: 0; transform: translateY(-40px) rotate(68deg); }
+          15% { opacity: 1; }
+          to { opacity: 0; transform: translateY(${ARENA_H + 80}px) rotate(68deg); }
+        }
         @keyframes excaliburSwing {
           0% { transform: rotate(58deg) translateY(0); }
           45% { transform: rotate(-28deg) translateY(-4px); }
           100% { transform: rotate(28deg) translateY(0); }
+        }
+        @keyframes excaliburWave {
+          from { opacity: 0; transform: translate(-50%, -50%) scaleX(0.3) skewX(-16deg); }
+          25% { opacity: 1; }
+          to { opacity: 0; transform: translate(-50%, -50%) scaleX(1.15) skewX(-16deg); }
         }
         @keyframes weaponShieldPop {
           0% { opacity: 0; transform: translateY(-50%) scale(0.55); }
