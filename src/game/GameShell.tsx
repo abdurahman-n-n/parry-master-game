@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { hydrateFromCloud, migrateLegacyIfNeeded } from "./storage";
 import { installButtonSfx } from "./sfx";
 import { getEquippedTitle, TITLES } from "./achievements";
+import { isAdminEmail } from "@/lib/admin";
 
 type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite" | "ai-duel" | "achievements";
 
@@ -339,7 +340,7 @@ export function GameShell() {
         >
           ⚙ Settings
         </button>
-        {user?.toLowerCase().startsWith("abdurahman") && (
+        {isAdminEmail(user) && (
           <button
             onClick={() => setScreen("admin")}
             className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"

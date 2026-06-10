@@ -20,6 +20,8 @@ function write(key: string, n: number) {
 export function getCredits() { return read(CREDITS_KEY); }
 export function getGems()    { return read(GEMS_KEY); }
 
+export function setCredits(n: number) { const v = Math.max(0, Math.round(n)); write(CREDITS_KEY, v); return v; }
+export function setGems(n: number) { const v = Math.max(0, Math.round(n)); write(GEMS_KEY, v); return v; }
 export function addCredits(n: number) { const v = getCredits() + n; write(CREDITS_KEY, v); return v; }
 export function addGems(n: number) {
   const v = getGems() + n;

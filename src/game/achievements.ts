@@ -43,6 +43,13 @@ export function unlockAchievement(id: string) {
   return true;
 }
 
+export function removeAchievement(id: string) {
+  const item = ACHIEVEMENTS.find((a) => a.id === id);
+  const next = readUnlocked().filter((achievementId) => achievementId !== id);
+  writeUnlocked(next);
+  if (item?.rewardTitle && getEquippedTitle() === item.rewardTitle) setEquippedTitle(null);
+}
+
 export function getOwnedTitles(): TitleId[] {
   const unlocked = getUnlockedAchievements();
   return ACHIEVEMENTS

@@ -74,6 +74,41 @@ export function getUpgradePrice(item: StoreItem): number {
 export function getOwned(): Set<string> {
   return new Set(readOwned());
 }
+
+export function grantItem(id: string) {
+  const item = findItem(id);
+  if (!item) return false;
+  if (item.kind === "upgrade") {
+    setUpgradeCount(id, getUpgradeCount(id) + 1);
+    return true;
+  }
+  const owned = readOwned();
+  if (!owned.includes(id)) writeOwned([...owned, id]);
+  if (item.kind === "skin" && !getEquippedSkin()) setEquippedSkin(id);
+  if (item.kind === "ability" && !getEquippedAbility()) setEquippedAbility(id);
+  return true;
+}
+
+export function removeItem(id: string) {
+  const item = findItem(id);
+  if (!item) return false;
+  if (item.kind === "upgrade") {
+    setUpgradeCount(id, Math.max(0, getUpgradeCount(id) - 1));
+    return true;
+  }
+  writeOwned(readOwned().filter((ownedId) => ownedId !== id));
+  if (getEquippedSkin() === id) setEquippedSkin(null);
+  if (getEquippedAbility() === id) setEquippedAbility(null);
+  return true;
+}
+
+export function setUpgradeCount(id: string, count: number) {
+  const counts = readUpgradeCounts();
+  const next = Math.max(0, Math.round(count));
+  if (next === 0) delete counts[id];
+  else counts[id] = next;
+  writeUpgradeCounts(counts);
+}
 export function findItem(id: string): StoreItem | undefined {
   return STORE_ITEMS.find((i) => i.id === id);
 }

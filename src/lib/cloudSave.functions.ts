@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { isAdminEmail } from "@/lib/admin";
 
 const SaveKey = z.object({
   key: z.string().min(1).max(120),
@@ -168,7 +169,7 @@ export const resetSeason = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const auth = authed(context);
     const email = auth.claims?.email ?? "";
-    if (!email.toLowerCase().startsWith("abdurahman")) {
+    if (!isAdminEmail(email)) {
       throw new Error("Unauthorized");
     }
     const { error } = await auth.supabase
