@@ -29,6 +29,7 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [amount, setAmount] = useState(1000);
   const [wave, setWave] = useState(75);
+  const [upgradeCounts, setUpgradeCounts] = useState<Record<string, number>>({});
   const [poseIndex, setPoseIndex] = useState(0);
   const [, force] = useState(0);
   const resetSeasonFn = useServerFn(resetSeason);
@@ -182,8 +183,16 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
             {STORE_ITEMS.map((item) => {
               const count = item.kind === "upgrade" ? getUpgradeCount(item.id) : 0;
               const has = item.kind === "upgrade" ? count > 0 : owned.has(item.id);
+              const pendingCount = upgradeCounts[item.id] ?? count;
               return (
-                <div key={item.id} className="grid grid-cols-[1fr_80px_80px] items-center gap-2 border border-border p-2">
+                <div
+                  key={item.id}
+                  className={`grid items-center gap-2 border border-border p-2 ${
+                    item.kind === "upgrade"
+                      ? "grid-cols-[1fr_64px_64px_64px_64px]"
+                      : "grid-cols-[1fr_80px_80px]"
+                  }`}
+                >
                   <div className="min-w-0">
                     <div className="truncate text-[10px] uppercase tracking-widest">{item.name}</div>
                     <div className="text-[8px] uppercase tracking-widest text-muted-foreground">
@@ -192,6 +201,25 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
                   </div>
                   <AdminButton onClick={() => mutate(`${item.name} given`, () => grantItem(item.id))}>Give</AdminButton>
                   <AdminButton onClick={() => mutate(`${item.name} removed`, () => removeItem(item.id))}>Remove</AdminButton>
+                  {item.kind === "upgrade" && (
+                    <>
+                      <input
+                        type="number"
+                        min={0}
+                        value={pendingCount}
+                        onChange={(e) => setUpgradeCounts((counts) => ({
+                          ...counts,
+                          [item.id]: Number(e.target.value),
+                        }))}
+                        className="min-w-0 border border-border bg-background px-2 py-2 text-[8px] text-foreground outline-none"
+                      />
+                      <AdminButton
+                        onClick={() => mutate(`${item.name} set`, () => setUpgradeCount(item.id, pendingCount))}
+                      >
+                        Set
+                      </AdminButton>
+                    </>
+                  )}
                 </div>
               );
             })}
