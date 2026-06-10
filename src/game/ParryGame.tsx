@@ -6,7 +6,7 @@ import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
 import { isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility } from "./inventory";
 import { minionForLevel, levelTier } from "./levels";
-import { unlockAchievement } from "./achievements";
+import { getEquippedTitle, TITLES, unlockAchievement } from "./achievements";
 import { playSfx } from "./sfx";
 
 interface Incoming {
@@ -148,6 +148,8 @@ export function ParryGame({
   const [pose, setPose] = useState<"idle" | "walk" | "strike" | "hit">("idle");
   const [isWalking, setIsWalking] = useState(false);
   const [viewport, setViewport] = useState({ width: ARENA_W + 32, height: ARENA_H + 260 });
+  const [dashEffectUntil, setDashEffectUntil] = useState(0);
+  const [instakillEyeUntil, setInstakillEyeUntil] = useState(0);
 
   // Ability cooldowns
   const [cdInsta, setCdInsta] = useState(0);
@@ -344,6 +346,7 @@ export function ParryGame({
       }
     }
     if (!target) return;
+    setInstakillEyeUntil(now + 560);
     target.hp = 0;
     pushFlash("instakill");
     playSfx("kill");
@@ -377,6 +380,7 @@ export function ParryGame({
     const DASH_DIST = 140;
     p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * DASH_DIST));
     p.y = Math.max(PLAYER_RADIUS, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * DASH_DIST));
+    setDashEffectUntil(now + 380);
     pushFlash("dash");
     playSfx("dash");
     setLog("* Dashed away!");
@@ -403,7 +407,12 @@ export function ParryGame({
         else if (equippedAbility === "dash") useDash();
         return;
       }
-      if (e.code === "Space") { e.preventDefault(); tryAttack(); return; }
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (!blockHeldRef.current) triggerBlockTap();
+        blockHeldRef.current = true;
+        return;
+      }
       if (e.code === "Escape") {
         if (stateRef.current !== "playing") return;
         e.preventDefault();
@@ -413,7 +422,7 @@ export function ParryGame({
     const up = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       if (k === "w" || k === "a" || k === "s" || k === "d") keysRef.current[k] = false;
-      if (k === "q") blockHeldRef.current = false;
+      if (k === "q" || e.code === "Space") blockHeldRef.current = false;
     };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
@@ -583,6 +592,10 @@ export function ParryGame({
   const totalMaxHp = enemies.reduce((s, e) => s + e.maxHp, 0);
   const effectivePose: "idle" | "walk" | "strike" | "hit" =
     pose === "idle" && isWalking ? "walk" : pose;
+  const equippedTitle = getEquippedTitle();
+  const playerLabel = equippedTitle ? TITLES[equippedTitle].toUpperCase() : character.name.toUpperCase();
+  const dashEffectActive = now < dashEffectUntil;
+  const instakillEyeActive = now < instakillEyeUntil;
 
   const instaReady = now >= cdInsta;
   const dashReady = now >= cdDash;
@@ -713,6 +726,19 @@ export function ParryGame({
 
         })}
 
+        {equippedTitle && (
+          <div
+            className="pointer-events-none absolute -translate-x-1/2 border border-accent bg-background/95 px-2 py-1 text-[8px] uppercase tracking-widest text-accent"
+            style={{
+              left: player.x,
+              top: player.y - 58,
+              textShadow: "0 0 10px var(--color-accent)",
+            }}
+          >
+            {TITLES[equippedTitle]}
+          </div>
+        )}
+
         {/* Player shadow */}
         <div
           className="pointer-events-none absolute -translate-x-1/2 rounded-[50%]"
@@ -754,6 +780,8 @@ export function ParryGame({
               skinId="kid:default"
               size={56}
               pose={effectivePose}
+              dash={dashEffectActive}
+              redEyeSpark={instakillEyeActive}
               key={overlayFlash?.uid ?? effectivePose}
             />
           </div>
@@ -855,10 +883,10 @@ export function ParryGame({
           </div>
         </div>
 
-        <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" hp={playerHp} maxHp={playerMaxHp} />
+        <StatusRow label={playerLabel} alive={playerHp > 0} color="var(--color-foreground)" hp={playerHp} maxHp={playerMaxHp} />
 
         <div className="flex items-center justify-between border-2 border-border bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-foreground">
-          <span>[Q] Block</span>
+          <span>[Space/Q] Block</span>
           <span className="text-muted-foreground">{blockReady ? "READY" : `${blockCdRem}s`}</span>
         </div>
 
@@ -896,7 +924,7 @@ export function ParryGame({
           {log}
         </div>
         <div className="text-center text-[9px] uppercase tracking-widest text-muted-foreground">
-          [ WASD ] Move &middot; [ Q ] Block &middot; [ Space / Click ] Strike &middot; [ E ] Ability &middot; [ Esc ] Pause
+          [ WASD ] Move &middot; [ Space / Q ] Block &middot; [ Click ] Strike &middot; [ E ] Ability &middot; [ Esc ] Pause
         </div>
       </div>
 

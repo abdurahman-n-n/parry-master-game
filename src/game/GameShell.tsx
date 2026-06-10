@@ -328,8 +328,8 @@ const PLAYER_SIZE = 54;
 const STATION_W = 126;
 const STATION_H = 58;
 const PRACTICE_BOTS = [
-  { id: "left", name: "Garden Bot", x: 510, y: 410, offset: 0, maxHp: 5, color: "oklch(0.72 0.16 160)" },
-  { id: "right", name: "Timing Bot", x: 770, y: 410, offset: 980, maxHp: 6, color: "oklch(0.78 0.14 85)" },
+  { id: "left", name: "Garden Bot", x: 510, y: 410, offset: 0, maxHp: 5, color: "oklch(0.72 0.16 160)", trim: "oklch(0.90 0.12 85)" },
+  { id: "right", name: "Timing Bot", x: 770, y: 410, offset: 980, maxHp: 6, color: "oklch(0.78 0.14 85)", trim: "oklch(0.74 0.18 320)" },
 ];
 
 type LobbyStation = {
@@ -390,7 +390,6 @@ function LobbyMap({
     ...(isAdmin
       ? [{ id: "admin", label: "Admin", hint: "Panel", x: 144, y: 430, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
       : []),
-    { id: "logout", label: "Logout", hint: "Exit", x: 580, y: 430, action: onLogout, accent: "oklch(0.66 0.06 260)" },
   ];
 
   const nearest = stations.reduce<{ station: LobbyStation | null; dist: number }>(
@@ -476,13 +475,9 @@ function LobbyMap({
         event.preventDefault();
         useStation(activeStation);
       }
-      if (key === "q" || key === "f") {
+      if (key === "q" || key === "f" || event.code === "Space") {
         event.preventDefault();
         tryPracticeParry();
-      }
-      if (event.code === "Space") {
-        event.preventDefault();
-        tryPracticeStrike();
       }
     };
     const up = (event: KeyboardEvent) => {
@@ -556,12 +551,18 @@ function LobbyMap({
         <div className="pointer-events-none absolute left-2 top-2 z-20 flex flex-col gap-2 text-[8px] uppercase tracking-widest text-muted-foreground">
           <CurrencyHUD credits={credits} gems={gems} />
           <div className="max-w-72 truncate bg-background/85 px-2 py-1">
-            {user}{title ? ` · ${TITLES[title]}` : ""}
+            {user}
           </div>
           <div className="bg-background/85 px-2 py-1">{levelsCleared}/{TOTAL_LEVELS} levels cleared</div>
         </div>
+        <button
+          onClick={onLogout}
+          className="absolute bottom-2 left-2 z-30 border-2 border-border bg-background/90 px-3 py-2 text-[8px] uppercase tracking-widest text-muted-foreground hover:bg-foreground hover:text-background"
+        >
+          Logout
+        </button>
         <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 border-2 border-border bg-background/85 px-3 py-2 text-center text-[8px] uppercase tracking-widest text-muted-foreground">
-          WASD / arrows · E near station · Space/click hit · Q/F parry
+          WASD / arrows · E near station · Click hit · Space/Q/F parry
         </div>
         <div
           className="relative overflow-hidden"
@@ -570,15 +571,15 @@ function LobbyMap({
             height: LOBBY_H,
             transform: `translate(${-cameraX * scale}px, ${-cameraY * scale}px) scale(${scale})`,
             transformOrigin: "top left",
-            background:
-              "linear-gradient(180deg, oklch(0.20 0.03 260), oklch(0.13 0.02 260))",
+              background:
+              "linear-gradient(180deg, oklch(0.20 0.04 255), oklch(0.14 0.03 250) 45%, oklch(0.16 0.04 185))",
           }}
         >
           <div
             className="absolute inset-0 opacity-70"
             style={{
               backgroundImage:
-                "linear-gradient(oklch(0.28 0.02 260) 2px, transparent 2px), linear-gradient(90deg, oklch(0.28 0.02 260) 2px, transparent 2px)",
+                "radial-gradient(circle at 14px 18px, oklch(0.24 0.06 180) 0 4px, transparent 5px), linear-gradient(oklch(0.28 0.03 250) 2px, transparent 2px), linear-gradient(90deg, oklch(0.28 0.03 250) 2px, transparent 2px)",
               backgroundSize: "40px 40px",
             }}
           />
@@ -587,8 +588,37 @@ function LobbyMap({
             <div className="text-3xl tracking-[0.32em] text-foreground">PARRY!</div>
             <PixelSword size={34} />
           </div>
-          <div className="absolute left-[152px] top-[226px] h-24 w-[980px] border-t-2 border-dashed border-border/70" />
-          <div className="absolute left-[640px] top-[160px] h-[620px] border-l-2 border-dashed border-border/70" />
+          <div className="absolute left-[152px] top-[226px] h-24 w-[980px] border-t-4 border-dashed border-[oklch(0.40_0.04_250)]/80" />
+          <div className="absolute left-[640px] top-[160px] h-[620px] border-l-4 border-dashed border-[oklch(0.40_0.04_250)]/80" />
+          <div className="absolute left-[524px] top-[62px] h-28 w-60 border-4 border-[oklch(0.48_0.08_55)] bg-[oklch(0.24_0.05_55)] shadow-[inset_0_-18px_0_rgba(0,0,0,0.18)]" />
+          <div className="absolute left-[548px] top-[86px] h-16 w-44 border-2 border-accent/70 bg-background/60" />
+          <div className="absolute left-[612px] top-[152px] h-12 w-16 border-2 border-[oklch(0.30_0.06_250)] bg-[oklch(0.12_0.03_250)]" />
+          <div className="absolute left-[92px] top-[174px] h-28 w-72 border-4 border-[oklch(0.38_0.10_160)] bg-[oklch(0.19_0.06_160)]" />
+          <div className="absolute left-[932px] top-[174px] h-28 w-72 border-4 border-danger/70 bg-danger/10" />
+          <div className="absolute left-[90px] top-[628px] h-28 w-72 border-4 border-[oklch(0.52_0.11_85)] bg-[oklch(0.23_0.05_85)]" />
+          <div className="absolute left-[918px] top-[626px] h-28 w-72 border-4 border-[oklch(0.36_0.10_185)] bg-[oklch(0.15_0.06_185)]" />
+          <div className="absolute left-[380px] top-[684px] h-28 w-[216px] border-4 border-[oklch(0.48_0.09_35)] bg-[oklch(0.24_0.06_35)]" />
+          <div className="absolute left-[684px] top-[684px] h-28 w-[216px] border-4 border-[oklch(0.40_0.10_250)] bg-[oklch(0.17_0.06_250)]" />
+          {[
+            [176, 182, "∞"], [1038, 184, "VS"], [190, 646, "★"], [1040, 642, "#"], [448, 704, "$"], [762, 704, "BAG"],
+          ].map(([x, y, mark], index) => (
+            <div key={`district-mark-${index}`} className="absolute flex h-14 w-14 items-center justify-center border-2 border-border bg-background/60 text-[12px] text-foreground" style={{ left: x, top: y }}>
+              {mark}
+            </div>
+          ))}
+          {[
+            [236, 324], [1012, 330], [238, 556], [1012, 548], [500, 632], [778, 630], [606, 238], [676, 238],
+          ].map(([x, y], index) => (
+            <div key={`lamp-${index}`} className="absolute">
+              <div className="absolute h-14 w-3 bg-[oklch(0.28_0.03_250)]" style={{ left: x, top: y }} />
+              <div className="absolute h-5 w-5 border-2 border-[oklch(0.78_0.14_85)] bg-[oklch(0.78_0.14_85)]/70" style={{ left: x - 6, top: y - 8, boxShadow: "0 0 18px oklch(0.78 0.14 85)" }} />
+            </div>
+          ))}
+          {[
+            [74, 92], [244, 92], [1034, 92], [1190, 92], [64, 760], [284, 776], [1016, 772], [1202, 756],
+          ].map(([x, y], index) => (
+            <div key={`rock-${index}`} className="absolute h-8 w-12 border-2 border-[oklch(0.36_0.03_250)] bg-[oklch(0.22_0.03_250)]" style={{ left: x, top: y }} />
+          ))}
           <div
             className="absolute left-[356px] top-[294px] h-[280px] w-[568px] border-4 border-[oklch(0.42_0.10_145)] bg-[oklch(0.24_0.07_145)]/80"
             style={{
@@ -633,10 +663,6 @@ function LobbyMap({
               <div className="absolute left-20 top-4 h-3 w-3" style={{ background: color }} />
             </div>
           ))}
-          <div className="absolute left-[80px] top-[74px] h-20 w-24 border-2 border-[oklch(0.42_0.06_260)] bg-background/70" />
-          <div className="absolute left-[1080px] top-[94px] h-20 w-28 border-2 border-danger bg-danger/10" />
-          <div className="absolute left-[92px] top-[724px] h-20 w-24 border-2 border-[oklch(0.62_0.12_85)] bg-[oklch(0.25_0.06_85)]" />
-          <div className="absolute left-[1084px] top-[724px] h-20 w-24 border-2 border-[oklch(0.42_0.12_180)] bg-[oklch(0.18_0.08_180)]" />
           {[
             [382, 340, "oklch(0.76 0.16 35)"],
             [454, 528, "oklch(0.82 0.14 85)"],
@@ -715,22 +741,29 @@ function LobbyMap({
                   style={{
                     left: bot.x,
                     top: down ? bot.y + 14 : bot.y,
-                    width: 44,
-                    height: down ? 24 : 54,
+                    width: 52,
+                    height: down ? 26 : 62,
                     opacity: down ? 0.55 : 1,
                     borderColor: !down && striking ? "var(--color-danger)" : close ? "var(--color-accent)" : "var(--color-border)",
                     boxShadow: striking ? "0 0 18px var(--color-danger)" : close ? "0 0 12px var(--color-accent)" : undefined,
                     transform: `translate(-50%, -50%) ${down ? "rotate(90deg)" : windup ? `rotate(${charge * -8}deg)` : striking ? "translateX(8px)" : ""}`,
                   }}
                 >
-                  <div className="absolute left-3 top-2 h-2 w-2" style={{ background: bot.color }} />
-                  <div className="absolute right-3 top-2 h-2 w-2" style={{ background: bot.color }} />
-                  <div className="absolute left-2 top-7 h-2 w-8 bg-foreground" />
-                  <div className="absolute left-4 top-10 h-2 w-4" style={{ background: bot.color }} />
+                  <div className="absolute left-1/2 top-[-10px] h-7 w-7 -translate-x-1/2 border-2 border-border bg-[oklch(0.86_0.04_75)]" />
+                  <div className="absolute left-4 top-[-2px] h-2 w-2 bg-background" />
+                  <div className="absolute right-4 top-[-2px] h-2 w-2 bg-background" />
+                  <div className="absolute left-4 top-6 h-3 w-3" style={{ background: bot.trim }} />
+                  <div className="absolute right-4 top-6 h-3 w-3" style={{ background: bot.trim }} />
+                  <div className="absolute left-2 top-8 h-2 w-10 bg-foreground" />
+                  <div className="absolute left-4 top-[52px] h-2 w-4" style={{ background: bot.color }} />
+                  <div className="absolute left-1 top-4 h-8 w-2" style={{ background: bot.color }} />
+                  <div className="absolute right-1 top-4 h-8 w-2" style={{ background: bot.color }} />
+                  <div className="absolute left-2 bottom-[-8px] h-8 w-3 bg-[oklch(0.18_0.03_250)]" />
+                  <div className="absolute right-2 bottom-[-8px] h-8 w-3 bg-[oklch(0.18_0.03_250)]" />
                   <div
-                    className="absolute h-2 w-20 origin-left"
+                    className="absolute h-3 w-24 origin-left border border-background"
                     style={{
-                      left: 30,
+                      left: 34,
                       top: 25,
                       background: striking ? "var(--color-danger)" : bot.color,
                       transform: `rotate(${windup ? -38 + charge * 24 : striking ? -8 : 42}deg)`,
@@ -787,9 +820,17 @@ function LobbyMap({
           {activeStation && (
             <div
               className="pointer-events-none absolute -translate-x-1/2 border border-accent bg-background px-2 py-1 text-[8px] uppercase tracking-widest text-accent"
-              style={{ left: player.x, top: player.y - 68 }}
+              style={{ left: player.x, top: player.y - 86 }}
             >
               Press E: {activeStation.label}
+            </div>
+          )}
+          {title && (
+            <div
+              className="pointer-events-none absolute -translate-x-1/2 border border-accent bg-background/95 px-2 py-1 text-[8px] uppercase tracking-widest text-accent"
+              style={{ left: player.x, top: player.y - 64, textShadow: "0 0 10px var(--color-accent)" }}
+            >
+              {TITLES[title]}
             </div>
           )}
 

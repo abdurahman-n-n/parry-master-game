@@ -178,10 +178,14 @@ export function PixelCharacter({
   skinId,
   size = 64,
   pose = "idle",
+  dash = false,
+  redEyeSpark = false,
 }: {
   skinId: string;
   size?: number;
   pose?: Pose;
+  dash?: boolean;
+  redEyeSpark?: boolean;
 }) {
   const variant = VARIANTS[skinId] ?? VARIANTS["kid:default"];
   const cells = pose === "strike" ? variant.strike : variant.idle;
@@ -213,6 +217,38 @@ export function PixelCharacter({
       {pose === "walk" && (
         <>
           <div
+            className="pointer-events-none absolute left-[24%] top-[62%] h-[30%] w-[12%]"
+            style={{
+              background: "oklch(0.20 0.04 260)",
+              transformOrigin: "top center",
+              animation: "heroStrideA 0.42s ease-in-out infinite",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute right-[24%] top-[62%] h-[30%] w-[12%]"
+            style={{
+              background: "oklch(0.20 0.04 260)",
+              transformOrigin: "top center",
+              animation: "heroStrideB 0.42s ease-in-out infinite",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute left-[15%] top-[46%] h-[28%] w-[10%]"
+            style={{
+              background: SKIN,
+              transformOrigin: "top center",
+              animation: "heroArmA 0.42s ease-in-out infinite",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute right-[14%] top-[46%] h-[28%] w-[10%]"
+            style={{
+              background: SKIN,
+              transformOrigin: "top center",
+              animation: "heroArmB 0.42s ease-in-out infinite",
+            }}
+          />
+          <div
             className="pointer-events-none absolute bottom-0 left-2 h-1 w-3"
             style={{
               background: "color-mix(in oklab, var(--color-foreground) 35%, transparent)",
@@ -227,6 +263,42 @@ export function PixelCharacter({
             }}
           />
         </>
+      )}
+      {dash && (
+        <>
+          <div
+            className="pointer-events-none absolute inset-y-[14%] right-[58%] w-[110%]"
+            style={{
+              background: "linear-gradient(90deg, transparent, color-mix(in oklab, var(--color-accent) 75%, white), transparent)",
+              filter: "blur(1px)",
+              opacity: 0.75,
+              animation: "heroDashTrail 360ms ease-out forwards",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              border: "2px solid var(--color-accent)",
+              boxShadow: "0 0 18px var(--color-accent)",
+              animation: "heroDashAfterimage 360ms ease-out forwards",
+            }}
+          />
+        </>
+      )}
+      {redEyeSpark && (
+        <div
+          className="pointer-events-none absolute"
+          style={{
+            left: "58%",
+            top: "28%",
+            width: Math.max(4, size * 0.12),
+            height: Math.max(4, size * 0.12),
+            background: "var(--color-danger)",
+            boxShadow: "0 0 10px var(--color-danger), 0 0 20px var(--color-danger)",
+            clipPath: "polygon(50% 0, 64% 35%, 100% 50%, 64% 65%, 50% 100%, 36% 65%, 0 50%, 36% 35%)",
+            animation: "heroRedEyeSpark 520ms steps(3) forwards",
+          }}
+        />
       )}
       {pose === "strike" && (
         <div
@@ -251,13 +323,20 @@ export function PixelCharacter({
       )}
       <style>{`
         @keyframes heroBob { 0%,100% { transform: translateY(0) scaleY(1);} 50% { transform: translateY(-3px) scaleY(1.025);} }
-        @keyframes heroWalk { 0%,100% { transform: translateY(0) translateX(-1px) rotate(-2deg) scaleX(1.02);} 25% { transform: translateY(-5px) translateX(1px) rotate(2deg) scaleX(0.98);} 50% { transform: translateY(0) translateX(1px) rotate(2deg) scaleX(1.02);} 75% { transform: translateY(-5px) translateX(-1px) rotate(-2deg) scaleX(0.98);} }
+        @keyframes heroWalk { 0%,100% { transform: translateY(1px) translateX(-2px) rotate(-4deg) scaleX(1.04);} 25% { transform: translateY(-6px) translateX(2px) rotate(4deg) scaleX(0.96);} 50% { transform: translateY(1px) translateX(2px) rotate(4deg) scaleX(1.04);} 75% { transform: translateY(-6px) translateX(-2px) rotate(-4deg) scaleX(0.96);} }
         @keyframes heroStrike { 0%{transform:translateY(0) rotate(0) scale(1);} 35%{transform:translateY(-6px) rotate(-8deg) scale(1.08);} 100%{transform:translateY(0) rotate(0) scale(1);} }
         @keyframes heroShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);} }
         @keyframes heroFlash { from{opacity:1;} to{opacity:0;} }
+        @keyframes heroStrideA { 0%,100%{transform:rotate(22deg) translateY(0);} 50%{transform:rotate(-30deg) translateY(3px);} }
+        @keyframes heroStrideB { 0%,100%{transform:rotate(-30deg) translateY(3px);} 50%{transform:rotate(22deg) translateY(0);} }
+        @keyframes heroArmA { 0%,100%{transform:rotate(-24deg);} 50%{transform:rotate(28deg);} }
+        @keyframes heroArmB { 0%,100%{transform:rotate(28deg);} 50%{transform:rotate(-24deg);} }
         @keyframes heroDustA { 0%{opacity:0; transform:translateX(0) scaleX(0.6);} 35%{opacity:0.65;} 100%{opacity:0; transform:translateX(-8px) scaleX(1.8);} }
         @keyframes heroDustB { 0%{opacity:0; transform:translateX(0) scaleX(0.5);} 45%{opacity:0.5;} 100%{opacity:0; transform:translateX(7px) scaleX(1.5);} }
         @keyframes heroBladeGlint { from{opacity:1; transform:translate(-50%, -50%) rotate(-28deg) scaleX(0.45);} to{opacity:0; transform:translate(-50%, -50%) rotate(-28deg) scaleX(1.35);} }
+        @keyframes heroDashTrail { from{opacity:0.9; transform:translateX(0) scaleX(1);} to{opacity:0; transform:translateX(-34px) scaleX(0.25);} }
+        @keyframes heroDashAfterimage { from{opacity:0.65; transform:translateX(-24px) scale(1.08);} to{opacity:0; transform:translateX(-54px) scale(0.92);} }
+        @keyframes heroRedEyeSpark { 0%{opacity:0; transform:scale(0.6) rotate(0deg);} 20%{opacity:1; transform:scale(1.35) rotate(45deg);} 70%{opacity:1; transform:scale(0.95) rotate(90deg);} 100%{opacity:0; transform:scale(0.3) rotate(135deg);} }
       `}</style>
     </div>
   );
