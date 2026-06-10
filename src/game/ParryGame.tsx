@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { AttackPattern, CharacterDef, EnemyDef, GameState } from "./types";
 import { PixelCharacter } from "./PixelCharacters";
 import { PixelEnemy } from "./PixelEnemy";
@@ -547,6 +547,24 @@ export function ParryGame({
     };
   }, []);
 
+  const setMobileMoveFromPointer = useCallback((event: { currentTarget: EventTarget & HTMLElement; clientX: number; clientY: number }) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    const dead = 12;
+    keysRef.current.w = dy < -dead;
+    keysRef.current.s = dy > dead;
+    keysRef.current.a = dx < -dead;
+    keysRef.current.d = dx > dead;
+  }, []);
+
+  const clearMobileMove = useCallback(() => {
+    keysRef.current.w = false;
+    keysRef.current.a = false;
+    keysRef.current.s = false;
+    keysRef.current.d = false;
+  }, []);
+
   // Mouse click = attack
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -746,8 +764,8 @@ export function ParryGame({
   const instaCdRem = Math.max(0, Math.ceil((cdInsta - now) / 1000));
   const dashCdRem = Math.max(0, Math.ceil((cdDash - now) / 1000));
   const arenaScale = Math.max(
-    0.48,
-    Math.min(1, (viewport.width - 24) / ARENA_W, (viewport.height - 230) / ARENA_H)
+    0.58,
+    Math.min(1, (viewport.width - 12) / ARENA_W, (viewport.height - 190) / ARENA_H)
   );
   const arenaDisplayWidth = ARENA_W * arenaScale;
   const arenaDisplayHeight = ARENA_H * arenaScale;
@@ -1096,6 +1114,41 @@ export function ParryGame({
           </div>
         )}
         </div>
+
+        {state === "playing" && !paused && (
+          <>
+            <div className="absolute left-2 top-1/2 z-20 flex -translate-y-1/2 flex-col gap-2 sm:hidden">
+              <MobileActionButton label="Hit" onPress={tryAttack}>
+                <span className="block h-5 w-5 border-2 border-current bg-current" />
+              </MobileActionButton>
+              <MobileActionButton label="Special" onPress={useWeaponSpecial} disabled={weaponId === "weapon-sword" || !weaponSpecialReady}>
+                <span className="text-xl leading-none">*</span>
+              </MobileActionButton>
+              <MobileActionButton
+                label="Ability"
+                onPress={() => {
+                  if (equippedAbility === "instakill") useInstakill();
+                  else if (equippedAbility === "dash") useDash();
+                }}
+                disabled={!equippedAbility || (equippedAbility === "instakill" ? !instaReady : !dashReady)}
+              >
+                <span className="text-lg leading-none">{equippedAbility === "dash" ? ">" : equippedAbility === "instakill" ? "!" : "-"}</span>
+              </MobileActionButton>
+            </div>
+            <div
+              className="absolute bottom-3 right-3 z-20 flex h-28 w-28 touch-none select-none items-center justify-center rounded-full border-2 border-border bg-background/70 text-[8px] uppercase tracking-widest text-muted-foreground sm:hidden"
+              onPointerDown={(event) => {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                setMobileMoveFromPointer(event);
+              }}
+              onPointerMove={setMobileMoveFromPointer}
+              onPointerUp={clearMobileMove}
+              onPointerCancel={clearMobileMove}
+            >
+              <div className="h-8 w-8 rounded-full border-2 border-accent" />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Status + abilities + log */}
@@ -1233,5 +1286,33 @@ function StatusRow({ label, alive, color, hp, maxHp }: { label: string; alive: b
         {hasHp ? `${hp}/${maxHp}` : (alive ? "Alive" : "Down")}
       </div>
     </div>
+  );
+}
+
+function MobileActionButton({
+  label,
+  disabled = false,
+  onPress,
+  children,
+}: {
+  label: string;
+  disabled?: boolean;
+  onPress: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        onPress();
+      }}
+      className="flex h-14 w-14 touch-none flex-col items-center justify-center gap-0.5 border-2 border-border bg-background/85 text-foreground shadow-[0_0_12px_rgba(0,0,0,0.35)] disabled:opacity-40"
+      aria-label={label}
+    >
+      {children}
+      <span className="sr-only">{label}</span>
+    </button>
   );
 }

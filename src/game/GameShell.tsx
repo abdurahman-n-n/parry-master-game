@@ -396,8 +396,8 @@ function StatBox({ label, value }: { label: string; value: string | number }) {
 
 const LOBBY_W = 1280;
 const LOBBY_H = 860;
-const LOBBY_VIEW_W = 760;
-const LOBBY_VIEW_H = 480;
+const LOBBY_VIEW_W = 900;
+const LOBBY_VIEW_H = 560;
 const PLAYER_SIZE = 54;
 const STATION_W = 126;
 const STATION_H = 88;
@@ -593,15 +593,29 @@ function LobbyMap({
     return () => cancelAnimationFrame(raf);
   }, [keys]);
 
-  const scale = Math.max(0.5, Math.min(1, (viewport.width - 24) / LOBBY_VIEW_W, (viewport.height - 118) / LOBBY_VIEW_H));
+  const scale = Math.max(0.5, Math.min(1, (viewport.width - 12) / LOBBY_VIEW_W, (viewport.height - 64) / LOBBY_VIEW_H));
   const mapWidth = LOBBY_VIEW_W * scale;
   const mapHeight = LOBBY_VIEW_H * scale;
   const cameraX = Math.max(0, Math.min(LOBBY_W - LOBBY_VIEW_W, player.x - LOBBY_VIEW_W / 2));
   const cameraY = Math.max(0, Math.min(LOBBY_H - LOBBY_VIEW_H, player.y - LOBBY_VIEW_H / 2));
   const playerPose = swingAt > 0 && lobbyTime - swingAt < 220 ? "strike" : walking ? "walk" : "idle";
 
-  const holdMove = (key: string, pressed: boolean) => {
-    setKeys((current) => ({ ...current, [key]: pressed }));
+  const setDragMove = (event: { currentTarget: EventTarget & HTMLElement; clientX: number; clientY: number }) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    const dead = 12;
+    setKeys((current) => ({
+      ...current,
+      w: dy < -dead,
+      a: dx < -dead,
+      s: dy > dead,
+      d: dx > dead,
+    }));
+  };
+
+  const clearDragMove = () => {
+    setKeys((current) => ({ ...current, w: false, a: false, s: false, d: false }));
   };
 
   const stationIcon = (station: LobbyStation) => {
@@ -700,12 +714,6 @@ function LobbyMap({
             {displayName}
           </div>
         </div>
-        <button
-          onClick={onLogout}
-          className="absolute bottom-2 left-2 z-30 border-2 border-border bg-background/90 px-3 py-2 text-[8px] uppercase tracking-widest text-muted-foreground hover:bg-foreground hover:text-background"
-        >
-          Logout
-        </button>
         <div
           className="relative overflow-hidden"
           style={{
@@ -831,6 +839,16 @@ function LobbyMap({
           <div className="absolute left-[548px] top-[300px] border border-accent bg-background/90 px-2 py-1 text-[8px] uppercase tracking-widest text-accent">
             Training garden
           </div>
+
+          <button
+            onClick={onLogout}
+            className="absolute left-[590px] top-[790px] z-20 flex h-16 w-24 flex-col items-center justify-end border-2 border-border bg-[oklch(0.20_0.06_55)] pb-2 text-[9px] uppercase tracking-[0.18em] text-foreground hover:border-accent hover:text-accent"
+          >
+            <span className="absolute -top-7 border border-border bg-background px-2 py-1 text-[8px] text-accent">Exit</span>
+            <span className="absolute left-3 top-3 h-8 w-3 bg-[oklch(0.42_0.11_55)]" />
+            <span className="absolute right-3 top-3 h-8 w-3 bg-[oklch(0.42_0.11_55)]" />
+            Door
+          </button>
 
           {stations.map((station) => {
             const active = activeStation?.id === station.id;
@@ -1070,49 +1088,38 @@ function LobbyMap({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 sm:hidden">
-        <div />
-        <PadButton label="W" onDown={() => holdMove("w", true)} onUp={() => holdMove("w", false)} />
-        <div />
-        <PadButton label="A" onDown={() => holdMove("a", true)} onUp={() => holdMove("a", false)} />
+      <div className="fixed bottom-4 right-4 z-40 flex h-28 w-28 touch-none select-none items-center justify-center rounded-full border-2 border-border bg-background/80 sm:hidden"
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setDragMove(event);
+        }}
+        onPointerMove={setDragMove}
+        onPointerUp={clearDragMove}
+        onPointerCancel={clearDragMove}
+      >
+        <div className="h-8 w-8 rounded-full border-2 border-accent" />
+      </div>
+      <div className="fixed bottom-4 left-4 z-40 flex flex-col gap-2 sm:hidden">
         <button
           onClick={() => useStation(activeStation)}
-          className="border-2 border-border bg-foreground px-3 py-2 text-[9px] uppercase tracking-widest text-background"
+          className="h-12 w-20 border-2 border-border bg-foreground px-3 py-2 text-[9px] uppercase tracking-widest text-background"
         >
           Use
         </button>
-        <PadButton label="D" onDown={() => holdMove("d", true)} onUp={() => holdMove("d", false)} />
-        <div />
-        <PadButton label="S" onDown={() => holdMove("s", true)} onUp={() => holdMove("s", false)} />
-        <div />
+        <button
+          onClick={tryPracticeParry}
+          className="h-12 w-20 border-2 border-accent bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-accent"
+        >
+          Parry
+        </button>
+        <button
+          onClick={() => tryPracticeStrike()}
+          className="h-12 w-20 border-2 border-border bg-foreground px-3 py-2 text-[9px] uppercase tracking-widest text-background"
+        >
+          Hit
+        </button>
       </div>
-      <button
-        onClick={tryPracticeParry}
-        className="border-2 border-accent bg-background px-4 py-2 text-[9px] uppercase tracking-widest text-accent sm:hidden"
-      >
-        Parry
-      </button>
-      <button
-        onClick={() => tryPracticeStrike()}
-        className="border-2 border-border bg-foreground px-4 py-2 text-[9px] uppercase tracking-widest text-background sm:hidden"
-      >
-        Attack
-      </button>
     </div>
-  );
-}
-
-function PadButton({ label, onDown, onUp }: { label: string; onDown: () => void; onUp: () => void }) {
-  return (
-    <button
-      onPointerDown={onDown}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-      onPointerLeave={onUp}
-      className="border-2 border-border bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-foreground"
-    >
-      {label}
-    </button>
   );
 }
 
