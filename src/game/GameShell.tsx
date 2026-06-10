@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DEFAULT_CHARACTER, enemyForLevel, TOTAL_LEVELS,
   getBeatenLevels, markLevelBeaten, isLevelUnlocked, rewardForLevel,
@@ -325,6 +325,10 @@ const LOBBY_H = 480;
 const PLAYER_SIZE = 54;
 const STATION_W = 126;
 const STATION_H = 58;
+const PRACTICE_BOTS = [
+  { id: "left", name: "Garden Bot", x: 232, y: 246, offset: 0, color: "oklch(0.72 0.16 160)" },
+  { id: "right", name: "Timing Bot", x: 482, y: 246, offset: 980, color: "oklch(0.78 0.14 85)" },
+];
 
 type LobbyStation = {
   id: string;
@@ -356,6 +360,12 @@ function LobbyMap({
   const [keys, setKeys] = useState<Record<string, boolean>>({});
   const [viewport, setViewport] = useState({ width: LOBBY_W + 40, height: LOBBY_H + 40 });
   const [walking, setWalking] = useState(false);
+  const [lobbyTime, setLobbyTime] = useState(0);
+  const [parryPop, setParryPop] = useState<{ x: number; y: number; at: number } | null>(null);
+  const playerRef = useRef(player);
+  const lobbyTimeRef = useRef(lobbyTime);
+  playerRef.current = player;
+  lobbyTimeRef.current = lobbyTime;
   const isAdmin = isAdminEmail(user);
   const title = getEquippedTitle();
 
@@ -391,6 +401,17 @@ function LobbyMap({
     station.action?.();
   };
 
+  const tryPracticeParry = () => {
+    const bot = PRACTICE_BOTS.find((practiceBot) => {
+      const phase = (lobbyTimeRef.current + practiceBot.offset) % 2600;
+      const close = Math.hypot(playerRef.current.x - practiceBot.x, playerRef.current.y - practiceBot.y) < 118;
+      return close && phase >= 980 && phase <= 1550;
+    });
+
+    if (!bot) return;
+    setParryPop({ x: bot.x, y: bot.y - 44, at: performance.now() });
+  };
+
   useEffect(() => {
     const updateViewport = () => {
       setViewport({ width: window.innerWidth, height: window.innerHeight });
@@ -416,6 +437,10 @@ function LobbyMap({
         event.preventDefault();
         useStation(activeStation);
       }
+      if (key === "q" || key === "f") {
+        event.preventDefault();
+        tryPracticeParry();
+      }
     };
     const up = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
@@ -437,6 +462,8 @@ function LobbyMap({
     const frame = (time: number) => {
       const dt = Math.min(0.033, (time - last) / 1000);
       last = time;
+      lobbyTimeRef.current = time;
+      setLobbyTime(time);
       const left = keys.a || keys.arrowleft;
       const right = keys.d || keys.arrowright;
       const up = keys.w || keys.arrowup;
@@ -507,11 +534,31 @@ function LobbyMap({
             <div>{levelsCleared}/{TOTAL_LEVELS} levels cleared</div>
           </div>
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 border-2 border-border bg-background/85 px-3 py-2 text-center text-[8px] uppercase tracking-widest text-muted-foreground">
-            WASD / arrows to walk · E / Enter near a station
+            WASD / arrows to walk · E / Enter near a station · Q / F in garden
           </div>
 
-          <div className="absolute left-24 top-80 h-24 w-[560px] border-t-2 border-dashed border-border/70" />
-          <div className="absolute left-[378px] top-96 h-28 border-l-2 border-dashed border-border/70" />
+          <div className="absolute left-8 top-72 h-40 w-[704px] border-2 border-[oklch(0.42_0.10_145)] bg-[oklch(0.24_0.07_145)]/70" />
+          <div className="absolute left-24 top-[332px] h-20 w-[560px] border-t-2 border-dashed border-[oklch(0.58_0.12_120)]" />
+          <div className="absolute left-[378px] top-[300px] h-[116px] border-l-2 border-dashed border-[oklch(0.58_0.12_120)]" />
+          <div className="absolute left-32 top-[286px] h-10 w-28 border-2 border-[oklch(0.55_0.10_220)] bg-[oklch(0.34_0.10_220)]" />
+          <div className="absolute left-[590px] top-[348px] h-12 w-20 border-2 border-[oklch(0.50_0.12_85)] bg-[oklch(0.33_0.12_85)]" />
+          {[
+            [44, 326, "oklch(0.76 0.16 35)"],
+            [68, 380, "oklch(0.82 0.14 85)"],
+            [170, 384, "oklch(0.74 0.18 320)"],
+            [630, 300, "oklch(0.72 0.16 160)"],
+            [704, 386, "oklch(0.76 0.16 35)"],
+            [548, 396, "oklch(0.82 0.14 85)"],
+          ].map(([x, y, color], index) => (
+            <div
+              key={index}
+              className="absolute h-3 w-3 border border-background"
+              style={{ left: x, top: y, background: color }}
+            />
+          ))}
+          <div className="absolute left-[270px] top-[284px] border border-accent bg-background/90 px-2 py-1 text-[8px] uppercase tracking-widest text-accent">
+            Training garden
+          </div>
 
           {stations.map((station) => {
             const active = activeStation?.id === station.id;
@@ -542,6 +589,80 @@ function LobbyMap({
             );
           })}
 
+          {PRACTICE_BOTS.map((bot) => {
+            const phase = (lobbyTime + bot.offset) % 2600;
+            const windup = phase < 1200;
+            const striking = phase >= 1200 && phase < 1550;
+            const charge = Math.min(1, phase / 1200);
+            const close = Math.hypot(player.x - bot.x, player.y - bot.y) < 118;
+            return (
+              <div key={bot.id}>
+                <div
+                  className="pointer-events-none absolute -translate-x-1/2 rounded-[50%]"
+                  style={{
+                    left: bot.x,
+                    top: bot.y + 26,
+                    width: 58,
+                    height: 10,
+                    background: "radial-gradient(ellipse, rgba(0,0,0,0.45), rgba(0,0,0,0))",
+                  }}
+                />
+                <div
+                  className="absolute -translate-x-1/2 -translate-y-1/2 border-2 bg-background"
+                  style={{
+                    left: bot.x,
+                    top: bot.y,
+                    width: 44,
+                    height: 54,
+                    borderColor: striking ? "var(--color-danger)" : close ? "var(--color-accent)" : "var(--color-border)",
+                    boxShadow: striking ? "0 0 18px var(--color-danger)" : close ? "0 0 12px var(--color-accent)" : undefined,
+                    transform: `translate(-50%, -50%) ${windup ? `rotate(${charge * -8}deg)` : striking ? "translateX(8px)" : ""}`,
+                  }}
+                >
+                  <div className="absolute left-3 top-2 h-2 w-2" style={{ background: bot.color }} />
+                  <div className="absolute right-3 top-2 h-2 w-2" style={{ background: bot.color }} />
+                  <div className="absolute left-2 top-7 h-2 w-8 bg-foreground" />
+                  <div className="absolute left-4 top-10 h-2 w-4" style={{ background: bot.color }} />
+                  <div
+                    className="absolute h-2 w-20 origin-left"
+                    style={{
+                      left: 30,
+                      top: 25,
+                      background: striking ? "var(--color-danger)" : bot.color,
+                      transform: `rotate(${windup ? -38 + charge * 24 : striking ? -8 : 42}deg)`,
+                    }}
+                  />
+                </div>
+                <div
+                  className="absolute -translate-x-1/2 text-center text-[7px] uppercase tracking-widest text-muted-foreground"
+                  style={{ left: bot.x, top: bot.y + 36 }}
+                >
+                  {bot.name}
+                </div>
+                {striking && (
+                  <div
+                    className="pointer-events-none absolute h-16 w-28 -translate-x-1/2 -translate-y-1/2 border-2 border-danger bg-danger/20"
+                    style={{ left: bot.x + 50, top: bot.y + 4 }}
+                  />
+                )}
+              </div>
+            );
+          })}
+
+          {parryPop && performance.now() - parryPop.at < 700 && (
+            <div
+              className="pointer-events-none absolute -translate-x-1/2 text-2xl uppercase tracking-[0.24em] text-accent"
+              style={{
+                left: parryPop.x,
+                top: parryPop.y,
+                textShadow: "0 0 14px var(--color-accent), 2px 2px 0 var(--color-background)",
+                animation: "lobbyParryPop 700ms ease-out forwards",
+              }}
+            >
+              PARRY!
+            </div>
+          )}
+
           {activeStation && (
             <div
               className="pointer-events-none absolute -translate-x-1/2 border border-accent bg-background px-2 py-1 text-[8px] uppercase tracking-widest text-accent"
@@ -567,6 +688,13 @@ function LobbyMap({
           >
             <PixelCharacter skinId="kid:default" size={PLAYER_SIZE} pose={walking ? "walk" : "idle"} />
           </div>
+          <style>{`
+            @keyframes lobbyParryPop {
+              0% { opacity: 0; transform: translate(-50%, 8px) scale(0.72); }
+              18% { opacity: 1; transform: translate(-50%, -4px) scale(1.22); }
+              100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
+            }
+          `}</style>
         </div>
       </div>
 
@@ -579,13 +707,19 @@ function LobbyMap({
           onClick={() => useStation(activeStation)}
           className="border-2 border-border bg-foreground px-3 py-2 text-[9px] uppercase tracking-widest text-background"
         >
-          E
+          Use
         </button>
         <PadButton label="D" onDown={() => holdMove("d", true)} onUp={() => holdMove("d", false)} />
         <div />
         <PadButton label="S" onDown={() => holdMove("s", true)} onUp={() => holdMove("s", false)} />
         <div />
       </div>
+      <button
+        onClick={tryPracticeParry}
+        className="border-2 border-accent bg-background px-4 py-2 text-[9px] uppercase tracking-widest text-accent sm:hidden"
+      >
+        Parry
+      </button>
     </div>
   );
 }
