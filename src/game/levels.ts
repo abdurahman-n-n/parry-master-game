@@ -29,13 +29,13 @@ const REGULAR_TEMPLATES = [
     cadenceMs: [800, 1300] as [number, number],
   },
   {
-    id: "knight", name: "Shade", title: "Fast strikes",
+    id: "shade", name: "Shade", title: "Fast strikes",
     color: "oklch(0.55 0.20 295)", shape: "diamond" as const,
     attacks: [mk("thrust-fast", "thrust", 420, 110), mk("slash-fast", "slash", 520, 130)],
     cadenceMs: [700, 1200] as [number, number],
   },
   {
-    id: "knight", name: "Phantom", title: "Erratic tempo",
+    id: "phantom", name: "Phantom", title: "Erratic tempo",
     color: "oklch(0.85 0.18 200)", shape: "circle" as const,
     attacks: [mk("p-slash", "slash", 900, 140), mk("p-thrust", "thrust", 460, 110), mk("p-heavy", "heavy", 1100, 170)],
     cadenceMs: [800, 1500] as [number, number],

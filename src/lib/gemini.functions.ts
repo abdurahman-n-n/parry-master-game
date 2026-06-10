@@ -16,25 +16,27 @@ const RequestSchema = z.object({
 
 const FALLBACK_OPPONENT: AiDuelOpponent = {
   source: "fallback",
-  intro: "A quiet challenger steps into the grid.",
-  taunt: "Read the windup. I will not swing twice the same way.",
-  tactic: "Alternates fast thrusts with slower heavy pressure.",
+  intro: "A rival champion steps into the grid.",
+  taunt: "You cleared the waves. Now prove you can read a human.",
+  tactic: "Punishes panic blocks with fast pressure and delayed heavy swings.",
   enemy: {
-    id: "knight",
-    name: "Mirror Knight",
-    title: "AI Duelist",
-    maxHp: 7,
+    id: "duelist",
+    name: "Mira Vale",
+    title: "Blade Saint",
+    maxHp: 100,
     isBoss: true,
-    color: "oklch(0.72 0.18 210)",
+    color: "oklch(0.74 0.18 25)",
     shape: "diamond",
-    cadenceMs: [650, 1050],
+    cadenceMs: [520, 920],
     attacks: [
-      { id: "ai-thrust", kind: "thrust", windupMs: 420, parryWindowMs: 100, damage: 1, reflect: 1 },
-      { id: "ai-slash", kind: "slash", windupMs: 620, parryWindowMs: 130, damage: 1, reflect: 1 },
-      { id: "ai-heavy", kind: "heavy", windupMs: 980, parryWindowMs: 160, damage: 1, reflect: 1 },
+      { id: "duel-thrust", kind: "thrust", windupMs: 360, parryWindowMs: 90, damage: 5, reflect: 2 },
+      { id: "duel-slash", kind: "slash", windupMs: 560, parryWindowMs: 120, damage: 5, reflect: 2 },
+      { id: "duel-heavy", kind: "heavy", windupMs: 880, parryWindowMs: 150, damage: 7, reflect: 3 },
     ],
   },
 };
+
+const DUEL_BOSS_IDS = ["duelist", "ronin", "champion"] as const;
 
 const ATTACK_KINDS: AttackKind[] = ["slash", "thrust", "heavy"];
 const SHAPES: EnemyShape[] = ["pentagon", "diamond", "circle", "triangle", "hex", "star"];
@@ -72,8 +74,8 @@ function sanitizeOpponent(raw: any): AiDuelOpponent {
       kind,
       windupMs,
       parryWindowMs: clamp(attack?.parryWindowMs, 80, 190, Math.round(windupMs * 0.22)),
-      damage: 1,
-      reflect: 1,
+      damage: kind === "heavy" ? clamp(attack?.damage, 6, 10, 7) : clamp(attack?.damage, 5, 8, 5),
+      reflect: kind === "heavy" ? 3 : 2,
     };
   });
 
@@ -83,16 +85,16 @@ function sanitizeOpponent(raw: any): AiDuelOpponent {
     taunt: cleanText(raw?.taunt, FALLBACK_OPPONENT.taunt, 110),
     tactic: cleanText(raw?.tactic, FALLBACK_OPPONENT.tactic, 120),
     enemy: {
-      id: "knight",
-      name: cleanText(enemyRaw?.name, "Gemini Duelist", 28),
-      title: cleanText(enemyRaw?.title, "AI Duelist", 42),
-      maxHp: clamp(enemyRaw?.maxHp, 5, 10, 7),
+      id: DUEL_BOSS_IDS[Math.floor(Math.random() * DUEL_BOSS_IDS.length)],
+      name: cleanText(enemyRaw?.name, "Rival Champion", 28),
+      title: cleanText(enemyRaw?.title, "Duel Boss", 42),
+      maxHp: clamp(enemyRaw?.maxHp, 80, 140, 100),
       isBoss: true,
       color: cleanText(enemyRaw?.color, "oklch(0.72 0.18 210)", 32),
       shape: SHAPES.includes(enemyRaw?.shape) ? enemyRaw.shape : "diamond",
       cadenceMs: [
-        clamp(enemyRaw?.cadenceMs?.[0], 480, 950, 650),
-        clamp(enemyRaw?.cadenceMs?.[1], 760, 1500, 1100),
+        clamp(enemyRaw?.cadenceMs?.[0], 380, 720, 520),
+        clamp(enemyRaw?.cadenceMs?.[1], 650, 1200, 920),
       ],
       attacks: attacks.length ? attacks : FALLBACK_OPPONENT.enemy.attacks,
     },
@@ -107,15 +109,16 @@ export const getAiDuelOpponent = createServerFn({ method: "POST" })
     if (!apiKey) return FALLBACK_OPPONENT;
 
     const prompt = [
-      "Create one opponent for a pixel-art browser game named PARRY.",
-      "The player has 1 HP and defeats enemies by blocking telegraphed attacks, then striking.",
+      "Create one human boss opponent for a pixel-art browser game named PARRY.",
+      "The player defeats bosses by blocking telegraphed attacks, then striking.",
       "Return only JSON with keys: intro, taunt, tactic, enemy.",
       "enemy must contain: name, title, maxHp, color, shape, cadenceMs, attacks.",
       "Use shape from pentagon, diamond, circle, triangle, hex, star.",
       "Use color as an oklch(...) CSS color.",
       "Create 2 or 3 attacks. Each attack has kind, windupMs, parryWindowMs.",
       "Attack kind must be slash, thrust, or heavy.",
-      "Difficulty should be tense but fair for a 1v1 duel.",
+      "The boss should average 100 HP. Attacks usually deal 5 damage; some heavy attacks can deal more.",
+      "Difficulty should be tense, fast, and fair for a late-game 1v1 duel.",
       data.seed ? `Theme seed: ${data.seed}` : "Theme seed: arcade rival.",
     ].join(" ");
 

@@ -6,6 +6,7 @@ import {
   type ItemKind, type StoreItem,
 } from "./inventory";
 import { CurrencyHUD, getCredits, getGems } from "./Currency";
+import { getEquippedTitle, getOwnedTitles, setEquippedTitle, TITLES, type TitleId } from "./achievements";
 
 const SECTIONS: { kind: ItemKind; title: string }[] = [
   { kind: "ability", title: "Abilities" },
@@ -19,6 +20,8 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
   const gems = getGems();
   const equippedSkin = getEquippedSkin();
   const equippedAbility = getEquippedAbility();
+  const equippedTitle = getEquippedTitle();
+  const titles = getOwnedTitles();
   const refresh = () => force((n) => n + 1);
 
   return (
@@ -68,6 +71,50 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
           </div>
         );
       })}
+
+      <div className="w-full max-w-2xl">
+        <div className="mb-2 text-[11px] uppercase tracking-widest text-accent">Titles</div>
+        {titles.length === 0 ? (
+          <div className="border-2 border-dashed border-border bg-background p-4 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
+            None unlocked
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {titles.map((id) => (
+              <TitleCard
+                key={id}
+                id={id}
+                equippedTitle={equippedTitle}
+                onEquip={() => { setEquippedTitle(id); refresh(); }}
+                onUnequip={() => { setEquippedTitle(null); refresh(); }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TitleCard({
+  id, equippedTitle, onEquip, onUnequip,
+}: {
+  id: TitleId;
+  equippedTitle: TitleId | null;
+  onEquip: () => void;
+  onUnequip: () => void;
+}) {
+  const equipped = equippedTitle === id;
+  return (
+    <div className="flex flex-col gap-2 border-2 border-border bg-background p-4">
+      <div className="text-[12px] uppercase tracking-widest">{TITLES[id]}</div>
+      <button
+        onClick={equipped ? onUnequip : onEquip}
+        className="mt-1 border-2 border-border bg-background px-3 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background data-[on=true]:bg-accent data-[on=true]:text-background"
+        data-on={equipped}
+      >
+        {equipped ? "Equipped (Unequip)" : "Equip"}
+      </button>
     </div>
   );
 }

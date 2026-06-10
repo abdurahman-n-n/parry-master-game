@@ -163,12 +163,81 @@ const ABYSS_LORD: Cell[] = [
   [12,13,GOLD],[13,13,HILT],[14,13,GOLD],
 ];
 
+const SHADE: Cell[] = KNIGHT.map(([x, y, c]) => [
+  x,
+  y,
+  c === STEEL_L ? "oklch(0.65 0.12 295)" : c === STEEL ? "oklch(0.38 0.12 295)" : c === GOLD ? "oklch(0.72 0.18 300)" : c,
+]);
+
+const PHANTOM: Cell[] = KNIGHT
+  .filter(([x, y]) => !(y >= 11 && (x === 5 || x === 10)))
+  .map(([x, y, c]) => [
+    x,
+    y,
+    c === STEEL_L ? "oklch(0.88 0.12 200)" : c === STEEL ? "oklch(0.55 0.14 210)" : c === STEEL_D ? "oklch(0.22 0.08 230)" : c,
+  ]);
+
+const DUELIST: Cell[] = [
+  [6,1,SHADOW],[7,1,SHADOW],[8,1,SHADOW],[9,1,SHADOW],
+  [5,2,SHADOW],[6,2,FLESH],[7,2,FLESH],[8,2,FLESH],[9,2,FLESH],[10,2,SHADOW],
+  [5,3,FLESH],[6,3,SHADOW],[7,3,FLESH],[8,3,FLESH],[9,3,SHADOW],[10,3,FLESH],
+  [6,4,FLESH],[7,4,FLESH],[8,4,FLESH],[9,4,FLESH],
+  [7,5,ROBE],[8,5,ROBE],
+  [4,6,ROBE],[5,6,ROBE],[6,6,STEEL_D],[7,6,STEEL],[8,6,STEEL],[9,6,STEEL_D],[10,6,ROBE],[11,6,ROBE],
+  [4,7,ROBE],[5,7,STEEL_D],[6,7,STEEL],[7,7,GOLD],[8,7,GOLD],[9,7,STEEL],[10,7,STEEL_D],[11,7,ROBE],
+  [5,8,ROBE],[6,8,STEEL],[7,8,STEEL],[8,8,STEEL],[9,8,STEEL],[10,8,ROBE],
+  [5,9,HILT],[6,9,HILT],[7,9,GOLD],[8,9,GOLD],[9,9,HILT],[10,9,HILT],
+  [5,10,ROBE],[6,10,ROBE],[7,10,ROBE],[8,10,ROBE],[9,10,ROBE],[10,10,ROBE],
+  [5,11,STEEL_D],[6,11,STEEL_D],[9,11,STEEL_D],[10,11,STEEL_D],
+  [5,12,SHADOW],[6,12,SHADOW],[9,12,SHADOW],[10,12,SHADOW],
+  [12,4,BLADE],[12,5,BLADE],[12,6,BLADE],[12,7,BLADE],[12,8,BLADE],[12,9,BLADE],
+  [11,10,GOLD],[12,10,HILT],[13,10,GOLD],
+];
+
+const RONIN: Cell[] = [
+  [4,1,SHADOW],[5,1,SHADOW],[6,1,SHADOW],[7,1,SHADOW],[8,1,SHADOW],[9,1,SHADOW],[10,1,SHADOW],[11,1,SHADOW],
+  [5,2,SHADOW],[6,2,FLESH],[7,2,FLESH],[8,2,FLESH],[9,2,FLESH],[10,2,SHADOW],
+  [5,3,FLESH],[6,3,SHADOW],[7,3,FLESH],[8,3,FLESH],[9,3,SHADOW],[10,3,FLESH],
+  [6,4,FLESH],[7,4,FLESH],[8,4,FLESH],[9,4,FLESH],
+  [3,5,ROBE],[4,5,ROBE],[5,5,ROBE],[10,5,ROBE],[11,5,ROBE],[12,5,ROBE],
+  [3,6,ROBE],[4,6,ROBE],[5,6,ROBE],[6,6,HILT],[7,6,HILT],[8,6,HILT],[9,6,ROBE],[10,6,ROBE],[11,6,ROBE],[12,6,ROBE],
+  [4,7,ROBE],[5,7,ROBE],[6,7,ROBE],[7,7,GOLD],[8,7,GOLD],[9,7,ROBE],[10,7,ROBE],[11,7,ROBE],
+  [4,8,ROBE],[5,8,SHADOW],[6,8,ROBE],[7,8,ROBE],[8,8,ROBE],[9,8,ROBE],[10,8,SHADOW],[11,8,ROBE],
+  [5,9,HILT],[6,9,HILT],[7,9,HILT],[8,9,HILT],[9,9,HILT],[10,9,HILT],
+  [5,10,ROBE],[6,10,ROBE],[9,10,ROBE],[10,10,ROBE],
+  [5,11,STEEL_D],[6,11,STEEL_D],[9,11,STEEL_D],[10,11,STEEL_D],
+  [14,2,BLADE],[13,3,BLADE],[12,4,BLADE],[11,5,BLADE],[10,6,BLADE],
+  [9,7,HILT],
+];
+
+const CHAMPION: Cell[] = [
+  [6,0,GOLD],[8,0,GOLD],[10,0,GOLD],
+  [5,1,GOLD],[6,1,GOLD],[7,1,GOLD],[8,1,GOLD],[9,1,GOLD],[10,1,GOLD],[11,1,GOLD],
+  [5,2,STEEL_D],[6,2,FLESH],[7,2,FLESH],[8,2,FLESH],[9,2,FLESH],[10,2,STEEL_D],
+  [5,3,FLESH],[6,3,SHADOW],[7,3,FLESH],[8,3,FLESH],[9,3,SHADOW],[10,3,FLESH],
+  [6,4,FLESH],[7,4,FLESH],[8,4,FLESH],[9,4,FLESH],
+  [2,5,ROBE],[3,5,ROBE],[12,5,ROBE],[13,5,ROBE],
+  [3,6,ROBE],[4,6,STEEL_D],[5,6,STEEL],[6,6,STEEL_L],[7,6,GOLD],[8,6,GOLD],[9,6,STEEL_L],[10,6,STEEL],[11,6,STEEL_D],[12,6,ROBE],
+  [3,7,ROBE],[4,7,STEEL],[5,7,STEEL],[6,7,GOLD],[7,7,STEEL],[8,7,STEEL],[9,7,GOLD],[10,7,STEEL],[11,7,STEEL],[12,7,ROBE],
+  [4,8,STEEL_D],[5,8,STEEL],[6,8,STEEL],[7,8,STEEL],[8,8,STEEL],[9,8,STEEL],[10,8,STEEL],[11,8,STEEL_D],
+  [5,9,HILT],[6,9,HILT],[7,9,GOLD],[8,9,GOLD],[9,9,HILT],[10,9,HILT],
+  [5,10,STEEL_D],[6,10,STEEL],[9,10,STEEL],[10,10,STEEL_D],
+  [5,11,STEEL_D],[6,11,STEEL_D],[9,11,STEEL_D],[10,11,STEEL_D],
+  [12,3,BLADE],[12,4,BLADE],[12,5,BLADE],[12,6,BLADE],[12,7,BLADE],[12,8,BLADE],[12,9,BLADE],[12,10,BLADE],
+  [11,11,GOLD],[12,11,HILT],[13,11,GOLD],
+];
+
 const SPRITES: Record<string, Cell[]> = {
   knight: KNIGHT,
+  shade: SHADE,
+  phantom: PHANTOM,
   colossus: COLOSSUS,
   warden: WARDEN,
   "void-queen": VOID_QUEEN,
   "abyss-lord": ABYSS_LORD,
+  duelist: DUELIST,
+  ronin: RONIN,
+  champion: CHAMPION,
 };
 
 export function PixelEnemy({

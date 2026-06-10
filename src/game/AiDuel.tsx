@@ -4,6 +4,8 @@ import { getAiDuelOpponent } from "@/lib/gemini.functions";
 import { DEFAULT_CHARACTER } from "./levels";
 import { ParryGame, type FightResult } from "./ParryGame";
 import type { EnemyDef } from "./types";
+import { getCurrentUser } from "./AuthScreen";
+import { getBestWaveFor } from "./InfiniteLeaderboard";
 
 type DuelInfo = {
   enemy: EnemyDef;
@@ -22,6 +24,8 @@ export function AiDuel({ onExit }: { onExit: () => void }) {
   const [error, setError] = useState("");
   const [seed, setSeed] = useState("");
   const [lastResult, setLastResult] = useState<FightResult | null>(null);
+  const bestWave = getBestWaveFor(getCurrentUser() ?? "");
+  const unlocked = bestWave >= 75;
 
   const loadOpponent = useCallback(async (nextSeed = seed) => {
     setPhase("loading");
@@ -54,7 +58,7 @@ export function AiDuel({ onExit }: { onExit: () => void }) {
         enemy={duel.enemy}
         level={1}
         enemyCountOverride={1}
-        hudLabel="AI Duel"
+        hudLabel="Duel"
         onEnd={finishFight}
       />
     );
@@ -73,13 +77,23 @@ export function AiDuel({ onExit }: { onExit: () => void }) {
           >
             Back
           </button>
-          <div className="text-center text-xl uppercase tracking-[0.3em]">AI Duel</div>
+          <div className="text-center text-xl uppercase tracking-[0.3em]">Duel</div>
           <div className="w-[72px]" />
         </div>
 
         {phase === "loading" ? (
           <div className="border-2 border-border p-6 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
             Forging opponent...
+          </div>
+        ) : !unlocked ? (
+          <div className="flex flex-col gap-4 border-2 border-border p-6 text-center">
+            <div className="text-2xl uppercase tracking-[0.3em]">Locked</div>
+            <div className="text-[10px] uppercase leading-relaxed tracking-widest text-muted-foreground">
+              Clear wave 75 in Infinite Dungeon to enter Duel.
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-accent">
+              Best wave: {bestWave}
+            </div>
           </div>
         ) : (
           <>
@@ -105,7 +119,7 @@ export function AiDuel({ onExit }: { onExit: () => void }) {
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[9px] uppercase tracking-widest text-muted-foreground">
                   <div>HP {duel.enemy.maxHp}</div>
-                  <div>{duel.source === "gemini" ? "Gemini" : "Fallback"} generated</div>
+                  <div>{duel.enemy.attacks.length} attack styles</div>
                   <div>Cadence {duel.enemy.cadenceMs[0]}-{duel.enemy.cadenceMs[1]}ms</div>
                   <div>{duel.enemy.attacks.map((a) => a.kind).join(" / ")}</div>
                 </div>

@@ -92,6 +92,10 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       setProfileMessage("Nickname required");
       return;
     }
+    if (/abdurahman/i.test(nextNickname) && !email.toLowerCase().startsWith("abdurahman")) {
+      setProfileMessage("That nickname is reserved");
+      return;
+    }
     setBusyProfile(true);
     try {
       const { error: metadataError } = await supabase.auth.updateUser({

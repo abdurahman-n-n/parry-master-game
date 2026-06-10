@@ -17,10 +17,13 @@ import { LeaderboardScreen } from "./LeaderboardScreen";
 import { AdminScreen } from "./AdminScreen";
 import { InfiniteDungeon } from "./InfiniteDungeon";
 import { AiDuel } from "./AiDuel";
+import { AchievementsScreen } from "./AchievementsScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { hydrateFromCloud, migrateLegacyIfNeeded } from "./storage";
+import { installButtonSfx } from "./sfx";
+import { getEquippedTitle, TITLES } from "./achievements";
 
-type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite" | "ai-duel";
+type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite" | "ai-duel" | "achievements";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
@@ -107,6 +110,10 @@ export function GameShell() {
   }, []);
 
   useEffect(() => {
+    return installButtonSfx();
+  }, []);
+
+  useEffect(() => {
     applyAccent(getSavedAccent());
     setCredits(getCredits());
     setGems(getGems());
@@ -166,6 +173,7 @@ export function GameShell() {
   if (screen === "admin")     return <AdminScreen onBack={() => setScreen("menu")} />;
   if (screen === "infinite")  return <InfiniteDungeon onExit={() => setScreen("menu")} />;
   if (screen === "ai-duel")   return <AiDuel onExit={() => setScreen("menu")} />;
+  if (screen === "achievements") return <AchievementsScreen onBack={() => setScreen("menu")} />;
 
   if (screen === "levels") {
     return (
@@ -296,10 +304,16 @@ export function GameShell() {
         </button>
         <button
           onClick={() => setScreen("ai-duel")}
-          title="Gemini generated 1v1 opponent"
+          title="Late-game 1v1 boss"
           className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
         >
-          AI Duel
+          Duel
+        </button>
+        <button
+          onClick={() => setScreen("achievements")}
+          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+        >
+          Achievements
         </button>
         <button
           onClick={() => setScreen("store")}
@@ -338,7 +352,10 @@ export function GameShell() {
         v0.6 · {beaten.size}/{TOTAL_LEVELS} levels cleared
       </div>
       <div className="flex items-center gap-3 text-[9px] uppercase tracking-widest text-muted-foreground">
-        <span>Logged in as {user}</span>
+        <span>
+          Logged in as {user}
+          {getEquippedTitle() ? ` · ${TITLES[getEquippedTitle()!]}` : ""}
+        </span>
         <button
           onClick={() => setShowLogoutConfirm(true)}
           className="border border-border px-2 py-1 hover:bg-foreground hover:text-background"

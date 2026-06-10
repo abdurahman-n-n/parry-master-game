@@ -6,6 +6,8 @@ import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
 import { isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility } from "./inventory";
 import { minionForLevel, levelTier } from "./levels";
+import { unlockAchievement } from "./achievements";
+import { playSfx } from "./sfx";
 
 interface Incoming {
   uid: number;
@@ -18,7 +20,7 @@ interface Incoming {
 }
 
 
-type Flash = { uid: number; kind: "parry" | "hit" | "perfect" | "dodge" | "dash" | "instakill"; at: number };
+type Flash = { uid: number; kind: "parry" | "hit" | "perfect" | "dodge" | "dash" | "instakill" | "blackflash"; at: number };
 
 export interface FightResult {
   result: "victory" | "defeat";
@@ -59,6 +61,8 @@ const ENEMY_SEPARATION = 70;
 const MELEE_RANGE = 80;
 const RIPOSTE_MS = 900;
 const BLOCK_RAISE_MS = 380;
+const BASE_BLOCK_COOLDOWN_MS = 2000;
+const BASE_STRIKE_COOLDOWN_MS = 180;
 
 type Zone =
   | { kind: "slash"; cx: number; cy: number; w: number; h: number; aim: number }
@@ -117,7 +121,10 @@ export function ParryGame({
   const baseMaxHp = character.maxHp + hpUpCount;
   const playerMaxHp = Math.max(1, Math.round(baseMaxHp * hpMul));
   const strikeDmg = Math.max(1, Math.round((1 + dmgUpCount) * dmgMul));
-  const cdAdjust = Math.max(-8000, -2000 * cdDownCount - cdBonusMs);
+  const hasteMs = Math.min(1200, 100 * cdDownCount + cdBonusMs);
+  const cdAdjust = -hasteMs;
+  const strikeCooldownMs = Math.max(60, BASE_STRIKE_COOLDOWN_MS - hasteMs);
+  const blockCooldownMs = Math.max(500, BASE_BLOCK_COOLDOWN_MS - hasteMs);
   const skinColor = getEquippedSkinColor();
   const equippedAbility = getEquippedAbility();
   const tier = levelTier(level);
@@ -151,10 +158,14 @@ export function ParryGame({
   const [, tick] = useState(0);
 
   const blockUntilRef = useRef(0);
+  const blockStartedAtRef = useRef(0);
+  const blockCooldownUntilRef = useRef(0);
   const riposteUntilRef = useRef(0);
   const riposteTargetRef = useRef<number | null>(null);
   const lastActionRef = useRef(0);
   const [riposteEndAt, setRiposteEndAt] = useState(0);
+  const [blockCooldownUntil, setBlockCooldownUntil] = useState(0);
+  const frameParryTargetRef = useRef<{ uid: number; at: number } | null>(null);
 
   const fightStartRef = useRef<number>(performance.now());
   const uidRef = useRef(1);
@@ -202,7 +213,7 @@ export function ParryGame({
   const pushFlash = useCallback((kind: Flash["kind"]) => {
     const f: Flash = { uid: uidRef.current++, kind, at: performance.now() };
     setFlashes((arr) => [...arr, f]);
-    setTimeout(() => setFlashes((arr) => arr.filter((x) => x.uid !== f.uid)), 500);
+    setTimeout(() => setFlashes((arr) => arr.filter((x) => x.uid !== f.uid)), kind === "blackflash" ? 900 : 500);
   }, []);
 
   useEffect(() => {
@@ -229,7 +240,16 @@ export function ParryGame({
     if (!en || en.hp <= 0) return;
     en.hp = Math.max(0, en.hp - dmg);
     setLog(`* ${label} ${en.def.name}. -${dmg}`);
-    pushFlash("perfect");
+    const frameParry = frameParryTargetRef.current;
+    const framePerfect = frameParry?.uid === uid && performance.now() - frameParry.at >= RIPOSTE_MS - 90;
+    if (framePerfect && unlockAchievement("parry-frame-perfect")) {
+      pushFlash("blackflash");
+      playSfx("blackflash");
+      setLog("* PARRY!! Frame Perfect title unlocked.");
+    } else {
+      pushFlash("perfect");
+      playSfx(en.hp === 0 ? "kill" : "strike");
+    }
     setPose("strike");
     setTimeout(() => setPose("idle"), 220);
     checkVictory();
@@ -238,7 +258,7 @@ export function ParryGame({
   const tryAttack = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
     const now = performance.now();
-    if (now - lastActionRef.current < 180) return;
+    if (now - lastActionRef.current < strikeCooldownMs) return;
     lastActionRef.current = now;
 
     const p = playerRef.current;
@@ -250,6 +270,7 @@ export function ParryGame({
       riposteTargetRef.current = null;
       setRiposteEndAt(0);
       damageEnemy(targetUid, strikeDmg, "Riposte! Struck");
+      frameParryTargetRef.current = null;
       return;
     }
 
@@ -270,9 +291,17 @@ export function ParryGame({
 
   const triggerBlockTap = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
-    blockUntilRef.current = performance.now() + BLOCK_RAISE_MS;
+    const now = performance.now();
+    if (now < blockCooldownUntilRef.current) {
+      setLog("* Block cooling down.");
+      return;
+    }
+    blockStartedAtRef.current = now;
+    blockUntilRef.current = now + BLOCK_RAISE_MS;
+    blockCooldownUntilRef.current = now + blockCooldownMs;
+    setBlockCooldownUntil(blockCooldownUntilRef.current);
     setLog("* Block raised.");
-  }, []);
+  }, [blockCooldownMs]);
 
   const useInstakill = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
@@ -300,6 +329,7 @@ export function ParryGame({
     if (!target) return;
     target.hp = 0;
     pushFlash("instakill");
+    playSfx("kill");
     setLog(`* INSTA-KILL! ${target.def.name} obliterated.`);
     checkVictory();
   }, [pushFlash, checkVictory, cdAdjust]);
@@ -331,6 +361,7 @@ export function ParryGame({
     p.x = Math.max(PLAYER_RADIUS, Math.min(ARENA_W - PLAYER_RADIUS, p.x + dx * DASH_DIST));
     p.y = Math.max(PLAYER_RADIUS, Math.min(ARENA_H - PLAYER_RADIUS, p.y + dy * DASH_DIST));
     pushFlash("dash");
+    playSfx("dash");
     setLog("* Dashed away!");
   }, [pushFlash, cdAdjust]);
 
@@ -396,7 +427,7 @@ export function ParryGame({
     const zone = zoneFor(inc.attack, en.x, en.y, inc.aim);
     const inDanger = insideZone(player.x, player.y, zone);
     const now = performance.now();
-    const blockUp = now < blockUntilRef.current || blockHeldRef.current;
+    const blockUp = now < blockUntilRef.current;
 
     if (!inDanger) {
       setLog(`* Sidestepped ${en.def.name}'s ${inc.attack.kind}.`);
@@ -405,9 +436,11 @@ export function ParryGame({
       const until = now + RIPOSTE_MS;
       riposteUntilRef.current = until;
       riposteTargetRef.current = en.uid;
+      frameParryTargetRef.current = now - blockStartedAtRef.current <= 80 ? { uid: en.uid, at: now } : null;
       setRiposteEndAt(until);
       setLog(`* Blocked ${en.def.name}! Strike back within ${(RIPOSTE_MS / 1000).toFixed(1)}s.`);
       pushFlash("parry");
+      playSfx("parry");
     } else {
       setPlayerHp((hp) => {
         const next = Math.max(0, hp - inc.attack.damage);
@@ -416,6 +449,7 @@ export function ParryGame({
       });
       setLog(`* ${en.def.name}'s ${inc.attack.kind} lands. -${inc.attack.damage} HP`);
       pushFlash("hit");
+      playSfx("hit");
       setPose("hit");
       setTimeout(() => setPose("idle"), 250);
     }
@@ -520,7 +554,9 @@ export function ParryGame({
 
   const overlayFlash = flashes[flashes.length - 1];
   const now = performance.now();
-  const blockUp = now < blockUntilRef.current || blockHeldRef.current;
+  const blockUp = now < blockUntilRef.current;
+  const blockReady = now >= blockCooldownUntil;
+  const blockCdRem = Math.max(0, (blockCooldownUntil - now) / 1000).toFixed(1);
   const inRiposte = now < riposteUntilRef.current;
   const riposteRemaining = inRiposte ? Math.max(0, riposteEndAt - now) : 0;
   const player = playerRef.current;
@@ -663,9 +699,18 @@ export function ParryGame({
                 style={{
                   background: `radial-gradient(circle, ${skinColor} 0%, transparent 70%)`,
                   filter: "blur(6px)",
-                  opacity: effectivePose === "strike" ? 0.95 : 0.55,
-                  transform: effectivePose === "strike" ? "scale(1.35)" : "scale(1)",
+                  opacity: effectivePose === "strike" ? 1 : 0.78,
+                  transform: effectivePose === "strike" ? "scale(1.75)" : "scale(1.22)",
                   transition: "opacity 120ms, transform 120ms",
+                }}
+              />
+            )}
+            {skinColor && effectivePose === "strike" && (
+              <div
+                className="pointer-events-none absolute left-1/2 top-1/2 h-3 w-24 -translate-x-1/2 -translate-y-1/2 rotate-[-28deg]"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${skinColor}, white, ${skinColor}, transparent)`,
+                  boxShadow: `0 0 18px ${skinColor}`,
                 }}
               />
             )}
@@ -706,8 +751,10 @@ export function ParryGame({
               background:
                 overlayFlash.kind === "hit"
                   ? "color-mix(in oklab, var(--color-danger) 35%, transparent)"
+                  : overlayFlash.kind === "blackflash"
+                  ? "linear-gradient(90deg, black 0 10%, white 10% 20%, black 20% 30%, white 30% 40%, black 40% 50%, white 50% 60%, black 60% 70%, white 70% 80%, black 80% 90%, white 90% 100%)"
                   : overlayFlash.kind === "perfect"
-                  ? "color-mix(in oklab, var(--color-accent) 45%, transparent)"
+                  ? "color-mix(in oklab, var(--color-accent) 65%, transparent)"
                   : overlayFlash.kind === "dodge"
                   ? "color-mix(in oklab, var(--color-foreground) 12%, transparent)"
                   : overlayFlash.kind === "dash"
@@ -715,7 +762,7 @@ export function ParryGame({
                   : overlayFlash.kind === "instakill"
                   ? "color-mix(in oklab, var(--color-danger) 60%, transparent)"
                   : "color-mix(in oklab, var(--color-accent) 25%, transparent)",
-              animation: "parryFlash 280ms ease-out forwards",
+              animation: overlayFlash.kind === "blackflash" ? "impactFrames 820ms steps(6) forwards" : "parryFlash 280ms ease-out forwards",
             }}
           />
         )}
@@ -773,6 +820,11 @@ export function ParryGame({
 
         <StatusRow label={character.name.toUpperCase()} alive={playerHp > 0} color="var(--color-foreground)" hp={playerHp} maxHp={playerMaxHp} />
 
+        <div className="flex items-center justify-between border-2 border-border bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-foreground">
+          <span>[Q] Block</span>
+          <span className="text-muted-foreground">{blockReady ? "READY" : `${blockCdRem}s`}</span>
+        </div>
+
         {/* Equipped ability */}
         {(() => {
           if (!equippedAbility) {
@@ -813,6 +865,11 @@ export function ParryGame({
 
       <style>{`
         @keyframes parryFlash { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes impactFrames {
+          0% { opacity: 1; filter: contrast(3); }
+          70% { opacity: 0.9; filter: contrast(4); }
+          100% { opacity: 0; filter: contrast(1); }
+        }
       `}</style>
     </div>
   );

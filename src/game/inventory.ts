@@ -30,7 +30,7 @@ export const STORE_ITEMS: StoreItem[] = [
   // Upgrades
   { id: "hp-up",   kind: "upgrade", name: "Vitality",      desc: "+1 max HP.",                         creditCost: 60 },
   { id: "dmg-up",  kind: "upgrade", name: "Sharpened",    desc: "Strikes and ripostes deal +1 damage.", creditCost: 80 },
-  { id: "cd-down", kind: "upgrade", name: "Quick Hands",   desc: "Ability cooldowns reduced by 2s.",   creditCost: 50 },
+  { id: "cd-down", kind: "upgrade", name: "Haste",         desc: "Hit and block cooldowns reduced by 0.1s.", creditCost: 50 },
 ];
 
 const OWNED_KEY = "parry.inventory";
