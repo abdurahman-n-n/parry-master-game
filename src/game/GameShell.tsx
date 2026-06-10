@@ -19,13 +19,14 @@ import { InfiniteDungeon } from "./InfiniteDungeon";
 import { AiDuel } from "./AiDuel";
 import { AchievementsScreen } from "./AchievementsScreen";
 import { supabase } from "@/integrations/supabase/client";
-import { hydrateFromCloud, migrateLegacyIfNeeded } from "./storage";
+import { hydrateFromCloud, lsKey, migrateLegacyIfNeeded } from "./storage";
 import { installButtonSfx } from "./sfx";
 import { getEquippedTitle, TITLES } from "./achievements";
 import { isAdminEmail } from "@/lib/admin";
 import { PixelCharacter } from "./PixelCharacters";
+import { getBestWaveFor } from "./InfiniteLeaderboard";
 
-type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite" | "ai-duel" | "achievements";
+type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite" | "ai-duel" | "achievements" | "stats";
 
 export function GameShell() {
   const [screen, setScreen] = useState<Screen>("menu");
@@ -38,6 +39,7 @@ export function GameShell() {
   const [beaten, setBeaten] = useState<Set<number>>(new Set());
   const [lastReward, setLastReward] = useState<{ credits: number; gems: number } | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [displayName, setDisplayName] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -116,6 +118,22 @@ export function GameShell() {
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      setDisplayName("");
+      return;
+    }
+    let alive = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!alive) return;
+      const nickname = data.user?.user_metadata?.nickname;
+      setDisplayName(typeof nickname === "string" && nickname.trim() ? nickname.trim() : user.split("@")[0]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [user, screen]);
+
+  useEffect(() => {
     applyAccent(getSavedAccent());
     setCredits(getCredits());
     setGems(getGems());
@@ -176,6 +194,7 @@ export function GameShell() {
   if (screen === "infinite")  return <InfiniteDungeon onExit={() => setScreen("menu")} />;
   if (screen === "ai-duel")   return <AiDuel onExit={() => setScreen("menu")} />;
   if (screen === "achievements") return <AchievementsScreen onBack={() => setScreen("menu")} />;
+  if (screen === "stats") return <StatsScreen user={user} displayName={displayName || user.split("@")[0]} onBack={() => setScreen("menu")} />;
 
   if (screen === "levels") {
     return (
@@ -283,9 +302,9 @@ export function GameShell() {
     <div className="h-full w-full bg-background font-pixel text-foreground">
       <LobbyMap
         user={user}
+        displayName={displayName || user.split("@")[0]}
         credits={credits}
         gems={gems}
-        levelsCleared={beaten.size}
         onNavigate={setScreen}
         onLogout={() => setShowLogoutConfirm(true)}
       />
@@ -320,6 +339,59 @@ export function GameShell() {
   );
 }
 
+function StatsScreen({
+  user,
+  displayName,
+  onBack,
+}: {
+  user: string;
+  displayName: string;
+  onBack: () => void;
+}) {
+  const credits = getCredits();
+  const gems = getGems();
+  const levelsCleared = getBeatenLevels().size;
+  const bestWave = getBestWaveFor(user);
+  const lifetimeGems = typeof window === "undefined"
+    ? 0
+    : Number(localStorage.getItem(lsKey("parry.lifetimeGems")) ?? 0) || 0;
+
+  return (
+    <div className="flex h-full w-full items-center justify-center overflow-auto bg-background p-6 font-pixel text-foreground">
+      <div className="flex w-full max-w-md flex-col gap-4 border-2 border-border bg-background p-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onBack}
+            className="border-2 border-border bg-background px-3 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background"
+          >
+            Back
+          </button>
+          <div className="text-[12px] uppercase tracking-[0.3em]">Stats</div>
+          <div className="w-[66px]" />
+        </div>
+        <div className="truncate text-center text-[14px] uppercase tracking-[0.22em] text-accent">{displayName}</div>
+        <div className="grid grid-cols-2 gap-3">
+          <StatBox label="Credits" value={credits} />
+          <StatBox label="Gems" value={gems} />
+          <StatBox label="Lifetime Gems" value={lifetimeGems} />
+          <StatBox label="Best Wave" value={bestWave} />
+          <StatBox label="Levels" value={`${levelsCleared}/${TOTAL_LEVELS}`} />
+          <StatBox label="Account" value={user.split("@")[0]} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatBox({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="border-2 border-border bg-background p-3">
+      <div className="text-[8px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className="mt-2 truncate text-[13px] uppercase tracking-widest text-foreground">{value}</div>
+    </div>
+  );
+}
+
 const LOBBY_W = 1280;
 const LOBBY_H = 860;
 const LOBBY_VIEW_W = 760;
@@ -345,16 +417,16 @@ type LobbyStation = {
 
 function LobbyMap({
   user,
+  displayName,
   credits,
   gems,
-  levelsCleared,
   onNavigate,
   onLogout,
 }: {
   user: string;
+  displayName: string;
   credits: number;
   gems: number;
-  levelsCleared: number;
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
 }) {
@@ -382,6 +454,7 @@ function LobbyMap({
     { id: "inventory", label: "Inventory", hint: "Equip", x: 724, y: 716, screen: "inventory", accent: "oklch(0.70 0.13 250)" },
     { id: "leaderboard", label: "Board", hint: "Rankings", x: 982, y: 652, screen: "leaderboard", accent: "oklch(0.80 0.13 120)" },
     { id: "settings", label: "Settings", hint: "Profile", x: 1010, y: 430, screen: "settings", accent: "oklch(0.72 0.08 300)" },
+    { id: "stats", label: "Stats", hint: "Progress", x: 580, y: 430, screen: "stats", accent: "oklch(0.78 0.14 85)" },
     ...(isAdmin
       ? [{ id: "admin", label: "Admin", hint: "Panel", x: 144, y: 430, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
       : []),
@@ -543,9 +616,8 @@ function LobbyMap({
         <div className="pointer-events-none absolute left-2 top-2 z-20 flex flex-col gap-2 text-[8px] uppercase tracking-widest text-muted-foreground">
           <CurrencyHUD credits={credits} gems={gems} />
           <div className="max-w-72 truncate bg-background/85 px-2 py-1">
-            {user}
+            {displayName}
           </div>
-          <div className="bg-background/85 px-2 py-1">{levelsCleared}/{TOTAL_LEVELS} levels cleared</div>
         </div>
         <button
           onClick={onLogout}
@@ -553,9 +625,6 @@ function LobbyMap({
         >
           Logout
         </button>
-        <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 border-2 border-border bg-background/85 px-3 py-2 text-center text-[8px] uppercase tracking-widest text-muted-foreground">
-          WASD / arrows · E near station · Click hit · Space/Q/F parry
-        </div>
         <div
           className="relative overflow-hidden"
           style={{

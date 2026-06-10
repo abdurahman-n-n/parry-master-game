@@ -135,6 +135,8 @@ export function ParryGame({
   const weaponDamage = weaponStats?.damage ?? Math.max(1, Math.round(strikeDmg * (weaponStats?.damageMultiplier ?? 1)));
   const weaponIsRanged = !!weaponStats?.ranged;
   const weaponName = equippedWeapon?.name ?? "Sword";
+  const weaponId = equippedWeapon?.id ?? "weapon-sword";
+  const hasParryShield = weaponId === "weapon-mace" || weaponId === "weapon-heavy-sword";
   const tier = levelTier(level);
   const enemySpeed = ENEMY_SPEED * (1 + 0.1 * tier);
   const playerSpeed = PLAYER_SPEED * speedMul;
@@ -782,6 +784,31 @@ export function ParryGame({
                 }}
               />
             )}
+            {weaponId === "weapon-daggers" && (
+              <>
+                <div className="pointer-events-none absolute left-[36px] top-[22px] h-2 w-9 rotate-[-24deg] bg-[oklch(0.86_0.02_250)] shadow-[0_0_8px_var(--color-accent)]" />
+                <div className="pointer-events-none absolute left-[35px] top-[33px] h-2 w-8 rotate-[18deg] bg-[oklch(0.86_0.02_250)] shadow-[0_0_8px_var(--color-accent)]" />
+                {effectivePose === "strike" && (
+                  <div className="pointer-events-none absolute left-[48px] top-[22px] h-2 w-28 bg-[oklch(0.92_0.02_250)] shadow-[0_0_14px_var(--color-accent)]" style={{ animation: "daggerThrow 240ms ease-out forwards" }} />
+                )}
+              </>
+            )}
+            {weaponId === "weapon-mace" && (
+              <div className="pointer-events-none absolute left-[36px] top-[8px] h-16 w-16" style={{ animation: `maceSpin ${effectivePose === "strike" ? "260ms" : "900ms"} linear infinite` }}>
+                <div className="absolute left-7 top-3 h-12 w-2 bg-[oklch(0.56_0.05_55)]" />
+                <div className="absolute left-[19px] top-0 h-5 w-5 border-2 border-border bg-[oklch(0.48_0.03_250)]" />
+                <div className="absolute left-[15px] top-1 h-2 w-3 bg-[oklch(0.75_0.02_250)]" />
+                <div className="absolute left-[32px] top-1 h-2 w-3 bg-[oklch(0.75_0.02_250)]" />
+              </div>
+            )}
+            {weaponId === "weapon-heavy-sword" && (
+              <div className="pointer-events-none absolute left-[34px] top-[-10px] h-24 w-8 rotate-[28deg]" style={{ transformOrigin: "bottom center", animation: effectivePose === "strike" ? "excaliburSwing 360ms ease-out" : undefined }}>
+                <div className="absolute left-[11px] top-0 h-16 w-3 bg-[oklch(0.92_0.02_250)] shadow-[0_0_12px_var(--color-accent)]" />
+                <div className="absolute left-[7px] top-12 h-6 w-11 bg-[oklch(0.92_0.02_250)]" style={{ clipPath: "polygon(50% 0, 100% 100%, 0 100%)" }} />
+                <div className="absolute left-1 top-[62px] h-2 w-8 bg-[oklch(0.78_0.14_85)]" />
+                <div className="absolute left-[13px] top-[64px] h-8 w-2 bg-[oklch(0.40_0.08_55)]" />
+              </div>
+            )}
             <PixelCharacter
               skinId="kid:default"
               size={56}
@@ -798,6 +825,16 @@ export function ParryGame({
                 width: 70, height: 70,
                 border: "2px solid var(--color-accent)",
                 background: "color-mix(in oklab, var(--color-accent) 12%, transparent)",
+              }}
+            />
+          )}
+          {blockUp && hasParryShield && (
+            <div
+              className="pointer-events-none absolute left-[-22px] top-1/2 h-16 w-11 -translate-y-1/2 border-4 border-accent bg-background/80"
+              style={{
+                borderRadius: weaponId === "weapon-mace" ? "999px 999px 12px 12px" : 6,
+                boxShadow: "0 0 18px var(--color-accent), inset 0 0 12px var(--color-accent)",
+                animation: "weaponShieldPop 380ms ease-out",
               }}
             />
           )}
@@ -941,6 +978,25 @@ export function ParryGame({
 
       <style>{`
         @keyframes parryFlash { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes daggerThrow {
+          0% { opacity: 0; transform: translateX(-16px) scaleX(0.35); }
+          25% { opacity: 1; }
+          100% { opacity: 0; transform: translateX(110px) scaleX(1); }
+        }
+        @keyframes maceSpin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes excaliburSwing {
+          0% { transform: rotate(58deg) translateY(0); }
+          45% { transform: rotate(-28deg) translateY(-4px); }
+          100% { transform: rotate(28deg) translateY(0); }
+        }
+        @keyframes weaponShieldPop {
+          0% { opacity: 0; transform: translateY(-50%) scale(0.55); }
+          35% { opacity: 1; transform: translateY(-50%) scale(1.1); }
+          100% { opacity: 0.85; transform: translateY(-50%) scale(1); }
+        }
         @keyframes impactFrames {
           0% { opacity: 1; filter: contrast(3); }
           70% { opacity: 0.9; filter: contrast(4); }
