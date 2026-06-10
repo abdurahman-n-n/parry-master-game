@@ -41,7 +41,6 @@ export function GameShell() {
   const [lastReward, setLastReward] = useState<{ credits: number; gems: number } | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [displayName, setDisplayName] = useState("");
-  const equippedWeaponId = typeof window === "undefined" ? "weapon-sword" : getEquippedWeapon() ?? "weapon-sword";
 
   useEffect(() => {
     let alive = true;
@@ -446,6 +445,7 @@ function LobbyMap({
   lobbyTimeRef.current = lobbyTime;
   const isAdmin = isAdminEmail(user);
   const title = getEquippedTitle();
+  const equippedWeaponId = typeof window === "undefined" ? "weapon-sword" : getEquippedWeapon() ?? "weapon-sword";
 
   const stations: LobbyStation[] = [
     { id: "levels", label: "Play", hint: "Level gate", x: 580, y: 84, screen: "levels", accent: "var(--color-accent)" },
