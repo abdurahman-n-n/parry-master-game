@@ -320,14 +320,16 @@ export function GameShell() {
   );
 }
 
-const LOBBY_W = 760;
-const LOBBY_H = 480;
+const LOBBY_W = 1280;
+const LOBBY_H = 860;
+const LOBBY_VIEW_W = 760;
+const LOBBY_VIEW_H = 480;
 const PLAYER_SIZE = 54;
 const STATION_W = 126;
 const STATION_H = 58;
 const PRACTICE_BOTS = [
-  { id: "left", name: "Garden Bot", x: 232, y: 246, offset: 0, color: "oklch(0.72 0.16 160)" },
-  { id: "right", name: "Timing Bot", x: 482, y: 246, offset: 980, color: "oklch(0.78 0.14 85)" },
+  { id: "left", name: "Garden Bot", x: 510, y: 410, offset: 0, color: "oklch(0.72 0.16 160)" },
+  { id: "right", name: "Timing Bot", x: 770, y: 410, offset: 980, color: "oklch(0.78 0.14 85)" },
 ];
 
 type LobbyStation = {
@@ -356,9 +358,9 @@ function LobbyMap({
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
 }) {
-  const [player, setPlayer] = useState({ x: LOBBY_W / 2, y: LOBBY_H - 92 });
+  const [player, setPlayer] = useState({ x: LOBBY_W / 2, y: LOBBY_H - 250 });
   const [keys, setKeys] = useState<Record<string, boolean>>({});
-  const [viewport, setViewport] = useState({ width: LOBBY_W + 40, height: LOBBY_H + 40 });
+  const [viewport, setViewport] = useState({ width: LOBBY_VIEW_W + 40, height: LOBBY_VIEW_H + 120 });
   const [walking, setWalking] = useState(false);
   const [lobbyTime, setLobbyTime] = useState(0);
   const [parryPop, setParryPop] = useState<{ x: number; y: number; at: number } | null>(null);
@@ -370,18 +372,18 @@ function LobbyMap({
   const title = getEquippedTitle();
 
   const stations: LobbyStation[] = [
-    { id: "levels", label: "Play", hint: "Level gate", x: 318, y: 54, screen: "levels", accent: "var(--color-accent)" },
-    { id: "infinite", label: "Infinite", hint: "Wave door", x: 78, y: 124, screen: "infinite", accent: "oklch(0.72 0.16 160)" },
-    { id: "duel", label: "Duel", hint: "1v1 arena", x: 556, y: 124, screen: "ai-duel", accent: "var(--color-danger)" },
-    { id: "achievements", label: "Awards", hint: "Titles", x: 78, y: 304, screen: "achievements", accent: "oklch(0.78 0.14 85)" },
-    { id: "store", label: "Store", hint: "Buy gear", x: 238, y: 336, screen: "store", accent: "oklch(0.76 0.15 35)" },
-    { id: "inventory", label: "Inventory", hint: "Equip", x: 396, y: 336, screen: "inventory", accent: "oklch(0.70 0.13 250)" },
-    { id: "leaderboard", label: "Board", hint: "Rankings", x: 556, y: 304, screen: "leaderboard", accent: "oklch(0.80 0.13 120)" },
-    { id: "settings", label: "Settings", hint: "Profile", x: 556, y: 214, screen: "settings", accent: "oklch(0.72 0.08 300)" },
+    { id: "levels", label: "Play", hint: "Level gate", x: 580, y: 84, screen: "levels", accent: "var(--color-accent)" },
+    { id: "infinite", label: "Infinite", hint: "Wave door", x: 158, y: 198, screen: "infinite", accent: "oklch(0.72 0.16 160)" },
+    { id: "duel", label: "Duel", hint: "1v1 arena", x: 996, y: 198, screen: "ai-duel", accent: "var(--color-danger)" },
+    { id: "achievements", label: "Awards", hint: "Titles", x: 172, y: 652, screen: "achievements", accent: "oklch(0.78 0.14 85)" },
+    { id: "store", label: "Store", hint: "Buy gear", x: 430, y: 716, screen: "store", accent: "oklch(0.76 0.15 35)" },
+    { id: "inventory", label: "Inventory", hint: "Equip", x: 724, y: 716, screen: "inventory", accent: "oklch(0.70 0.13 250)" },
+    { id: "leaderboard", label: "Board", hint: "Rankings", x: 982, y: 652, screen: "leaderboard", accent: "oklch(0.80 0.13 120)" },
+    { id: "settings", label: "Settings", hint: "Profile", x: 1010, y: 430, screen: "settings", accent: "oklch(0.72 0.08 300)" },
     ...(isAdmin
-      ? [{ id: "admin", label: "Admin", hint: "Panel", x: 78, y: 214, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
+      ? [{ id: "admin", label: "Admin", hint: "Panel", x: 144, y: 430, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
       : []),
-    { id: "logout", label: "Logout", hint: "Exit", x: 318, y: 214, action: onLogout, accent: "oklch(0.66 0.06 260)" },
+    { id: "logout", label: "Logout", hint: "Exit", x: 580, y: 430, action: onLogout, accent: "oklch(0.66 0.06 260)" },
   ];
 
   const nearest = stations.reduce<{ station: LobbyStation | null; dist: number }>(
@@ -477,7 +479,7 @@ function LobbyMap({
         const len = Math.hypot(dx, dy) || 1;
         setPlayer((p) => ({
           x: Math.max(38, Math.min(LOBBY_W - 38, p.x + (dx / len) * 190 * dt)),
-          y: Math.max(74, Math.min(LOBBY_H - 42, p.y + (dy / len) * 190 * dt)),
+          y: Math.max(72, Math.min(LOBBY_H - 42, p.y + (dy / len) * 190 * dt)),
         }));
       }
 
@@ -488,9 +490,11 @@ function LobbyMap({
     return () => cancelAnimationFrame(raf);
   }, [keys]);
 
-  const scale = Math.max(0.44, Math.min(1, (viewport.width - 24) / LOBBY_W, (viewport.height - 24) / LOBBY_H));
-  const mapWidth = LOBBY_W * scale;
-  const mapHeight = LOBBY_H * scale;
+  const scale = Math.max(0.5, Math.min(1, (viewport.width - 24) / LOBBY_VIEW_W, (viewport.height - 118) / LOBBY_VIEW_H));
+  const mapWidth = LOBBY_VIEW_W * scale;
+  const mapHeight = LOBBY_VIEW_H * scale;
+  const cameraX = Math.max(0, Math.min(LOBBY_W - LOBBY_VIEW_W, player.x - LOBBY_VIEW_W / 2));
+  const cameraY = Math.max(0, Math.min(LOBBY_H - LOBBY_VIEW_H, player.y - LOBBY_VIEW_H / 2));
 
   const holdMove = (key: string, pressed: boolean) => {
     setKeys((current) => ({ ...current, [key]: pressed }));
@@ -502,15 +506,25 @@ function LobbyMap({
         className="relative overflow-hidden border-4 border-border"
         style={{ width: mapWidth, height: mapHeight }}
       >
+        <div className="pointer-events-none absolute left-2 top-2 z-20 flex flex-col gap-2 text-[8px] uppercase tracking-widest text-muted-foreground">
+          <CurrencyHUD credits={credits} gems={gems} />
+          <div className="max-w-72 truncate bg-background/85 px-2 py-1">
+            {user}{title ? ` · ${TITLES[title]}` : ""}
+          </div>
+          <div className="bg-background/85 px-2 py-1">{levelsCleared}/{TOTAL_LEVELS} levels cleared</div>
+        </div>
+        <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 border-2 border-border bg-background/85 px-3 py-2 text-center text-[8px] uppercase tracking-widest text-muted-foreground">
+          WASD / arrows to walk · E near station · Q/F in garden
+        </div>
         <div
           className="relative overflow-hidden"
           style={{
             width: LOBBY_W,
             height: LOBBY_H,
-            transform: `scale(${scale})`,
+            transform: `translate(${-cameraX * scale}px, ${-cameraY * scale}px) scale(${scale})`,
             transformOrigin: "top left",
             background:
-              "linear-gradient(180deg, oklch(0.20 0.03 260), oklch(0.15 0.02 260))",
+              "linear-gradient(180deg, oklch(0.20 0.03 260), oklch(0.13 0.02 260))",
           }}
         >
           <div
@@ -521,34 +535,31 @@ function LobbyMap({
               backgroundSize: "40px 40px",
             }}
           />
-          <div className="absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-3">
+          <div className="absolute left-1/2 top-6 flex -translate-x-1/2 items-center gap-3">
             <PixelShield size={34} />
             <div className="text-3xl tracking-[0.32em] text-foreground">PARRY!</div>
             <PixelSword size={34} />
           </div>
-          <div className="absolute left-4 top-4 flex flex-col gap-2 text-[8px] uppercase tracking-widest text-muted-foreground">
-            <CurrencyHUD credits={credits} gems={gems} />
-            <div className="max-w-72 truncate">
-              {user}{title ? ` · ${TITLES[title]}` : ""}
-            </div>
-            <div>{levelsCleared}/{TOTAL_LEVELS} levels cleared</div>
-          </div>
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 border-2 border-border bg-background/85 px-3 py-2 text-center text-[8px] uppercase tracking-widest text-muted-foreground">
-            WASD / arrows to walk · E / Enter near a station · Q / F in garden
-          </div>
-
-          <div className="absolute left-8 top-72 h-40 w-[704px] border-2 border-[oklch(0.42_0.10_145)] bg-[oklch(0.24_0.07_145)]/70" />
-          <div className="absolute left-24 top-[332px] h-20 w-[560px] border-t-2 border-dashed border-[oklch(0.58_0.12_120)]" />
-          <div className="absolute left-[378px] top-[300px] h-[116px] border-l-2 border-dashed border-[oklch(0.58_0.12_120)]" />
-          <div className="absolute left-32 top-[286px] h-10 w-28 border-2 border-[oklch(0.55_0.10_220)] bg-[oklch(0.34_0.10_220)]" />
-          <div className="absolute left-[590px] top-[348px] h-12 w-20 border-2 border-[oklch(0.50_0.12_85)] bg-[oklch(0.33_0.12_85)]" />
+          <div className="absolute left-[152px] top-[226px] h-24 w-[980px] border-t-2 border-dashed border-border/70" />
+          <div className="absolute left-[640px] top-[160px] h-[620px] border-l-2 border-dashed border-border/70" />
+          <div className="absolute left-[356px] top-[294px] h-[280px] w-[568px] border-2 border-[oklch(0.42_0.10_145)] bg-[oklch(0.24_0.07_145)]/70" />
+          <div className="absolute left-[420px] top-[448px] h-20 w-[440px] border-t-2 border-dashed border-[oklch(0.58_0.12_120)]" />
+          <div className="absolute left-[638px] top-[326px] h-[210px] border-l-2 border-dashed border-[oklch(0.58_0.12_120)]" />
+          <div className="absolute left-[426px] top-[322px] h-12 w-32 border-2 border-[oklch(0.55_0.10_220)] bg-[oklch(0.34_0.10_220)]" />
+          <div className="absolute left-[822px] top-[500px] h-14 w-24 border-2 border-[oklch(0.50_0.12_85)] bg-[oklch(0.33_0.12_85)]" />
+          <div className="absolute left-[80px] top-[74px] h-20 w-24 border-2 border-[oklch(0.42_0.06_260)] bg-background/70" />
+          <div className="absolute left-[1080px] top-[94px] h-20 w-28 border-2 border-danger bg-danger/10" />
+          <div className="absolute left-[92px] top-[724px] h-20 w-24 border-2 border-[oklch(0.62_0.12_85)] bg-[oklch(0.25_0.06_85)]" />
+          <div className="absolute left-[1084px] top-[724px] h-20 w-24 border-2 border-[oklch(0.42_0.12_180)] bg-[oklch(0.18_0.08_180)]" />
           {[
-            [44, 326, "oklch(0.76 0.16 35)"],
-            [68, 380, "oklch(0.82 0.14 85)"],
-            [170, 384, "oklch(0.74 0.18 320)"],
-            [630, 300, "oklch(0.72 0.16 160)"],
-            [704, 386, "oklch(0.76 0.16 35)"],
-            [548, 396, "oklch(0.82 0.14 85)"],
+            [382, 340, "oklch(0.76 0.16 35)"],
+            [454, 528, "oklch(0.82 0.14 85)"],
+            [548, 548, "oklch(0.74 0.18 320)"],
+            [894, 342, "oklch(0.72 0.16 160)"],
+            [850, 546, "oklch(0.76 0.16 35)"],
+            [704, 560, "oklch(0.82 0.14 85)"],
+            [332, 518, "oklch(0.82 0.14 85)"],
+            [950, 430, "oklch(0.74 0.18 320)"],
           ].map(([x, y, color], index) => (
             <div
               key={index}
@@ -556,7 +567,7 @@ function LobbyMap({
               style={{ left: x, top: y, background: color }}
             />
           ))}
-          <div className="absolute left-[270px] top-[284px] border border-accent bg-background/90 px-2 py-1 text-[8px] uppercase tracking-widest text-accent">
+          <div className="absolute left-[548px] top-[300px] border border-accent bg-background/90 px-2 py-1 text-[8px] uppercase tracking-widest text-accent">
             Training garden
           </div>
 
