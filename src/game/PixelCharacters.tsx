@@ -217,35 +217,17 @@ export function PixelCharacter({
       {pose === "walk" && (
         <>
           <div
-            className="pointer-events-none absolute left-[24%] top-[62%] h-[30%] w-[12%]"
+            className="pointer-events-none absolute bottom-[4%] left-[20%] h-[8%] w-[24%]"
             style={{
-              background: "oklch(0.20 0.04 260)",
-              transformOrigin: "top center",
-              animation: "heroStrideA 0.42s ease-in-out infinite",
+              background: "color-mix(in oklab, var(--color-foreground) 35%, transparent)",
+              animation: "heroFootA 0.44s ease-in-out infinite",
             }}
           />
           <div
-            className="pointer-events-none absolute right-[24%] top-[62%] h-[30%] w-[12%]"
+            className="pointer-events-none absolute bottom-[4%] right-[20%] h-[8%] w-[24%]"
             style={{
-              background: "oklch(0.20 0.04 260)",
-              transformOrigin: "top center",
-              animation: "heroStrideB 0.42s ease-in-out infinite",
-            }}
-          />
-          <div
-            className="pointer-events-none absolute left-[15%] top-[46%] h-[28%] w-[10%]"
-            style={{
-              background: SKIN,
-              transformOrigin: "top center",
-              animation: "heroArmA 0.42s ease-in-out infinite",
-            }}
-          />
-          <div
-            className="pointer-events-none absolute right-[14%] top-[46%] h-[28%] w-[10%]"
-            style={{
-              background: SKIN,
-              transformOrigin: "top center",
-              animation: "heroArmB 0.42s ease-in-out infinite",
+              background: "color-mix(in oklab, var(--color-foreground) 28%, transparent)",
+              animation: "heroFootB 0.44s ease-in-out infinite",
             }}
           />
           <div
@@ -323,14 +305,12 @@ export function PixelCharacter({
       )}
       <style>{`
         @keyframes heroBob { 0%,100% { transform: translateY(0) scaleY(1);} 50% { transform: translateY(-3px) scaleY(1.025);} }
-        @keyframes heroWalk { 0%,100% { transform: translateY(1px) translateX(-2px) rotate(-4deg) scaleX(1.04);} 25% { transform: translateY(-6px) translateX(2px) rotate(4deg) scaleX(0.96);} 50% { transform: translateY(1px) translateX(2px) rotate(4deg) scaleX(1.04);} 75% { transform: translateY(-6px) translateX(-2px) rotate(-4deg) scaleX(0.96);} }
+        @keyframes heroWalk { 0%,100% { transform: translateY(0) translateX(-1px) rotate(-2deg) scaleX(1.03) scaleY(0.98);} 25% { transform: translateY(-5px) translateX(1px) rotate(2deg) scaleX(0.98) scaleY(1.04);} 50% { transform: translateY(0) translateX(1px) rotate(2deg) scaleX(1.03) scaleY(0.98);} 75% { transform: translateY(-5px) translateX(-1px) rotate(-2deg) scaleX(0.98) scaleY(1.04);} }
         @keyframes heroStrike { 0%{transform:translateY(0) rotate(0) scale(1);} 35%{transform:translateY(-6px) rotate(-8deg) scale(1.08);} 100%{transform:translateY(0) rotate(0) scale(1);} }
         @keyframes heroShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);} }
         @keyframes heroFlash { from{opacity:1;} to{opacity:0;} }
-        @keyframes heroStrideA { 0%,100%{transform:rotate(22deg) translateY(0);} 50%{transform:rotate(-30deg) translateY(3px);} }
-        @keyframes heroStrideB { 0%,100%{transform:rotate(-30deg) translateY(3px);} 50%{transform:rotate(22deg) translateY(0);} }
-        @keyframes heroArmA { 0%,100%{transform:rotate(-24deg);} 50%{transform:rotate(28deg);} }
-        @keyframes heroArmB { 0%,100%{transform:rotate(28deg);} 50%{transform:rotate(-24deg);} }
+        @keyframes heroFootA { 0%,100%{opacity:0.8; transform:translate(0, 0) scaleX(1.1);} 45%{opacity:0.2; transform:translate(9px, -2px) scaleX(0.6);} 50%{opacity:0;} 55%{opacity:0.2; transform:translate(-8px, -1px) scaleX(0.5);} }
+        @keyframes heroFootB { 0%,100%{opacity:0.2; transform:translate(8px, -1px) scaleX(0.5);} 45%{opacity:0.8; transform:translate(0, 0) scaleX(1.1);} 50%{opacity:0.8; transform:translate(0, 0) scaleX(1.1);} 95%{opacity:0.2; transform:translate(-9px, -2px) scaleX(0.6);} }
         @keyframes heroDustA { 0%{opacity:0; transform:translateX(0) scaleX(0.6);} 35%{opacity:0.65;} 100%{opacity:0; transform:translateX(-8px) scaleX(1.8);} }
         @keyframes heroDustB { 0%{opacity:0; transform:translateX(0) scaleX(0.5);} 45%{opacity:0.5;} 100%{opacity:0; transform:translateX(7px) scaleX(1.5);} }
         @keyframes heroBladeGlint { from{opacity:1; transform:translate(-50%, -50%) rotate(-28deg) scaleX(0.45);} to{opacity:0; transform:translate(-50%, -50%) rotate(-28deg) scaleX(1.35);} }
