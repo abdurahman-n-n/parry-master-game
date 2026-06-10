@@ -3,6 +3,7 @@ import {
   itemsByKind, isOwned, getUpgradeCount,
   getEquippedSkin, setEquippedSkin,
   getEquippedAbility, setEquippedAbility,
+  getEquippedWeapon, setEquippedWeapon,
   type ItemKind, type StoreItem,
 } from "./inventory";
 import { CurrencyHUD, getCredits, getGems } from "./Currency";
@@ -10,6 +11,7 @@ import { getEquippedTitle, getOwnedTitles, setEquippedTitle, TITLES, type TitleI
 
 const SECTIONS: { kind: ItemKind; title: string }[] = [
   { kind: "ability", title: "Abilities" },
+  { kind: "weapon", title: "Weapons" },
   { kind: "skin",    title: "Weapon Effects" },
   { kind: "upgrade", title: "Upgrades" },
 ];
@@ -20,6 +22,7 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
   const gems = getGems();
   const equippedSkin = getEquippedSkin();
   const equippedAbility = getEquippedAbility();
+  const equippedWeapon = getEquippedWeapon();
   const equippedTitle = getEquippedTitle();
   const titles = getOwnedTitles();
   const refresh = () => force((n) => n + 1);
@@ -48,6 +51,11 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
                   Only one ability can be equipped · [E] in battle
                 </div>
               )}
+              {kind === "weapon" && (
+                <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                  Only one weapon can be equipped
+                </div>
+              )}
             </div>
             {owned.length === 0 ? (
               <div className="border-2 border-dashed border-border bg-background p-4 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -61,9 +69,12 @@ export function InventoryScreen({ onBack }: { onBack: () => void }) {
                     item={item}
                     equippedSkin={equippedSkin}
                     equippedAbility={equippedAbility}
+                    equippedWeapon={equippedWeapon}
                     onEquipSkin={() => { setEquippedSkin(item.id); refresh(); }}
                     onEquipAbility={() => { setEquippedAbility(item.id); refresh(); }}
                     onUnequipAbility={() => { setEquippedAbility(null); refresh(); }}
+                    onEquipWeapon={() => { setEquippedWeapon(item.id); refresh(); }}
+                    onUnequipWeapon={() => { setEquippedWeapon(null); refresh(); }}
                   />
                 ))}
               </div>
@@ -120,18 +131,22 @@ function TitleCard({
 }
 
 function OwnedCard({
-  item, equippedSkin, equippedAbility,
-  onEquipSkin, onEquipAbility, onUnequipAbility,
+  item, equippedSkin, equippedAbility, equippedWeapon,
+  onEquipSkin, onEquipAbility, onUnequipAbility, onEquipWeapon, onUnequipWeapon,
 }: {
   item: StoreItem;
   equippedSkin: string | null;
   equippedAbility: string | null;
+  equippedWeapon: string | null;
   onEquipSkin: () => void;
   onEquipAbility: () => void;
   onUnequipAbility: () => void;
+  onEquipWeapon: () => void;
+  onUnequipWeapon: () => void;
 }) {
   const isEquippedSkin = item.kind === "skin" && equippedSkin === item.id;
   const isEquippedAbility = item.kind === "ability" && equippedAbility === item.id;
+  const isEquippedWeapon = item.kind === "weapon" && equippedWeapon === item.id;
 
   return (
     <div className="flex flex-col gap-2 border-2 border-border bg-background p-4">
@@ -147,6 +162,9 @@ function OwnedCard({
         </div>
         {item.kind === "ability" && (
           <div className="border border-border px-2 py-0.5 text-[9px] tracking-widest">[E]</div>
+        )}
+        {item.kind === "weapon" && item.weapon && (
+          <div className="border border-border px-2 py-0.5 text-[9px] tracking-widest">{(item.weapon.cooldownMs / 1000).toFixed(1)}s</div>
         )}
       </div>
       <div className="text-[10px] normal-case leading-relaxed tracking-wider text-muted-foreground">
@@ -168,6 +186,15 @@ function OwnedCard({
           data-on={isEquippedAbility}
         >
           {isEquippedAbility ? "✓ Equipped (Unequip)" : "Equip"}
+        </button>
+      )}
+      {item.kind === "weapon" && (
+        <button
+          onClick={isEquippedWeapon ? onUnequipWeapon : onEquipWeapon}
+          className="mt-1 border-2 border-border bg-background px-3 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background data-[on=true]:bg-accent data-[on=true]:text-background"
+          data-on={isEquippedWeapon}
+        >
+          {isEquippedWeapon ? "✓ Equipped (Unequip)" : "Equip"}
         </button>
       )}
     </div>

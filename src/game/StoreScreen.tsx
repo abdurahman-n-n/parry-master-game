@@ -7,6 +7,7 @@ import { CurrencyHUD, CreditIcon, GemIcon, getCredits, getGems } from "./Currenc
 
 const SECTIONS: { kind: ItemKind; title: string; blurb: string }[] = [
   { kind: "ability", title: "Abilities", blurb: "Unlock special combat moves" },
+  { kind: "weapon", title: "Weapons", blurb: "Equip one weapon in Inventory" },
   { kind: "skin",    title: "Weapon Effects", blurb: "Glow effects for your blade" },
   { kind: "upgrade", title: "Upgrades",  blurb: "Permanent stat boosts" },
 ];
@@ -67,7 +68,7 @@ export function StoreScreen({ onBack }: { onBack: () => void }) {
       ))}
 
       <div className="text-[9px] uppercase tracking-widest text-muted-foreground">
-        Upgrades: pay with <CreditIcon size={10} /> credits OR <GemIcon size={10} /> gems.
+        Weapons and upgrades: pay with <CreditIcon size={10} /> credits OR <GemIcon size={10} /> gems.
       </div>
     </div>
   );
@@ -83,6 +84,7 @@ function StoreCard({
   const isUpgrade = item.kind === "upgrade";
   const price = getUpgradePrice(item);
   const gemPrice = getUpgradeGemCost(item);
+  const canBuyWithGems = isUpgrade || (item.gemCost ?? 0) > 0;
   const stack = isUpgrade ? getUpgradeCount(item.id) : 0;
   const ownedDisabled = !isUpgrade && owned;
   return (
@@ -106,18 +108,18 @@ function StoreCard({
         {isUpgrade && <span className="block text-muted-foreground/80">Stackable · +10 credits / +1 gem per 5 stacks.</span>}
       </div>
 
-      {isUpgrade ? (
+      {isUpgrade || canBuyWithGems ? (
         <div className="mt-1 grid grid-cols-2 gap-2">
           <button
             onClick={() => onBuy("credits")}
-            disabled={credits < price}
+            disabled={ownedDisabled || credits < price}
             className="inline-flex items-center justify-center gap-1 border-2 border-border bg-background px-2 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background disabled:cursor-default disabled:opacity-40"
           >
             <span>Buy</span><span>{price}</span><CreditIcon size={11} />
           </button>
           <button
             onClick={() => onBuy("gems")}
-            disabled={gems < gemPrice}
+            disabled={ownedDisabled || gems < gemPrice}
             className="inline-flex items-center justify-center gap-1 border-2 border-border bg-background px-2 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background disabled:cursor-default disabled:opacity-40"
             style={{ color: "var(--color-accent)" }}
           >

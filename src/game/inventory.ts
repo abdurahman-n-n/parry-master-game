@@ -3,7 +3,7 @@ import { getCredits, spendCredits, getGems, spendGems } from "./Currency";
 import { lsKey } from "./storage";
 
 
-export type ItemKind = "ability" | "skin" | "upgrade";
+export type ItemKind = "ability" | "weapon" | "skin" | "upgrade";
 
 export interface StoreItem {
   id: string;
@@ -15,12 +15,23 @@ export interface StoreItem {
   /** For skins: color used to tint the player. */
   color?: string;
   hotkey?: string;
+  weapon?: {
+    cooldownMs: number;
+    damage?: number;
+    damageMultiplier?: number;
+    ranged?: boolean;
+  };
 }
 
 export const STORE_ITEMS: StoreItem[] = [
   // Abilities
   { id: "instakill", kind: "ability", name: "Insta Kill", desc: "Unlocks [E] — instantly kills the enemy. Costs 5 gems per use.", creditCost: 50, hotkey: "E" },
   { id: "dash",      kind: "ability", name: "Dash",       desc: "Unlocks [E] — dashes away from the enemy. Free to use.",      creditCost: 25, hotkey: "E" },
+
+  // Weapons
+  { id: "weapon-daggers", kind: "weapon", name: "Daggers", desc: "Fast throwable daggers with endless ammo. 0.1s cooldown.", creditCost: 300, gemCost: 30, weapon: { cooldownMs: 100, ranged: true } },
+  { id: "weapon-mace", kind: "weapon", name: "Mace", desc: "Slow heavy hit. Deals 10x your upgraded strike damage. 1s cooldown.", creditCost: 500, gemCost: 50, weapon: { cooldownMs: 1000, damageMultiplier: 10 } },
+  { id: "weapon-heavy-sword", kind: "weapon", name: "Heavy Sword", desc: "Massive swing. Deals 12 damage. 1.5s cooldown.", creditCost: 400, gemCost: 40, weapon: { cooldownMs: 1500, damage: 12 } },
 
   // Weapon Effects
   { id: "skin-crimson", kind: "skin", name: "Crimson Edge", desc: "Wreathes your blade in a bloody red aura.",   creditCost: 30, color: "oklch(0.65 0.22 25)" },
@@ -36,6 +47,7 @@ export const STORE_ITEMS: StoreItem[] = [
 const OWNED_KEY = "parry.inventory";
 const SKIN_KEY = "parry.equippedSkin";
 const ABILITY_KEY = "parry.equippedAbility";
+const WEAPON_KEY = "parry.equippedWeapon";
 const UPGRADE_COUNT_KEY = "parry.upgradeCounts";
 const UPGRADE_PRICE_STEP = 10;
 const UPGRADE_GEM_STEP = 5;
@@ -86,6 +98,7 @@ export function grantItem(id: string) {
   if (!owned.includes(id)) writeOwned([...owned, id]);
   if (item.kind === "skin" && !getEquippedSkin()) setEquippedSkin(id);
   if (item.kind === "ability" && !getEquippedAbility()) setEquippedAbility(id);
+  if (item.kind === "weapon" && !getEquippedWeapon()) setEquippedWeapon(id);
   return true;
 }
 
@@ -99,6 +112,7 @@ export function removeItem(id: string) {
   writeOwned(readOwned().filter((ownedId) => ownedId !== id));
   if (getEquippedSkin() === id) setEquippedSkin(null);
   if (getEquippedAbility() === id) setEquippedAbility(null);
+  if (getEquippedWeapon() === id) setEquippedWeapon(null);
   return true;
 }
 
@@ -140,12 +154,16 @@ export function buyItem(id: string, currency?: "credits" | "gems"): BuyResult {
       if (price > 0 && !spendCredits(price)) return { ok: false, reason: "credits" };
     }
   } else {
+    const pay = currency ?? "credits";
     const price = item.creditCost;
     const gemPrice = item.gemCost ?? 0;
-    if (getCredits() < price) return { ok: false, reason: "credits" };
-    if (gemPrice > 0 && getGems() < gemPrice) return { ok: false, reason: "gems" };
-    if (price > 0 && !spendCredits(price)) return { ok: false, reason: "credits" };
-    if (gemPrice > 0 && !spendGems(gemPrice)) return { ok: false, reason: "gems" };
+    if (pay === "gems" && gemPrice > 0) {
+      if (getGems() < gemPrice) return { ok: false, reason: "gems" };
+      if (!spendGems(gemPrice)) return { ok: false, reason: "gems" };
+    } else {
+      if (getCredits() < price) return { ok: false, reason: "credits" };
+      if (price > 0 && !spendCredits(price)) return { ok: false, reason: "credits" };
+    }
   }
 
   if (isUpgrade) {
@@ -161,6 +179,7 @@ export function buyItem(id: string, currency?: "credits" | "gems"): BuyResult {
   // Auto-equip the first skin / ability purchased.
   if (item.kind === "skin" && !getEquippedSkin()) setEquippedSkin(id);
   if (item.kind === "ability" && !getEquippedAbility()) setEquippedAbility(id);
+  if (item.kind === "weapon" && !getEquippedWeapon()) setEquippedWeapon(id);
   return { ok: true };
 }
 
@@ -171,6 +190,15 @@ export function getEquippedAbility(): string | null {
 export function setEquippedAbility(id: string | null) {
   if (id === null) localStorage.removeItem(lsKey(ABILITY_KEY));
   else localStorage.setItem(lsKey(ABILITY_KEY), id);
+}
+
+export function getEquippedWeapon(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(lsKey(WEAPON_KEY));
+}
+export function setEquippedWeapon(id: string | null) {
+  if (id === null) localStorage.removeItem(lsKey(WEAPON_KEY));
+  else localStorage.setItem(lsKey(WEAPON_KEY), id);
 }
 
 export function getEquippedSkin(): string | null {

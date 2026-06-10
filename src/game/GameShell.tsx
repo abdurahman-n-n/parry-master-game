@@ -328,8 +328,8 @@ const PLAYER_SIZE = 54;
 const STATION_W = 126;
 const STATION_H = 58;
 const PRACTICE_BOTS = [
-  { id: "left", name: "Garden Bot", x: 510, y: 410, offset: 0, maxHp: 5, color: "oklch(0.72 0.16 160)", trim: "oklch(0.90 0.12 85)" },
-  { id: "right", name: "Timing Bot", x: 770, y: 410, offset: 980, maxHp: 6, color: "oklch(0.78 0.14 85)", trim: "oklch(0.74 0.18 320)" },
+  { id: "left", name: "Garden Knight", x: 510, y: 410, offset: 0, color: "oklch(0.72 0.16 160)", trim: "oklch(0.90 0.12 85)" },
+  { id: "right", name: "Timing Knight", x: 770, y: 410, offset: 980, color: "oklch(0.78 0.14 85)", trim: "oklch(0.74 0.18 320)" },
 ];
 
 type LobbyStation = {
@@ -363,18 +363,13 @@ function LobbyMap({
   const [viewport, setViewport] = useState({ width: LOBBY_VIEW_W + 40, height: LOBBY_VIEW_H + 120 });
   const [walking, setWalking] = useState(false);
   const [lobbyTime, setLobbyTime] = useState(0);
-  const [parryPop, setParryPop] = useState<{ x: number; y: number; at: number } | null>(null);
+  const [parryPop, setParryPop] = useState<{ x: number; y: number; playerX: number; playerY: number; at: number } | null>(null);
   const [hitPop, setHitPop] = useState<{ x: number; y: number; at: number; label: string } | null>(null);
   const [swingAt, setSwingAt] = useState(0);
-  const [practiceHp, setPracticeHp] = useState<Record<string, number>>(() =>
-    Object.fromEntries(PRACTICE_BOTS.map((bot) => [bot.id, bot.maxHp]))
-  );
   const playerRef = useRef(player);
   const lobbyTimeRef = useRef(lobbyTime);
-  const practiceHpRef = useRef(practiceHp);
   playerRef.current = player;
   lobbyTimeRef.current = lobbyTime;
-  practiceHpRef.current = practiceHp;
   const isAdmin = isAdminEmail(user);
   const title = getEquippedTitle();
 
@@ -417,7 +412,13 @@ function LobbyMap({
     });
 
     if (!bot) return;
-    setParryPop({ x: bot.x, y: bot.y - 44, at: performance.now() });
+    setParryPop({
+      x: bot.x,
+      y: bot.y - 44,
+      playerX: playerRef.current.x,
+      playerY: playerRef.current.y,
+      at: performance.now(),
+    });
   };
 
   const tryPracticeStrike = (targetId?: string) => {
@@ -427,27 +428,18 @@ function LobbyMap({
         bot,
         dist: Math.hypot(playerRef.current.x - bot.x, playerRef.current.y - bot.y),
       }))
-      .filter(({ bot, dist }) => dist < 104 && (practiceHpRef.current[bot.id] ?? bot.maxHp) > 0)
+      .filter(({ dist }) => dist < 104)
       .sort((a, b) => a.dist - b.dist)[0]?.bot;
 
     setSwingAt(performance.now());
     if (!target) return;
 
-    const currentHp = practiceHpRef.current[target.id] ?? target.maxHp;
-    const nextHp = Math.max(0, currentHp - 1);
-    setPracticeHp((hp) => ({ ...hp, [target.id]: nextHp }));
     setHitPop({
       x: target.x,
       y: target.y - 54,
       at: performance.now(),
-      label: nextHp === 0 ? "DOWN!" : "HIT!",
+      label: "CLANG!",
     });
-
-    if (nextHp === 0) {
-      window.setTimeout(() => {
-        setPracticeHp((hp) => ({ ...hp, [target.id]: target.maxHp }));
-      }, 1400);
-    }
   };
 
   useEffect(() => {
@@ -645,7 +637,14 @@ function LobbyMap({
             [370, 326], [890, 326], [370, 530], [890, 530],
           ].map(([x, y], index) => (
             <div key={`tree-${index}`}>
-              <div className="absolute h-8 w-5 bg-[oklch(0.38_0.08_55)]" style={{ left: x + 13, top: y + 34 }} />
+              <div
+                className="absolute h-11 w-8 border-2 border-[oklch(0.24_0.08_55)] bg-[oklch(0.46_0.12_55)]"
+                style={{
+                  left: x + 12,
+                  top: y + 34,
+                  backgroundImage: "linear-gradient(90deg, transparent 0 35%, oklch(0.30 0.09 55) 35% 45%, transparent 45% 70%, oklch(0.32 0.08 55) 70% 78%, transparent 78%)",
+                }}
+              />
               <div className="absolute h-16 w-16 rounded-[18px] border-2 border-[oklch(0.24_0.08_145)] bg-[oklch(0.34_0.12_145)]" style={{ left: x, top: y }} />
               <div className="absolute h-8 w-8 rounded-[10px] bg-[oklch(0.42_0.14_145)]" style={{ left: x + 12, top: y + 10 }} />
             </div>
@@ -718,8 +717,6 @@ function LobbyMap({
             const striking = phase >= 1200 && phase < 1550;
             const charge = Math.min(1, phase / 1200);
             const close = Math.hypot(player.x - bot.x, player.y - bot.y) < 118;
-            const hp = practiceHp[bot.id] ?? bot.maxHp;
-            const down = hp <= 0;
             return (
               <div key={bot.id}>
                 <div
@@ -740,33 +737,33 @@ function LobbyMap({
                   }}
                   style={{
                     left: bot.x,
-                    top: down ? bot.y + 14 : bot.y,
+                    top: bot.y,
                     width: 52,
-                    height: down ? 26 : 62,
-                    opacity: down ? 0.55 : 1,
-                    borderRadius: down ? 2 : 8,
-                    borderColor: !down && striking ? "var(--color-danger)" : close ? "var(--color-accent)" : "var(--color-border)",
+                    height: 64,
+                    borderRadius: 8,
+                    borderColor: striking ? "var(--color-danger)" : close ? "var(--color-accent)" : "var(--color-border)",
                     boxShadow: striking ? "0 0 18px var(--color-danger)" : close ? "0 0 12px var(--color-accent)" : undefined,
-                    transform: `translate(-50%, -50%) ${down ? "rotate(90deg)" : windup ? `rotate(${charge * -8}deg)` : striking ? "translateX(8px)" : ""}`,
+                    background: "linear-gradient(180deg, oklch(0.28 0.03 250), oklch(0.14 0.03 250))",
+                    transform: `translate(-50%, -50%) ${windup ? `rotate(${charge * -8}deg)` : striking ? "translateX(8px)" : ""}`,
                   }}
                 >
-                  <div className="absolute left-1/2 top-[-10px] h-7 w-7 -translate-x-1/2 border-2 border-border bg-[oklch(0.86_0.04_75)]" style={{ borderRadius: 6 }} />
-                  <div className="absolute left-4 top-[-2px] h-2 w-2 bg-background" />
-                  <div className="absolute right-4 top-[-2px] h-2 w-2 bg-background" />
-                  <div className="absolute left-4 top-6 h-3 w-3" style={{ background: bot.trim }} />
-                  <div className="absolute right-4 top-6 h-3 w-3" style={{ background: bot.trim }} />
-                  <div className="absolute left-2 top-8 h-2 w-10 bg-foreground" />
-                  <div className="absolute left-4 top-[52px] h-2 w-4" style={{ background: bot.color }} />
-                  <div className="absolute left-1 top-4 h-8 w-2" style={{ background: bot.color }} />
-                  <div className="absolute right-1 top-4 h-8 w-2" style={{ background: bot.color }} />
-                  <div className="absolute left-2 bottom-[-8px] h-8 w-3 bg-[oklch(0.18_0.03_250)]" />
-                  <div className="absolute right-2 bottom-[-8px] h-8 w-3 bg-[oklch(0.18_0.03_250)]" />
+                  <div className="absolute left-1/2 top-[-12px] h-8 w-8 -translate-x-1/2 border-2 border-border bg-[oklch(0.67_0.02_250)]" style={{ borderRadius: "8px 8px 4px 4px" }} />
+                  <div className="absolute left-[15px] top-[-4px] h-2 w-5 bg-background" />
+                  <div className="absolute left-[17px] top-[-4px] h-1 w-1 bg-danger" />
+                  <div className="absolute left-[6px] top-2 h-16 w-4 border-l-2 border-[oklch(0.76_0.02_250)] bg-[oklch(0.48_0.03_250)]" />
+                  <div className="absolute right-[6px] top-2 h-16 w-4 border-r-2 border-[oklch(0.76_0.02_250)] bg-[oklch(0.48_0.03_250)]" />
+                  <div className="absolute left-[15px] top-5 h-9 w-5" style={{ background: bot.color }} />
+                  <div className="absolute left-[17px] top-6 h-7 w-1 bg-background/60" />
+                  <div className="absolute left-[-12px] top-5 h-9 w-7 border-2 border-border bg-[oklch(0.50_0.03_250)]" style={{ borderRadius: 8 }} />
+                  <div className="absolute left-[-6px] top-7 h-5 w-1" style={{ background: bot.trim }} />
+                  <div className="absolute left-4 top-[54px] h-3 w-3 bg-[oklch(0.18_0.03_250)]" />
+                  <div className="absolute right-4 top-[54px] h-3 w-3 bg-[oklch(0.18_0.03_250)]" />
                   <div
                     className="absolute h-3 w-24 origin-left border border-background"
                     style={{
                       left: 34,
                       top: 25,
-                      background: striking ? "var(--color-danger)" : bot.color,
+                      background: striking ? "var(--color-danger)" : "oklch(0.82 0.02 250)",
                       transform: `rotate(${windup ? -38 + charge * 24 : striking ? -8 : 42}deg)`,
                     }}
                   />
@@ -777,10 +774,7 @@ function LobbyMap({
                 >
                   {bot.name}
                 </div>
-                <div className="absolute h-2 w-16 -translate-x-1/2 border border-border bg-background" style={{ left: bot.x, top: bot.y + 48 }}>
-                  <div className="h-full bg-accent" style={{ width: `${(hp / bot.maxHp) * 100}%` }} />
-                </div>
-                {!down && striking && (
+                {striking && (
                   <div
                     className="pointer-events-none absolute h-2 w-24 -translate-x-1/2 -translate-y-1/2 bg-danger"
                     style={{
@@ -810,17 +804,49 @@ function LobbyMap({
           )}
 
           {parryPop && performance.now() - parryPop.at < 700 && (
-            <div
-              className="pointer-events-none absolute -translate-x-1/2 text-2xl uppercase tracking-[0.24em] text-accent"
-              style={{
-                left: parryPop.x,
-                top: parryPop.y,
-                textShadow: "0 0 14px var(--color-accent), 2px 2px 0 var(--color-background)",
-                animation: "lobbyParryPop 700ms ease-out forwards",
-              }}
-            >
-              PARRY!
-            </div>
+            <>
+              <div
+                className="pointer-events-none absolute -translate-x-1/2 text-2xl uppercase tracking-[0.24em] text-accent"
+                style={{
+                  left: parryPop.x,
+                  top: parryPop.y,
+                  textShadow: "0 0 14px var(--color-accent), 2px 2px 0 var(--color-background)",
+                  animation: "lobbyParryPop 700ms ease-out forwards",
+                }}
+              >
+                PARRY!
+              </div>
+              <div
+                className="pointer-events-none absolute h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-accent"
+                style={{
+                  left: parryPop.playerX,
+                  top: parryPop.playerY,
+                  boxShadow: "0 0 24px var(--color-accent), inset 0 0 16px var(--color-accent)",
+                  animation: "lobbyParryShield 440ms ease-out forwards",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute h-3 origin-left bg-accent"
+                style={{
+                  left: parryPop.playerX,
+                  top: parryPop.playerY - 12,
+                  width: Math.hypot(parryPop.x - parryPop.playerX, parryPop.y - parryPop.playerY),
+                  transform: `rotate(${Math.atan2(parryPop.y - parryPop.playerY, parryPop.x - parryPop.playerX)}rad)`,
+                  boxShadow: "0 0 18px var(--color-accent)",
+                  animation: "lobbyParryLine 420ms ease-out forwards",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute h-12 w-12 -translate-x-1/2 -translate-y-1/2 border-4 border-accent"
+                style={{
+                  left: parryPop.x,
+                  top: parryPop.y + 30,
+                  transform: "translate(-50%, -50%) rotate(45deg)",
+                  boxShadow: "0 0 20px var(--color-accent)",
+                  animation: "lobbyParryImpact 520ms ease-out forwards",
+                }}
+              />
+            </>
           )}
 
           {activeStation && (
@@ -861,6 +887,21 @@ function LobbyMap({
               0% { opacity: 0; transform: translate(-50%, 8px) scale(0.72); }
               18% { opacity: 1; transform: translate(-50%, -4px) scale(1.22); }
               100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
+            }
+            @keyframes lobbyParryShield {
+              0% { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
+              30% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+              100% { opacity: 0; transform: translate(-50%, -50%) scale(1.55); }
+            }
+            @keyframes lobbyParryLine {
+              0% { opacity: 0; transform-origin: left center; filter: brightness(1.8); }
+              20% { opacity: 1; }
+              100% { opacity: 0; transform-origin: left center; filter: brightness(1); }
+            }
+            @keyframes lobbyParryImpact {
+              0% { opacity: 0; transform: translate(-50%, -50%) rotate(45deg) scale(0.25); }
+              22% { opacity: 1; transform: translate(-50%, -50%) rotate(45deg) scale(1.1); }
+              100% { opacity: 0; transform: translate(-50%, -50%) rotate(45deg) scale(1.8); }
             }
             @keyframes lobbyHitPop {
               0% { opacity: 0; transform: translate(-50%, 6px) scale(0.8); }

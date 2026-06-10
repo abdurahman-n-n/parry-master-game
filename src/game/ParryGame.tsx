@@ -4,7 +4,7 @@ import { PixelCharacter } from "./PixelCharacters";
 import { PixelEnemy } from "./PixelEnemy";
 import { CurrencyHUD, getCredits, getGems, spendGems } from "./Currency";
 import { ABILITIES, findAbility } from "./abilities";
-import { isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility } from "./inventory";
+import { findItem, isOwned, getUpgradeCount, getEquippedSkinColor, getEquippedAbility, getEquippedWeapon } from "./inventory";
 import { minionForLevel, levelTier } from "./levels";
 import { getEquippedTitle, TITLES, unlockAchievement } from "./achievements";
 import { playSfx } from "./sfx";
@@ -125,10 +125,16 @@ export function ParryGame({
   const strikeDmg = Math.max(1, Math.round((1 + dmgUpCount) * dmgMul));
   const hasteMs = Math.min(1200, 100 * cdDownCount + cdBonusMs);
   const cdAdjust = -hasteMs;
-  const strikeCooldownMs = Math.max(60, BASE_STRIKE_COOLDOWN_MS - hasteMs);
   const blockCooldownMs = Math.max(500, BASE_BLOCK_COOLDOWN_MS - hasteMs);
   const skinColor = getEquippedSkinColor();
   const equippedAbility = abilityOverride ?? getEquippedAbility();
+  const equippedWeaponId = getEquippedWeapon();
+  const equippedWeapon = equippedWeaponId && isOwned(equippedWeaponId) ? findItem(equippedWeaponId) : null;
+  const weaponStats = equippedWeapon?.kind === "weapon" ? equippedWeapon.weapon : null;
+  const strikeCooldownMs = Math.max(60, (weaponStats?.cooldownMs ?? BASE_STRIKE_COOLDOWN_MS) - hasteMs);
+  const weaponDamage = weaponStats?.damage ?? Math.max(1, Math.round(strikeDmg * (weaponStats?.damageMultiplier ?? 1)));
+  const weaponIsRanged = !!weaponStats?.ranged;
+  const weaponName = equippedWeapon?.name ?? "Sword";
   const tier = levelTier(level);
   const enemySpeed = ENEMY_SPEED * (1 + 0.1 * tier);
   const playerSpeed = PLAYER_SPEED * speedMul;
@@ -288,7 +294,7 @@ export function ParryGame({
       riposteUntilRef.current = 0;
       riposteTargetRef.current = null;
       setRiposteEndAt(0);
-      damageEnemy(targetUid, strikeDmg, "Riposte! Struck");
+      damageEnemy(targetUid, weaponDamage, "Riposte! Struck");
       frameParryTargetRef.current = null;
       return;
     }
@@ -301,12 +307,12 @@ export function ParryGame({
       const d = Math.hypot(p.x - e.x, p.y - e.y);
       if (d < bestDist) { bestDist = d; best = e; }
     }
-    if (best && bestDist <= MELEE_RANGE + ENEMY_RADIUS) {
-      damageEnemy(best.uid, strikeDmg, "You strike");
+    if (best && (weaponIsRanged || bestDist <= MELEE_RANGE + ENEMY_RADIUS)) {
+      damageEnemy(best.uid, weaponDamage, weaponIsRanged ? "Dagger hit" : "You strike");
     } else {
       setLog(`* Too far! Close the distance.`);
     }
-  }, [damageEnemy, strikeDmg]);
+  }, [damageEnemy, weaponDamage, weaponIsRanged]);
 
   const triggerBlockTap = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
@@ -888,6 +894,11 @@ export function ParryGame({
         <div className="flex items-center justify-between border-2 border-border bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-foreground">
           <span>[Space/Q] Block</span>
           <span className="text-muted-foreground">{blockReady ? "READY" : `${blockCdRem}s`}</span>
+        </div>
+
+        <div className="flex items-center justify-between border-2 border-border bg-background px-3 py-2 text-[9px] uppercase tracking-widest text-foreground">
+          <span>{weaponName}</span>
+          <span className="text-muted-foreground">{(strikeCooldownMs / 1000).toFixed(1)}s · {weaponDamage} dmg</span>
         </div>
 
         {/* Equipped ability */}
