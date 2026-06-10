@@ -14,7 +14,7 @@ export const ABILITIES: AbilityDef[] = [
     desc: "Instantly kills the strongest enemy on screen.",
     cooldownMs: 10_000,
     gemCost: 5,
-    hotkey: "R",
+    hotkey: "E",
   },
   {
     id: "dash",

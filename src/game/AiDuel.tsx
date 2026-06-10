@@ -6,6 +6,8 @@ import { ParryGame, type FightResult } from "./ParryGame";
 import type { EnemyDef } from "./types";
 import { getCurrentUser } from "./AuthScreen";
 import { getBestWaveFor } from "./InfiniteLeaderboard";
+import { getEquippedAbility, isOwned } from "./inventory";
+import { ABILITIES } from "./abilities";
 
 type DuelInfo = {
   enemy: EnemyDef;
@@ -26,6 +28,9 @@ export function AiDuel({ onExit }: { onExit: () => void }) {
   const [lastResult, setLastResult] = useState<FightResult | null>(null);
   const bestWave = getBestWaveFor(getCurrentUser() ?? "");
   const unlocked = bestWave >= 75;
+  const equippedAbility = getEquippedAbility();
+  const activeAbility = equippedAbility && isOwned(equippedAbility) ? equippedAbility : null;
+  const activeAbilityDef = ABILITIES.find((ability) => ability.id === activeAbility);
 
   const loadOpponent = useCallback(async (nextSeed = seed) => {
     setPhase("loading");
@@ -59,6 +64,7 @@ export function AiDuel({ onExit }: { onExit: () => void }) {
         level={1}
         enemyCountOverride={1}
         hudLabel="Duel"
+        abilityOverride={activeAbility}
         onEnd={finishFight}
       />
     );
@@ -122,6 +128,9 @@ export function AiDuel({ onExit }: { onExit: () => void }) {
                   <div>{duel.enemy.attacks.length} attack styles</div>
                   <div>Cadence {duel.enemy.cadenceMs[0]}-{duel.enemy.cadenceMs[1]}ms</div>
                   <div>{duel.enemy.attacks.map((a) => a.kind).join(" / ")}</div>
+                </div>
+                <div className="text-[9px] uppercase tracking-widest text-accent">
+                  Ability: {activeAbilityDef ? `${activeAbilityDef.name} [${activeAbilityDef.hotkey}]` : "none equipped"}
                 </div>
                 <div className="text-[9px] uppercase leading-relaxed tracking-widest text-muted-foreground">
                   Tactic: {duel.tactic}

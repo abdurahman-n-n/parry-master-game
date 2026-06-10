@@ -49,6 +49,8 @@ interface Props {
   hideAbandon?: boolean;
   /** Start fight with a specific HP value (clamped to max). Default = full HP. */
   startHpOverride?: number;
+  /** Explicit ability override for screens that prepare their own loadout. */
+  abilityOverride?: string | null;
 }
 
 const ARENA_W = 640;
@@ -112,7 +114,7 @@ export function enemyCountForLevel(level: number): number {
 export function ParryGame({
   character, enemy, level, onEnd,
   enemyCountOverride, hpMul = 1, dmgMul = 1, speedMul = 1, cdBonusMs = 0,
-  hudLabel = "Level", hideAbandon = false, startHpOverride,
+  hudLabel = "Level", hideAbandon = false, startHpOverride, abilityOverride,
 }: Props) {
   // Upgrades (stackable)
   const hpUpCount = getUpgradeCount("hp-up");
@@ -126,7 +128,7 @@ export function ParryGame({
   const strikeCooldownMs = Math.max(60, BASE_STRIKE_COOLDOWN_MS - hasteMs);
   const blockCooldownMs = Math.max(500, BASE_BLOCK_COOLDOWN_MS - hasteMs);
   const skinColor = getEquippedSkinColor();
-  const equippedAbility = getEquippedAbility();
+  const equippedAbility = abilityOverride ?? getEquippedAbility();
   const tier = levelTier(level);
   const enemySpeed = ENEMY_SPEED * (1 + 0.1 * tier);
   const playerSpeed = PLAYER_SPEED * speedMul;
@@ -395,7 +397,7 @@ export function ParryGame({
         blockHeldRef.current = true;
         return;
       }
-      if (k === "e") {
+      if (k === "e" || (k === "r" && equippedAbility === "instakill")) {
         e.preventDefault();
         if (equippedAbility === "instakill") useInstakill();
         else if (equippedAbility === "dash") useDash();

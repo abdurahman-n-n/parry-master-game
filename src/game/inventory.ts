@@ -19,7 +19,7 @@ export interface StoreItem {
 
 export const STORE_ITEMS: StoreItem[] = [
   // Abilities
-  { id: "instakill", kind: "ability", name: "Insta Kill", desc: "Unlocks [Q] — instantly kills the enemy. Costs 5 gems per use.", creditCost: 50, hotkey: "Q" },
+  { id: "instakill", kind: "ability", name: "Insta Kill", desc: "Unlocks [E] — instantly kills the enemy. Costs 5 gems per use.", creditCost: 50, hotkey: "E" },
   { id: "dash",      kind: "ability", name: "Dash",       desc: "Unlocks [E] — dashes away from the enemy. Free to use.",      creditCost: 25, hotkey: "E" },
 
   // Weapon Effects
