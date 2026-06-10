@@ -56,7 +56,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     let alive = true;
-    supabase.auth.getSession().then(async ({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       const user = data.session?.user;
       if (!alive || !user) return;
 
@@ -66,13 +66,6 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         ? user.user_metadata.nickname
         : "";
       setNickname(metadataNickname || nextEmail.split("@")[0] || "");
-
-      const { data: profile } = await supabase
-        .from("game_profiles")
-        .select("nickname")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (alive && profile?.nickname) setNickname(profile.nickname);
     });
     return () => {
       alive = false;
@@ -101,30 +94,10 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
     }
     setBusyProfile(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-      if (!user?.email) throw new Error("Please log in again");
-
       const { error: metadataError } = await supabase.auth.updateUser({
         data: { nickname: nextNickname },
       });
       if (metadataError) throw metadataError;
-
-      const profilePayload = {
-        user_id: user.id,
-        email: user.email,
-        nickname: nextNickname,
-        updated_at: new Date().toISOString(),
-      };
-      const { error: profileError } = await supabase.from("game_profiles").upsert(profilePayload);
-      if (profileError) {
-        const { error: fallbackError } = await supabase.from("game_profiles").upsert({
-          user_id: user.id,
-          email: user.email,
-          updated_at: profilePayload.updated_at,
-        });
-        if (fallbackError) throw profileError;
-      }
 
       setNickname(nextNickname);
       setProfileMessage("Nickname saved");

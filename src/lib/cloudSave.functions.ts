@@ -50,9 +50,12 @@ function createPublicSupabaseClient() {
 async function upsertProfile(context: AuthedContext) {
   const email = context.claims?.email;
   if (!email) return;
-  await context.supabase
+  const { error } = await context.supabase
     .from("game_profiles")
     .upsert({ user_id: context.userId, email, updated_at: new Date().toISOString() });
+  if (error && error.code !== "42P01" && error.code !== "PGRST205") {
+    throw new Error(error.message);
+  }
 }
 
 export const pullSaves = createServerFn({ method: "POST" })
@@ -112,7 +115,13 @@ export const getCloudLeaderboards = createServerFn({ method: "GET" }).handler(
       const profilesWithoutNicknames = await supabase
         .from("game_profiles")
         .select("user_id, email");
-      if (profilesWithoutNicknames.error) throw new Error(profilesWithoutNicknames.error.message);
+      if (
+        profilesWithoutNicknames.error &&
+        profilesWithoutNicknames.error.code !== "42P01" &&
+        profilesWithoutNicknames.error.code !== "PGRST205"
+      ) {
+        throw new Error(profilesWithoutNicknames.error.message);
+      }
       profiles = profilesWithoutNicknames.data ?? [];
     } else {
       profiles = profilesWithNicknames.data ?? [];
