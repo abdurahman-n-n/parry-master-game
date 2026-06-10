@@ -278,12 +278,12 @@ export function PixelCharacter({
         <div
           className="pointer-events-none absolute"
           style={{
-            left: "58%",
-            top: "28%",
-            width: Math.max(8, size * 0.22),
-            height: Math.max(8, size * 0.22),
+            left: "50%",
+            top: "18%",
+            width: Math.max(16, size * 0.42),
+            height: Math.max(16, size * 0.42),
             background: "var(--color-danger)",
-            boxShadow: "0 0 14px var(--color-danger), 0 0 30px var(--color-danger), 0 0 46px var(--color-danger)",
+            boxShadow: "0 0 18px var(--color-danger), 0 0 42px var(--color-danger), 0 0 70px var(--color-danger)",
             clipPath: "polygon(50% 0, 64% 35%, 100% 50%, 64% 65%, 50% 100%, 36% 65%, 0 50%, 36% 35%)",
             animation: "heroRedEyeSpark 520ms steps(3) forwards",
           }}
