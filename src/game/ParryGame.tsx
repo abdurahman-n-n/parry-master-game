@@ -145,6 +145,7 @@ export function ParryGame({
   const [gems, setGems] = useState(() => getGems());
   const [pose, setPose] = useState<"idle" | "walk" | "strike" | "hit">("idle");
   const [isWalking, setIsWalking] = useState(false);
+  const [viewport, setViewport] = useState({ width: ARENA_W + 32, height: ARENA_H + 260 });
 
   // Ability cooldowns
   const [cdInsta, setCdInsta] = useState(0);
@@ -173,6 +174,20 @@ export function ParryGame({
   stateRef.current = state;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    window.addEventListener("orientationchange", updateViewport);
+    return () => {
+      window.removeEventListener("resize", updateViewport);
+      window.removeEventListener("orientationchange", updateViewport);
+    };
+  }, []);
 
   // Initial enemy spawn
   const enemiesRef = useRef<EnemyInstance[]>([]);
@@ -571,41 +586,60 @@ export function ParryGame({
   const dashReady = now >= cdDash;
   const instaCdRem = Math.max(0, Math.ceil((cdInsta - now) / 1000));
   const dashCdRem = Math.max(0, Math.ceil((cdDash - now) / 1000));
+  const arenaScale = Math.max(
+    0.48,
+    Math.min(1, (viewport.width - 24) / ARENA_W, (viewport.height - 230) / ARENA_H)
+  );
+  const arenaDisplayWidth = ARENA_W * arenaScale;
+  const arenaDisplayHeight = ARENA_H * arenaScale;
+  const compact = viewport.width < 560;
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background p-4 font-pixel">
+    <div className="flex h-full w-full flex-col items-center justify-start gap-3 overflow-auto bg-background p-3 font-pixel sm:justify-center sm:gap-4 sm:p-4">
       {/* HUD */}
-      <div className="flex w-full max-w-[640px] items-center justify-between text-[10px] uppercase tracking-widest">
+      <div
+        className="flex w-full items-center justify-between gap-2 text-[9px] uppercase tracking-widest sm:text-[10px]"
+        style={{ maxWidth: ARENA_W, width: arenaDisplayWidth }}
+      >
         {hideAbandon ? (
-          <div className="w-[80px]" />
+          <div className={compact ? "hidden" : "w-[80px]"} />
         ) : (
           <button
             onClick={() => onEnd({ result: "defeat", fightMs: performance.now() - fightStartRef.current, playerHpRemaining: 0 })}
-            className="border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
+            className="shrink-0 border border-border bg-background px-2 py-1 text-foreground hover:bg-foreground hover:text-background"
           >
             ← Abandon
           </button>
         )}
-        <div className="text-foreground">
+        <div className="min-w-0 truncate text-center text-foreground">
           {hudLabel} <span className="text-accent">{level}</span>
           {enemy.isBoss && <span className="ml-2 text-danger">⚠ BOSS</span>}
           <span className="ml-2 text-muted-foreground">· {aliveCount}/{enemies.length} alive</span>
         </div>
-        <CurrencyHUD credits={credits} gems={gems} />
+        {!compact && <CurrencyHUD credits={credits} gems={gems} />}
       </div>
 
       {/* Arena */}
       <div
         className="relative overflow-hidden border-4 border-border"
         style={{
-          width: ARENA_W,
-          height: ARENA_H,
-          background: "oklch(0.18 0.02 270)",
-          backgroundImage:
-            "linear-gradient(oklch(0.22 0.02 270) 1px, transparent 1px), linear-gradient(90deg, oklch(0.22 0.02 270) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
+          width: arenaDisplayWidth,
+          height: arenaDisplayHeight,
         }}
       >
+        <div
+          className="relative overflow-hidden"
+          style={{
+            width: ARENA_W,
+            height: ARENA_H,
+            transform: `scale(${arenaScale})`,
+            transformOrigin: "top left",
+            background: "oklch(0.18 0.02 270)",
+            backgroundImage:
+              "linear-gradient(oklch(0.22 0.02 270) 1px, transparent 1px), linear-gradient(90deg, oklch(0.22 0.02 270) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        >
         {/* Enemies */}
         {enemies.map((en) => {
           if (en.hp <= 0) return null;
@@ -797,10 +831,11 @@ export function ParryGame({
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Status + abilities + log */}
-      <div className="flex w-full max-w-[640px] flex-col gap-2">
+      <div className="flex w-full flex-col gap-2" style={{ maxWidth: ARENA_W, width: arenaDisplayWidth }}>
         {/* Aggregate enemy bar */}
         <div className="flex items-center gap-3">
           <div className="w-32 text-[9px] uppercase tracking-widest text-foreground">

@@ -279,71 +279,71 @@ export function GameShell() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-background p-6 font-pixel text-foreground">
-      <div className="flex items-center gap-4">
-        <PixelShield size={44} />
-        <h1 className="text-4xl tracking-[0.3em] sm:text-6xl">PARRY!</h1>
-        <PixelSword size={44} />
+    <div className="flex h-full w-full flex-col items-center justify-start gap-4 overflow-auto bg-background p-4 font-pixel text-foreground sm:justify-center sm:gap-6 sm:p-6">
+      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+        <PixelShield size={40} />
+        <h1 className="text-3xl tracking-[0.18em] sm:text-6xl sm:tracking-[0.3em]">PARRY!</h1>
+        <PixelSword size={40} />
       </div>
       <CurrencyHUD credits={credits} gems={gems} />
-      <p className="max-w-md text-center text-[10px] uppercase leading-relaxed tracking-widest text-muted-foreground">
+      <p className="max-w-md text-center text-[9px] uppercase leading-relaxed tracking-widest text-muted-foreground sm:text-[10px]">
         WASD to move · F to block · Space / Click to strike · E to use equipped ability
       </p>
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <button
           onClick={() => setScreen("levels")}
-          className="border-2 border-border bg-foreground px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-background transition-colors hover:bg-accent"
+          className="border-2 border-border bg-foreground px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-background transition-colors hover:bg-accent sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
         >
           ▶ Play
         </button>
         <button
           onClick={() => setScreen("infinite")}
           title="Endless waves"
-          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
         >
           ∞ Infinite Dungeon
         </button>
         <button
           onClick={() => setScreen("ai-duel")}
           title="Late-game 1v1 boss"
-          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
         >
           Duel
         </button>
         <button
           onClick={() => setScreen("achievements")}
-          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
         >
           Achievements
         </button>
         <button
           onClick={() => setScreen("store")}
-          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
         >
           🛒 Store
         </button>
         <button
           onClick={() => setScreen("inventory")}
-          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
         >
           Inventory
         </button>
         <button
           onClick={() => setScreen("leaderboard")}
-          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
         >
           🏆 Leaderboard
         </button>
         <button
           onClick={() => setScreen("settings")}
-          className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+          className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
         >
           ⚙ Settings
         </button>
         {isAdminEmail(user) && (
           <button
             onClick={() => setScreen("admin")}
-            className="border-2 border-border bg-background px-6 py-3 text-[11px] uppercase tracking-[0.3em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+            className="border-2 border-border bg-background px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background sm:px-6 sm:text-[11px] sm:tracking-[0.3em]"
           >
             🔧 Admin
           </button>
@@ -352,8 +352,8 @@ export function GameShell() {
       <div className="text-[8px] uppercase tracking-widest text-muted-foreground">
         v0.6 · {beaten.size}/{TOTAL_LEVELS} levels cleared
       </div>
-      <div className="flex items-center gap-3 text-[9px] uppercase tracking-widest text-muted-foreground">
-        <span>
+      <div className="flex flex-wrap items-center justify-center gap-3 text-center text-[9px] uppercase tracking-widest text-muted-foreground">
+        <span className="max-w-full truncate">
           Logged in as {user}
           {getEquippedTitle() ? ` · ${TITLES[getEquippedTitle()!]}` : ""}
         </span>

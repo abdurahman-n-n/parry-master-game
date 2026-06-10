@@ -112,15 +112,15 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col items-center gap-4 overflow-auto bg-background p-6 font-pixel text-foreground">
-      <div className="flex w-full max-w-4xl items-center justify-between">
+    <div className="flex h-full w-full flex-col items-center gap-4 overflow-auto bg-background p-4 font-pixel text-foreground sm:p-6">
+      <div className="flex w-full max-w-4xl flex-wrap items-center justify-between gap-3">
         <button
           onClick={onBack}
           className="border-2 border-border bg-background px-3 py-1 text-[10px] uppercase tracking-widest hover:bg-foreground hover:text-background"
         >
           Back
         </button>
-        <div className="text-2xl tracking-[0.3em]">ADMIN</div>
+        <div className="text-xl tracking-[0.2em] sm:text-2xl sm:tracking-[0.3em]">ADMIN</div>
         <div className="max-w-[180px] truncate text-right text-[9px] uppercase tracking-widest text-muted-foreground">
           {user}
         </div>
@@ -134,7 +134,7 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
 
       <div className="grid w-full max-w-4xl grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Wallet">
-          <div className="grid grid-cols-2 gap-2 text-[10px] uppercase tracking-widest">
+          <div className="grid grid-cols-1 gap-2 text-[10px] uppercase tracking-widest sm:grid-cols-2">
             <div className="border border-border p-3">Credits: {credits}</div>
             <div className="border border-border p-3">Gems: {gems}</div>
           </div>
@@ -147,7 +147,7 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
               className="border-2 border-border bg-background px-3 py-2 text-foreground outline-none"
             />
           </label>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <AdminButton onClick={() => mutate("Credits added", () => addCredits(amount))}>Give Credits</AdminButton>
             <AdminButton onClick={() => mutate("Credits set", () => setCredits(amount))}>Set Credits</AdminButton>
             <AdminButton onClick={() => mutate("Gems added", () => addGems(amount))}>Give Gems</AdminButton>
@@ -159,7 +159,7 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
             Levels cleared: {beaten.size}/{TOTAL_LEVELS}
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <AdminButton onClick={() => mutate("All levels unlocked", () => setAllLevels(true))}>Give All Levels</AdminButton>
             <AdminButton onClick={() => mutate("Levels cleared", () => setAllLevels(false))}>Remove Levels</AdminButton>
           </div>
@@ -189,11 +189,11 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
                   key={item.id}
                   className={`grid items-center gap-2 border border-border p-2 ${
                     item.kind === "upgrade"
-                      ? "grid-cols-[1fr_64px_64px_64px_64px]"
-                      : "grid-cols-[1fr_80px_80px]"
+                      ? "grid-cols-2 sm:grid-cols-[1fr_64px_64px_64px_64px]"
+                      : "grid-cols-2 sm:grid-cols-[1fr_80px_80px]"
                   }`}
                 >
-                  <div className="min-w-0">
+                  <div className="col-span-2 min-w-0 sm:col-span-1">
                     <div className="truncate text-[10px] uppercase tracking-widest">{item.name}</div>
                     <div className="text-[8px] uppercase tracking-widest text-muted-foreground">
                       {item.kind}{item.kind === "upgrade" ? ` x${count}` : has ? " owned" : " missing"}
@@ -224,7 +224,7 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
               );
             })}
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <AdminButton onClick={() => mutate("All items given", () => STORE_ITEMS.forEach((i) => grantItem(i.id)))}>Give All</AdminButton>
             <AdminButton onClick={() => mutate("All items removed", () => STORE_ITEMS.forEach((i) => {
               if (i.kind === "upgrade") setUpgradeCount(i.id, 0);
@@ -238,8 +238,8 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
             {ACHIEVEMENTS.map((achievement) => {
               const has = unlockedAchievements.has(achievement.id);
               return (
-                <div key={achievement.id} className="grid grid-cols-[1fr_80px_80px] items-center gap-2 border border-border p-2">
-                  <div>
+                <div key={achievement.id} className="grid grid-cols-2 items-center gap-2 border border-border p-2 sm:grid-cols-[1fr_80px_80px]">
+                  <div className="col-span-2 sm:col-span-1">
                     <div className="text-[10px] uppercase tracking-widest">{achievement.name}</div>
                     <div className="text-[8px] uppercase tracking-widest text-muted-foreground">
                       {has ? "unlocked" : "locked"}
@@ -251,7 +251,7 @@ export function AdminScreen({ onBack }: { onBack: () => void }) {
               );
             })}
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <AdminButton onClick={() => mutate("Title equipped", () => setEquippedTitle("frame-perfect"))}>
               Equip {TITLES["frame-perfect"]}
             </AdminButton>
