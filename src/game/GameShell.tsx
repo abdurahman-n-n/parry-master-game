@@ -455,7 +455,7 @@ function LobbyMap({
     { id: "store", label: "Store", hint: "Shop", x: 430, y: 716, screen: "store", accent: "oklch(0.76 0.15 35)" },
     { id: "inventory", label: "Inventory", hint: "Chest", x: 724, y: 716, screen: "inventory", accent: "oklch(0.70 0.13 250)" },
     { id: "leaderboard", label: "Leaderboard", hint: "Rankings", x: 982, y: 652, screen: "leaderboard", accent: "oklch(0.80 0.13 120)" },
-    { id: "settings", label: "Settings", hint: "Profile", x: 1010, y: 430, screen: "settings", accent: "oklch(0.72 0.08 300)" },
+    { id: "settings", label: "Settings", hint: "Color / Profile", x: 1010, y: 430, screen: "settings", accent: "oklch(0.72 0.08 300)" },
     { id: "stats", label: "Stats", hint: "Progress", x: 580, y: 430, screen: "stats", accent: "oklch(0.78 0.14 85)" },
     ...(isAdmin
       ? [{ id: "admin", label: "Admin", hint: "Panel", x: 144, y: 430, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
@@ -803,13 +803,14 @@ function LobbyMap({
               <div className="absolute left-5 top-[116px] h-4 w-60 border-2 border-border bg-[oklch(0.18_0.03_250)]" />
             </div>
           )}
-          {[
-            [176, 182, "INF"], [1038, 184, "VS"], [190, 646, "ACH"], [1040, 642, "#"], [448, 704, "$"], [762, 704, "BAG"],
-          ].map(([x, y, mark], index) => (
-            <div key={`district-mark-${index}`} className="absolute flex h-14 w-14 items-center justify-center border-2 border-border bg-background/60 text-[12px] text-foreground" style={{ left: x, top: y }}>
-              {mark}
-            </div>
-          ))}
+          <div className="pointer-events-none absolute left-[972px] top-[392px] h-40 w-48">
+            <div className="absolute left-0 top-12 h-24 w-48 border-4 border-[oklch(0.72_0.08_300)] bg-background/85" />
+            <div className="absolute left-8 top-2 h-16 w-32 border-2 border-[oklch(0.72_0.08_300)] bg-[oklch(0.18_0.03_250)]" />
+            <div className="absolute left-12 top-7 h-7 w-7 bg-[oklch(0.70_0.18_25)]" />
+            <div className="absolute left-[78px] top-7 h-7 w-7 bg-[oklch(0.72_0.16_160)]" />
+            <div className="absolute left-[108px] top-7 h-7 w-7 bg-[oklch(0.70_0.13_250)]" />
+            <div className="absolute left-16 top-[98px] h-10 w-16 border-2 border-border bg-[oklch(0.72_0.08_300)]/35" />
+          </div>
           {[
             [236, 324], [1012, 330], [238, 556], [1012, 548], [500, 632], [778, 630], [606, 238], [676, 238],
           ].map(([x, y], index) => (

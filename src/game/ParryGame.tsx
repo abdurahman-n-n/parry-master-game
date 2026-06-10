@@ -987,14 +987,6 @@ export function ParryGame({
                 <div className="absolute left-[62px] top-[19px] h-2 w-3 bg-[oklch(0.75_0.02_250)]" />
               </div>
             )}
-            {weaponId === "weapon-heavy-sword" && (
-              <div className="pointer-events-none absolute left-[34px] top-[-10px] h-24 w-8 rotate-[28deg]" style={{ transformOrigin: "bottom center", animation: effectivePose === "strike" ? "excaliburSwing 360ms ease-out" : undefined }}>
-                <div className="absolute left-[11px] top-0 h-16 w-3 bg-[oklch(0.92_0.02_250)] shadow-[0_0_12px_var(--color-accent)]" />
-                <div className="absolute left-[7px] top-12 h-6 w-11 bg-[oklch(0.92_0.02_250)]" style={{ clipPath: "polygon(50% 0, 100% 100%, 0 100%)" }} />
-                <div className="absolute left-1 top-[62px] h-2 w-8 bg-[oklch(0.78_0.14_85)]" />
-                <div className="absolute left-[13px] top-[64px] h-8 w-2 bg-[oklch(0.40_0.08_55)]" />
-              </div>
-            )}
             <PixelCharacter
               skinId="kid:default"
               size={56}
@@ -1006,11 +998,11 @@ export function ParryGame({
             />
             {weaponId === "weapon-daggers" && (
               <>
-                <div className="pointer-events-none absolute left-[8px] top-[31px] h-2 w-9 origin-right rotate-[205deg] bg-[oklch(0.90_0.02_250)] shadow-[0_0_8px_var(--color-accent)]">
-                  <div className="absolute -right-2 top-[-2px] h-6 w-2 bg-[oklch(0.45_0.12_285)]" />
+                <div className="pointer-events-none absolute left-[4px] top-[23px] h-2 w-10 origin-right rotate-[220deg] bg-[oklch(0.96_0.02_250)] shadow-[0_0_8px_var(--color-accent)]">
+                  <div className="absolute right-[-2px] top-[-2px] h-6 w-2 bg-[oklch(0.45_0.12_285)]" />
                 </div>
-                <div className="pointer-events-none absolute left-[34px] top-[31px] h-2 w-9 origin-left rotate-[-25deg] bg-[oklch(0.90_0.02_250)] shadow-[0_0_8px_var(--color-accent)]">
-                  <div className="absolute -left-2 top-[-2px] h-6 w-2 bg-[oklch(0.45_0.12_285)]" />
+                <div className="pointer-events-none absolute left-[34px] top-[23px] h-2 w-10 origin-left rotate-[-40deg] bg-[oklch(0.96_0.02_250)] shadow-[0_0_8px_var(--color-accent)]">
+                  <div className="absolute left-[-2px] top-[-2px] h-6 w-2 bg-[oklch(0.45_0.12_285)]" />
                 </div>
                 {effectivePose === "strike" && (
                   <div
@@ -1022,6 +1014,14 @@ export function ParryGame({
                   />
                 )}
               </>
+            )}
+            {weaponId === "weapon-heavy-sword" && (
+              <div className="pointer-events-none absolute left-[35px] top-[-4px] h-24 w-9 rotate-[20deg]" style={{ transformOrigin: "12px 72px", animation: effectivePose === "strike" ? "excaliburSwing 360ms ease-out" : undefined }}>
+                <div className="absolute left-[12px] top-0 h-16 w-3 bg-[oklch(0.95_0.02_250)] shadow-[0_0_14px_var(--color-accent)]" />
+                <div className="absolute left-[8px] top-0 h-4 w-11 bg-[oklch(0.95_0.02_250)]" style={{ clipPath: "polygon(50% 0, 100% 100%, 0 100%)" }} />
+                <div className="absolute left-0 top-[58px] h-3 w-10 bg-[oklch(0.78_0.14_85)]" />
+                <div className="absolute left-[14px] top-[61px] h-9 w-2 bg-[oklch(0.40_0.08_55)]" />
+              </div>
             )}
             {weaponSpecialKind === "mace" && weaponSpecialActive && (
               <div className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-accent" style={{ animation: "maceCyclone 520ms linear infinite", boxShadow: "0 0 28px var(--color-accent), inset 0 0 18px var(--color-accent)" }} />
