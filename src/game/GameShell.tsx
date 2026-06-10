@@ -749,6 +749,60 @@ function LobbyMap({
           <div className="absolute left-[918px] top-[626px] h-28 w-72 border-4 border-[oklch(0.36_0.10_185)] bg-[oklch(0.15_0.06_185)]" />
           <div className="absolute left-[380px] top-[684px] h-28 w-[216px] border-4 border-[oklch(0.48_0.09_35)] bg-[oklch(0.24_0.06_35)]" />
           <div className="absolute left-[684px] top-[684px] h-28 w-[216px] border-4 border-[oklch(0.40_0.10_250)] bg-[oklch(0.17_0.06_250)]" />
+          <div className="pointer-events-none absolute left-[104px] top-[130px] h-44 w-64">
+            <div className="absolute left-4 top-0 h-12 w-56 bg-[oklch(0.72_0.16_160)]" style={{ clipPath: "polygon(50% 0, 100% 100%, 0 100%)" }} />
+            <div className="absolute left-0 top-12 h-6 w-64 border-2 border-[oklch(0.38_0.10_160)] bg-[oklch(0.20_0.06_160)]" />
+            {[28, 80, 132, 184].map((x) => (
+              <div key={`temple-column-${x}`} className="absolute top-[70px] h-20 w-8 border-2 border-[oklch(0.38_0.10_160)] bg-background/80" style={{ left: x }} />
+            ))}
+            <div className="absolute left-5 top-[146px] h-4 w-56 border-2 border-[oklch(0.38_0.10_160)] bg-[oklch(0.72_0.16_160)]/40" />
+            <div className="absolute left-[104px] top-[92px] h-16 w-12 border-2 border-accent bg-background/80 shadow-[0_0_18px_var(--color-accent)]" />
+          </div>
+          <div className="pointer-events-none absolute left-[944px] top-[132px] h-44 w-64">
+            <div className="absolute left-2 top-10 h-28 w-60 rounded-full border-8 border-danger/80 bg-danger/10 shadow-[inset_0_0_18px_rgba(255,0,0,0.25)]" />
+            <div className="absolute left-[78px] top-[78px] h-1 w-28 rotate-[-22deg] bg-danger shadow-[0_0_14px_var(--color-danger)]" />
+            <div className="absolute left-[78px] top-[78px] h-1 w-28 rotate-[22deg] bg-danger shadow-[0_0_14px_var(--color-danger)]" />
+            <div className="absolute left-[102px] top-0 h-20 w-16 border-2 border-danger/70 bg-background/80" />
+            <div className="absolute left-[112px] top-3 h-10 w-10 border-2 border-danger/70" style={{ transform: "rotate(45deg)" }} />
+          </div>
+          <div className="pointer-events-none absolute left-[112px] top-[596px] h-48 w-64">
+            <div className="absolute left-0 top-12 h-28 w-64 border-4 border-[oklch(0.52_0.11_85)] bg-[oklch(0.20_0.05_85)]" />
+            <div className="absolute left-8 top-4 h-12 w-48 bg-[oklch(0.78_0.14_85)]" style={{ clipPath: "polygon(50% 0, 100% 100%, 0 100%)" }} />
+            {[34, 92, 150, 208].map((x, index) => (
+              <div key={`achievement-pedestal-${index}`} className="absolute top-[98px] h-16 w-8 border-2 border-border bg-background/75" style={{ left: x }}>
+                <div className="absolute -top-7 left-1 h-6 w-6 border-2 border-[oklch(0.78_0.14_85)] bg-[oklch(0.78_0.14_85)]/60" />
+              </div>
+            ))}
+          </div>
+          <div className="pointer-events-none absolute left-[928px] top-[590px] h-48 w-64">
+            <div className="absolute left-8 top-2 h-32 w-48 border-4 border-[oklch(0.36_0.10_185)] bg-background/90 shadow-[0_0_18px_oklch(0.36_0.10_185)]" />
+            {[20, 46, 72].map((y, index) => (
+              <div key={`leaderboard-line-${index}`} className="absolute left-14 h-3 w-36" style={{ top: y, background: index === 0 ? "oklch(0.80 0.13 120)" : "var(--color-border)" }} />
+            ))}
+            <div className="absolute left-[118px] top-[134px] h-12 w-8 bg-[oklch(0.24_0.06_185)]" />
+            <div className="absolute left-16 top-[172px] h-4 w-36 border-2 border-[oklch(0.36_0.10_185)] bg-[oklch(0.15_0.06_185)]" />
+          </div>
+          <div className="pointer-events-none absolute left-[394px] top-[652px] h-48 w-48">
+            <div className="absolute left-0 top-16 h-24 w-48 border-4 border-[oklch(0.48_0.09_35)] bg-background/80" />
+            <div className="absolute left-0 top-8 h-10 w-48" style={{ background: "repeating-linear-gradient(90deg, oklch(0.76 0.15 35) 0 18px, var(--color-background) 18px 36px)" }} />
+            <div className="absolute left-5 top-[100px] h-10 w-32 border-2 border-[oklch(0.48_0.09_35)] bg-[oklch(0.24_0.06_35)]" />
+            <div className="absolute left-[138px] top-[82px] h-20 w-4 bg-[oklch(0.48_0.09_35)]" />
+          </div>
+          <div className="pointer-events-none absolute left-[704px] top-[652px] h-48 w-48">
+            <div className="absolute left-8 top-20 h-20 w-32 border-4 border-border bg-[oklch(0.40_0.10_55)]" />
+            <div className="absolute left-12 top-12 h-12 w-24 border-4 border-border border-b-0 bg-[oklch(0.25_0.07_55)]" />
+            <div className="absolute left-[86px] top-[96px] h-8 w-4 bg-[oklch(0.70_0.13_250)] shadow-[0_0_12px_oklch(0.70_0.13_250)]" />
+            <div className="absolute left-5 top-[144px] h-5 w-40 border-2 border-[oklch(0.40_0.10_250)] bg-background/70" />
+          </div>
+          {isAdmin && (
+            <div className="pointer-events-none absolute left-[84px] top-[392px] h-40 w-72">
+              <div className="absolute left-0 top-12 h-24 w-72 border-4 border-[oklch(0.78_0.18_25)] bg-background/85" />
+              <div className="absolute left-9 top-6 h-24 w-8 border-2 border-border bg-[oklch(0.78_0.18_25)]/75" />
+              <div className="absolute left-28 top-6 h-24 w-8 border-2 border-border bg-[oklch(0.72_0.16_160)]/75" />
+              <div className="absolute left-[188px] top-6 h-24 w-8 border-2 border-border bg-[oklch(0.70_0.13_250)]/75" />
+              <div className="absolute left-5 top-[116px] h-4 w-60 border-2 border-border bg-[oklch(0.18_0.03_250)]" />
+            </div>
+          )}
           {[
             [176, 182, "INF"], [1038, 184, "VS"], [190, 646, "ACH"], [1040, 642, "#"], [448, 704, "$"], [762, 704, "BAG"],
           ].map(([x, y, mark], index) => (
