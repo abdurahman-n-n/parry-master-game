@@ -180,15 +180,22 @@ export function PixelCharacter({
   pose = "idle",
   dash = false,
   redEyeSpark = false,
+  showBuiltInWeapon = true,
 }: {
   skinId: string;
   size?: number;
   pose?: Pose;
   dash?: boolean;
   redEyeSpark?: boolean;
+  showBuiltInWeapon?: boolean;
 }) {
   const variant = VARIANTS[skinId] ?? VARIANTS["kid:default"];
-  const cells = pose === "strike" ? variant.strike : variant.idle;
+  const weaponCells = pose === "strike"
+    ? new Set(["8,7", "9,6", "10,5", "11,4", "11,3"])
+    : new Set(["9,7", "9,8", "9,9", "9,10"]);
+  const cells = (pose === "strike" ? variant.strike : variant.idle).filter(
+    ([x, y]) => showBuiltInWeapon || !skinId.startsWith("kid:") || !weaponCells.has(`${x},${y}`),
+  );
   const p = size / 12;
   const tint =
     pose === "hit"
@@ -273,16 +280,16 @@ export function PixelCharacter({
           style={{
             left: "58%",
             top: "28%",
-            width: Math.max(4, size * 0.12),
-            height: Math.max(4, size * 0.12),
+            width: Math.max(8, size * 0.22),
+            height: Math.max(8, size * 0.22),
             background: "var(--color-danger)",
-            boxShadow: "0 0 10px var(--color-danger), 0 0 20px var(--color-danger)",
+            boxShadow: "0 0 14px var(--color-danger), 0 0 30px var(--color-danger), 0 0 46px var(--color-danger)",
             clipPath: "polygon(50% 0, 64% 35%, 100% 50%, 64% 65%, 50% 100%, 36% 65%, 0 50%, 36% 35%)",
             animation: "heroRedEyeSpark 520ms steps(3) forwards",
           }}
         />
       )}
-      {pose === "strike" && (
+      {pose === "strike" && showBuiltInWeapon && (
         <div
           className="pointer-events-none absolute left-1/2 top-1/2 h-2 w-full -translate-x-1/2 -translate-y-1/2"
           style={{

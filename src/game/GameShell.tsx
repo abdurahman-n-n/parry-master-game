@@ -25,6 +25,7 @@ import { getEquippedTitle, TITLES } from "./achievements";
 import { isAdminEmail } from "@/lib/admin";
 import { PixelCharacter } from "./PixelCharacters";
 import { getBestWaveFor } from "./InfiniteLeaderboard";
+import { getEquippedWeapon } from "./inventory";
 
 type Screen = "menu" | "levels" | "fight" | "gameover" | "victory" | "settings" | "store" | "inventory" | "leaderboard" | "admin" | "infinite" | "ai-duel" | "achievements" | "stats";
 
@@ -40,6 +41,7 @@ export function GameShell() {
   const [lastReward, setLastReward] = useState<{ credits: number; gems: number } | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const equippedWeaponId = typeof window === "undefined" ? "weapon-sword" : getEquippedWeapon() ?? "weapon-sword";
 
   useEffect(() => {
     let alive = true;
@@ -398,7 +400,7 @@ const LOBBY_VIEW_W = 760;
 const LOBBY_VIEW_H = 480;
 const PLAYER_SIZE = 54;
 const STATION_W = 126;
-const STATION_H = 58;
+const STATION_H = 88;
 const PRACTICE_BOTS = [
   { id: "left", name: "Garden Knight", x: 510, y: 410, offset: 0, color: "oklch(0.72 0.16 160)", trim: "oklch(0.90 0.12 85)" },
   { id: "right", name: "Timing Knight", x: 770, y: 410, offset: 980, color: "oklch(0.78 0.14 85)", trim: "oklch(0.74 0.18 320)" },
@@ -447,16 +449,16 @@ function LobbyMap({
 
   const stations: LobbyStation[] = [
     { id: "levels", label: "Play", hint: "Level gate", x: 580, y: 84, screen: "levels", accent: "var(--color-accent)" },
-    { id: "infinite", label: "Infinite", hint: "Wave door", x: 158, y: 198, screen: "infinite", accent: "oklch(0.72 0.16 160)" },
-    { id: "duel", label: "Duel", hint: "1v1 arena", x: 996, y: 198, screen: "ai-duel", accent: "var(--color-danger)" },
-    { id: "achievements", label: "Awards", hint: "Titles", x: 172, y: 652, screen: "achievements", accent: "oklch(0.78 0.14 85)" },
-    { id: "store", label: "Store", hint: "Buy gear", x: 430, y: 716, screen: "store", accent: "oklch(0.76 0.15 35)" },
-    { id: "inventory", label: "Inventory", hint: "Equip", x: 724, y: 716, screen: "inventory", accent: "oklch(0.70 0.13 250)" },
-    { id: "leaderboard", label: "Board", hint: "Rankings", x: 982, y: 652, screen: "leaderboard", accent: "oklch(0.80 0.13 120)" },
+    { id: "infinite", label: "Infinite", hint: "Temple", x: 158, y: 198, screen: "infinite", accent: "oklch(0.72 0.16 160)" },
+    { id: "duel", label: "Duel", hint: "Arena", x: 996, y: 198, screen: "ai-duel", accent: "var(--color-danger)" },
+    { id: "achievements", label: "Achievements", hint: "Titles", x: 172, y: 652, screen: "achievements", accent: "oklch(0.78 0.14 85)" },
+    { id: "store", label: "Store", hint: "Shop", x: 430, y: 716, screen: "store", accent: "oklch(0.76 0.15 35)" },
+    { id: "inventory", label: "Inventory", hint: "Chest", x: 724, y: 716, screen: "inventory", accent: "oklch(0.70 0.13 250)" },
+    { id: "leaderboard", label: "Leaderboard", hint: "Rankings", x: 982, y: 652, screen: "leaderboard", accent: "oklch(0.80 0.13 120)" },
     { id: "settings", label: "Settings", hint: "Profile", x: 1010, y: 430, screen: "settings", accent: "oklch(0.72 0.08 300)" },
     { id: "stats", label: "Stats", hint: "Progress", x: 580, y: 430, screen: "stats", accent: "oklch(0.78 0.14 85)" },
     ...(isAdmin
-      ? [{ id: "admin", label: "Admin", hint: "Panel", x: 144, y: 430, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
+      ? [{ id: "admin", label: "Admin", hint: "Research", x: 144, y: 430, screen: "admin" as Screen, accent: "oklch(0.78 0.18 25)" }]
       : []),
   ];
 
@@ -602,6 +604,85 @@ function LobbyMap({
     setKeys((current) => ({ ...current, [key]: pressed }));
   };
 
+  const stationIcon = (station: LobbyStation) => {
+    const accent = station.accent;
+    if (station.id === "infinite") {
+      return (
+        <div className="relative h-12 w-20">
+          <div className="absolute left-1 top-0 h-3 w-[72px]" style={{ background: accent, clipPath: "polygon(50% 0, 100% 100%, 0 100%)" }} />
+          {[8, 24, 40, 56].map((x) => (
+            <div key={x} className="absolute top-3 h-8 w-3 border border-border bg-background" style={{ left: x }} />
+          ))}
+          <div className="absolute bottom-0 left-0 h-2 w-20 border border-border bg-background" />
+        </div>
+      );
+    }
+    if (station.id === "duel") {
+      return (
+        <div className="relative h-12 w-20">
+          <div className="absolute left-2 top-2 h-8 w-16 rounded-full border-4" style={{ borderColor: accent, boxShadow: `0 0 12px ${accent}` }} />
+          <div className="absolute left-5 top-5 h-1 w-10 rotate-[-18deg]" style={{ background: accent }} />
+          <div className="absolute left-5 top-5 h-1 w-10 rotate-[18deg]" style={{ background: accent }} />
+        </div>
+      );
+    }
+    if (station.id === "leaderboard") {
+      return (
+        <div className="relative h-12 w-20">
+          <div className="absolute left-3 top-1 h-9 w-14 border-2 border-border bg-background">
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="mx-2 mt-1 h-1" style={{ background: row === 0 ? accent : "var(--color-border)" }} />
+            ))}
+          </div>
+          <div className="absolute bottom-0 left-9 h-3 w-2 bg-border" />
+        </div>
+      );
+    }
+    if (station.id === "inventory") {
+      return (
+        <div className="relative h-12 w-20">
+          <div className="absolute left-3 top-4 h-7 w-14 border-2 border-border bg-[oklch(0.42_0.10_55)]" />
+          <div className="absolute left-5 top-2 h-4 w-10 border-2 border-border border-b-0 bg-[oklch(0.28_0.07_55)]" />
+          <div className="absolute left-9 top-5 h-4 w-2" style={{ background: accent }} />
+        </div>
+      );
+    }
+    if (station.id === "store") {
+      return (
+        <div className="relative h-12 w-20">
+          <div className="absolute left-2 top-3 h-4 w-16" style={{ background: `repeating-linear-gradient(90deg, ${accent} 0 10px, var(--color-background) 10px 20px)` }} />
+          <div className="absolute left-4 top-6 h-6 w-12 border-2 border-border bg-background" />
+          <div className="absolute left-9 top-8 h-4 w-2" style={{ background: accent }} />
+        </div>
+      );
+    }
+    if (station.id === "achievements") {
+      return (
+        <div className="relative h-12 w-20">
+          <div className="absolute left-7 top-1 h-8 w-6 border-2 border-border" style={{ background: accent }} />
+          <div className="absolute left-5 top-5 h-3 w-10 border-2 border-border bg-background" />
+          <div className="absolute left-8 top-9 h-2 w-4" style={{ background: accent }} />
+        </div>
+      );
+    }
+    if (station.id === "admin") {
+      return (
+        <div className="relative h-12 w-20">
+          <div className="absolute left-4 top-7 h-3 w-12 border-2 border-border bg-background" />
+          <div className="absolute left-6 top-2 h-8 w-3 border border-border" style={{ background: accent }} />
+          <div className="absolute left-11 top-2 h-8 w-3 border border-border" style={{ background: "oklch(0.72 0.16 160)" }} />
+          <div className="absolute left-4 top-1 h-2 w-12 border border-border bg-background" />
+        </div>
+      );
+    }
+    return (
+      <div className="relative h-12 w-20">
+        <div className="absolute left-5 top-2 h-8 w-10 border-2 border-border" style={{ background: accent }} />
+        <div className="absolute left-8 top-5 h-3 w-4 bg-background" />
+      </div>
+    );
+  };
+
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2 overflow-auto bg-background p-3">
       <div
@@ -661,7 +742,7 @@ function LobbyMap({
           <div className="absolute left-[380px] top-[684px] h-28 w-[216px] border-4 border-[oklch(0.48_0.09_35)] bg-[oklch(0.24_0.06_35)]" />
           <div className="absolute left-[684px] top-[684px] h-28 w-[216px] border-4 border-[oklch(0.40_0.10_250)] bg-[oklch(0.17_0.06_250)]" />
           {[
-            [176, 182, "∞"], [1038, 184, "VS"], [190, 646, "★"], [1040, 642, "#"], [448, 704, "$"], [762, 704, "BAG"],
+            [176, 182, "INF"], [1038, 184, "VS"], [190, 646, "ACH"], [1040, 642, "#"], [448, 704, "$"], [762, 704, "BAG"],
           ].map(([x, y, mark], index) => (
             <div key={`district-mark-${index}`} className="absolute flex h-14 w-14 items-center justify-center border-2 border-border bg-background/60 text-[12px] text-foreground" style={{ left: x, top: y }}>
               {mark}
@@ -757,7 +838,7 @@ function LobbyMap({
               <button
                 key={station.id}
                 onClick={() => useStation(station)}
-                className={`absolute flex flex-col items-center justify-center gap-1 border-2 bg-background/95 p-2 text-center uppercase transition-colors ${
+                className={`absolute flex flex-col items-center justify-center gap-1 border-2 bg-background/95 p-1 text-center uppercase transition-colors ${
                   active
                     ? "border-accent text-accent"
                     : "border-border text-foreground hover:border-foreground"
@@ -770,7 +851,8 @@ function LobbyMap({
                   boxShadow: active ? `0 0 18px ${station.accent}` : undefined,
                 }}
               >
-                <span className="text-[10px] tracking-[0.18em]">{station.label}</span>
+                {stationIcon(station)}
+                <span className="max-w-full text-[8px] tracking-[0.12em]">{station.label}</span>
                 <span className="text-[7px] tracking-widest text-muted-foreground">{station.hint}</span>
                 <span
                   className="absolute bottom-0 left-0 h-1 w-full"
@@ -827,15 +909,17 @@ function LobbyMap({
                   <div className="absolute left-[-6px] top-7 h-5 w-1" style={{ background: bot.trim }} />
                   <div className="absolute left-4 top-[54px] h-3 w-3 bg-[oklch(0.18_0.03_250)]" />
                   <div className="absolute right-4 top-[54px] h-3 w-3 bg-[oklch(0.18_0.03_250)]" />
-                  <div
-                    className="absolute h-3 w-24 origin-left border border-background"
-                    style={{
-                      left: 34,
-                      top: 25,
-                      background: striking ? "var(--color-danger)" : "oklch(0.82 0.02 250)",
-                      transform: `rotate(${windup ? -38 + charge * 24 : striking ? -8 : 42}deg)`,
-                    }}
-                  />
+                  {!striking && (
+                    <div
+                      className="absolute h-3 w-24 origin-left border border-background"
+                      style={{
+                        left: 34,
+                        top: 25,
+                        background: "oklch(0.82 0.02 250)",
+                        transform: `rotate(${windup ? -38 + charge * 24 : 42}deg)`,
+                      }}
+                    />
+                  )}
                 </div>
                 <div
                   className="absolute -translate-x-1/2 text-center text-[7px] uppercase tracking-widest text-muted-foreground"
@@ -845,7 +929,7 @@ function LobbyMap({
                 </div>
                 {striking && (
                   <div
-                    className="pointer-events-none absolute h-2 w-24 -translate-x-1/2 -translate-y-1/2 bg-danger"
+                    className="pointer-events-none absolute h-16 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border-r-4 border-danger"
                     style={{
                       left: bot.x + 52,
                       top: bot.y + 4,
@@ -949,7 +1033,12 @@ function LobbyMap({
             className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
             style={{ left: player.x, top: player.y }}
           >
-            <PixelCharacter skinId="kid:default" size={PLAYER_SIZE} pose={playerPose} />
+            <PixelCharacter
+              skinId="kid:default"
+              size={PLAYER_SIZE}
+              pose={playerPose}
+              showBuiltInWeapon={equippedWeaponId === "weapon-sword"}
+            />
           </div>
           <style>{`
             @keyframes lobbyParryPop {

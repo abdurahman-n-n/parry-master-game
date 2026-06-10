@@ -166,6 +166,8 @@ export function ParryGame({
   const [weaponSpecialUntil, setWeaponSpecialUntil] = useState(0);
   const [weaponSpecialKind, setWeaponSpecialKind] = useState<WeaponSpecialKind>(null);
   const [heavySlashUntil, setHeavySlashUntil] = useState(0);
+  const [heavySlashAngle, setHeavySlashAngle] = useState(-0.2);
+  const [daggerThrowAngle, setDaggerThrowAngle] = useState(-0.2);
 
   // Ability cooldowns
   const [cdInsta, setCdInsta] = useState(0);
@@ -174,6 +176,8 @@ export function ParryGame({
   const cdDashRef = useRef(0);
 
   const playerRef = useRef({ x: ARENA_W * 0.5, y: ARENA_H * 0.78 });
+  const arenaRef = useRef<HTMLDivElement | null>(null);
+  const aimRef = useRef({ x: ARENA_W * 0.5, y: ARENA_H * 0.2 });
   const keysRef = useRef<Record<string, boolean>>({});
   const blockHeldRef = useRef(false);
   const [, tick] = useState(0);
@@ -317,12 +321,23 @@ export function ParryGame({
       return;
     }
 
-    // Nearest alive enemy in melee range
+    const aim = aimRef.current;
+    const slashAngle = Math.atan2(aim.y - p.y, aim.x - p.x);
+
+    if (weaponId === "weapon-heavy-sword") {
+      setHeavySlashAngle(slashAngle);
+      setHeavySlashUntil(now + 300);
+    }
+    if (weaponId === "weapon-daggers") {
+      setDaggerThrowAngle(slashAngle);
+    }
+
+    // Nearest alive enemy in melee range, or closest to the cursor for daggers.
     let best: EnemyInstance | null = null;
     let bestDist = Infinity;
     for (const e of enemiesRef.current) {
       if (e.hp <= 0) continue;
-      const d = Math.hypot(p.x - e.x, p.y - e.y);
+      const d = weaponIsRanged ? Math.hypot(aim.x - e.x, aim.y - e.y) : Math.hypot(p.x - e.x, p.y - e.y);
       if (d < bestDist) { bestDist = d; best = e; }
     }
     if (best && (weaponIsRanged || bestDist <= MELEE_RANGE + ENEMY_RADIUS)) {
@@ -330,7 +345,7 @@ export function ParryGame({
     } else {
       setLog(`* Too far! Close the distance.`);
     }
-  }, [damageEnemy, weaponDamage, weaponIsRanged]);
+  }, [damageEnemy, weaponDamage, weaponId, weaponIsRanged]);
 
   const useWeaponSpecial = useCallback(() => {
     if (stateRef.current !== "playing" || pausedRef.current) return;
@@ -369,8 +384,11 @@ export function ParryGame({
 
     if (weaponId === "weapon-heavy-sword") {
       const p = playerRef.current;
+      const aim = aimRef.current;
+      const aimAngle = Math.atan2(aim.y - p.y, aim.x - p.x);
       let hit = false;
       setHeavySlashUntil(now + 520);
+      setHeavySlashAngle(aimAngle);
       setPose("strike");
       for (const e of enemiesRef.current) {
         if (e.hp <= 0) continue;
@@ -378,6 +396,8 @@ export function ParryGame({
         const dy = e.y - p.y;
         const dist = Math.hypot(dx, dy);
         if (dist > 230) continue;
+        const angleDelta = Math.abs(Math.atan2(Math.sin(Math.atan2(dy, dx) - aimAngle), Math.cos(Math.atan2(dy, dx) - aimAngle)));
+        if (angleDelta > 0.85) continue;
         hit = true;
         damageEnemy(e.uid, 30, "Excalibur cleaves");
         const len = dist || 1;
@@ -517,6 +537,16 @@ export function ParryGame({
     };
   }, [tryAttack, triggerBlockTap, useDash, useInstakill, useWeaponSpecial, equippedAbility]);
 
+  const updateAimFromMouse = useCallback((event: { clientX: number; clientY: number }) => {
+    const rect = arenaRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const scale = rect.width / ARENA_W || 1;
+    aimRef.current = {
+      x: Math.max(0, Math.min(ARENA_W, (event.clientX - rect.left) / scale)),
+      y: Math.max(0, Math.min(ARENA_H, (event.clientY - rect.top) / scale)),
+    };
+  }, []);
+
   // Mouse click = attack
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -524,11 +554,12 @@ export function ParryGame({
       const t = e.target as HTMLElement | null;
       if (t && t.closest("button")) return;
       e.preventDefault();
+      updateAimFromMouse(e);
       tryAttack();
     };
     window.addEventListener("mousedown", handler);
     return () => window.removeEventListener("mousedown", handler);
-  }, [tryAttack]);
+  }, [tryAttack, updateAimFromMouse]);
 
   // Resolve a single enemy's incoming attack at landing time
   const resolveAttack = useCallback((en: EnemyInstance) => {
@@ -749,7 +780,9 @@ export function ParryGame({
 
       {/* Arena */}
       <div
+        ref={arenaRef}
         className="relative overflow-hidden border-4 border-border"
+        onMouseMove={updateAimFromMouse}
         style={{
           width: arenaDisplayWidth,
           height: arenaDisplayHeight,
@@ -858,10 +891,14 @@ export function ParryGame({
 
         {now < heavySlashUntil && (
           <div
-            className="pointer-events-none absolute left-1/2 top-1/2 h-28 w-[520px] -translate-x-1/2 -translate-y-1/2 border-y-4 border-accent"
+            className="pointer-events-none absolute h-28 w-[520px] -translate-y-1/2 border-y-4 border-accent"
             style={{
+              left: player.x,
+              top: player.y,
               background: "linear-gradient(90deg, transparent, color-mix(in oklab, var(--color-accent) 35%, transparent), transparent)",
               boxShadow: "0 0 30px var(--color-accent)",
+              transformOrigin: "left center",
+              transform: `rotate(${heavySlashAngle}rad)`,
               animation: "excaliburWave 520ms ease-out forwards",
             }}
           />
@@ -917,21 +954,19 @@ export function ParryGame({
                 }}
               />
             )}
-            {weaponId === "weapon-daggers" && (
-              <>
-                <div className="pointer-events-none absolute left-[36px] top-[22px] h-2 w-9 rotate-[-24deg] bg-[oklch(0.86_0.02_250)] shadow-[0_0_8px_var(--color-accent)]" />
-                <div className="pointer-events-none absolute left-[35px] top-[33px] h-2 w-8 rotate-[18deg] bg-[oklch(0.86_0.02_250)] shadow-[0_0_8px_var(--color-accent)]" />
-                {effectivePose === "strike" && (
-                  <div className="pointer-events-none absolute left-[48px] top-[22px] h-2 w-28 bg-[oklch(0.92_0.02_250)] shadow-[0_0_14px_var(--color-accent)]" style={{ animation: "daggerThrow 240ms ease-out forwards" }} />
-                )}
-              </>
-            )}
             {weaponId === "weapon-mace" && (
-              <div className="pointer-events-none absolute left-[36px] top-[8px] h-16 w-16" style={{ animation: `maceSpin ${weaponSpecialActive ? "180ms" : effectivePose === "strike" ? "260ms" : "900ms"} linear infinite`, filter: weaponSpecialActive ? "drop-shadow(0 0 12px var(--color-accent))" : undefined }}>
-                <div className="absolute left-7 top-3 h-12 w-2 bg-[oklch(0.56_0.05_55)]" />
-                <div className="absolute left-[19px] top-0 h-5 w-5 border-2 border-border bg-[oklch(0.48_0.03_250)]" />
-                <div className="absolute left-[15px] top-1 h-2 w-3 bg-[oklch(0.75_0.02_250)]" />
-                <div className="absolute left-[32px] top-1 h-2 w-3 bg-[oklch(0.75_0.02_250)]" />
+              <div
+                className="pointer-events-none absolute left-[34px] top-[26px] h-8 w-16"
+                style={{
+                  animation: `maceSpin ${weaponSpecialActive ? "180ms" : effectivePose === "strike" ? "260ms" : "900ms"} linear infinite`,
+                  filter: weaponSpecialActive ? "drop-shadow(0 0 12px var(--color-accent))" : undefined,
+                  transformOrigin: "0px 50%",
+                }}
+              >
+                <div className="absolute left-0 top-[13px] h-2 w-12 bg-[oklch(0.56_0.05_55)]" />
+                <div className="absolute left-[42px] top-[6px] h-7 w-7 border-2 border-border bg-[oklch(0.48_0.03_250)]" />
+                <div className="absolute left-[39px] top-[9px] h-2 w-3 bg-[oklch(0.75_0.02_250)]" />
+                <div className="absolute left-[62px] top-[19px] h-2 w-3 bg-[oklch(0.75_0.02_250)]" />
               </div>
             )}
             {weaponId === "weapon-heavy-sword" && (
@@ -948,8 +983,28 @@ export function ParryGame({
               pose={effectivePose}
               dash={dashEffectActive}
               redEyeSpark={instakillEyeActive}
+              showBuiltInWeapon={weaponId === "weapon-sword"}
               key={overlayFlash?.uid ?? effectivePose}
             />
+            {weaponId === "weapon-daggers" && (
+              <>
+                <div className="pointer-events-none absolute left-[8px] top-[31px] h-2 w-9 origin-right rotate-[205deg] bg-[oklch(0.90_0.02_250)] shadow-[0_0_8px_var(--color-accent)]">
+                  <div className="absolute -right-2 top-[-2px] h-6 w-2 bg-[oklch(0.45_0.12_285)]" />
+                </div>
+                <div className="pointer-events-none absolute left-[34px] top-[31px] h-2 w-9 origin-left rotate-[-25deg] bg-[oklch(0.90_0.02_250)] shadow-[0_0_8px_var(--color-accent)]">
+                  <div className="absolute -left-2 top-[-2px] h-6 w-2 bg-[oklch(0.45_0.12_285)]" />
+                </div>
+                {effectivePose === "strike" && (
+                  <div
+                    className="pointer-events-none absolute left-[48px] top-[22px] h-2 w-28 origin-left bg-[oklch(0.96_0.02_250)] shadow-[0_0_14px_var(--color-accent)]"
+                    style={{
+                      transform: `rotate(${daggerThrowAngle}rad)`,
+                      animation: "daggerThrow 240ms ease-out forwards",
+                    }}
+                  />
+                )}
+              </>
+            )}
             {weaponSpecialKind === "mace" && weaponSpecialActive && (
               <div className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-accent" style={{ animation: "maceCyclone 520ms linear infinite", boxShadow: "0 0 28px var(--color-accent), inset 0 0 18px var(--color-accent)" }} />
             )}
@@ -1122,9 +1177,9 @@ export function ParryGame({
       <style>{`
         @keyframes parryFlash { from { opacity: 1; } to { opacity: 0; } }
         @keyframes daggerThrow {
-          0% { opacity: 0; transform: translateX(-16px) scaleX(0.35); }
+          0% { opacity: 0; clip-path: inset(0 100% 0 0); }
           25% { opacity: 1; }
-          100% { opacity: 0; transform: translateX(110px) scaleX(1); }
+          100% { opacity: 0; clip-path: inset(0 0 0 0); }
         }
         @keyframes maceSpin {
           from { transform: rotate(0deg); }
@@ -1145,9 +1200,9 @@ export function ParryGame({
           100% { transform: rotate(28deg) translateY(0); }
         }
         @keyframes excaliburWave {
-          from { opacity: 0; transform: translate(-50%, -50%) scaleX(0.3) skewX(-16deg); }
+          from { opacity: 0; clip-path: inset(0 100% 0 0); filter: brightness(1.8); }
           25% { opacity: 1; }
-          to { opacity: 0; transform: translate(-50%, -50%) scaleX(1.15) skewX(-16deg); }
+          to { opacity: 0; clip-path: inset(0 0 0 0); filter: brightness(1); }
         }
         @keyframes weaponShieldPop {
           0% { opacity: 0; transform: translateY(-50%) scale(0.55); }
