@@ -744,12 +744,13 @@ function LobbyMap({
                     width: 52,
                     height: down ? 26 : 62,
                     opacity: down ? 0.55 : 1,
+                    borderRadius: down ? 2 : 8,
                     borderColor: !down && striking ? "var(--color-danger)" : close ? "var(--color-accent)" : "var(--color-border)",
                     boxShadow: striking ? "0 0 18px var(--color-danger)" : close ? "0 0 12px var(--color-accent)" : undefined,
                     transform: `translate(-50%, -50%) ${down ? "rotate(90deg)" : windup ? `rotate(${charge * -8}deg)` : striking ? "translateX(8px)" : ""}`,
                   }}
                 >
-                  <div className="absolute left-1/2 top-[-10px] h-7 w-7 -translate-x-1/2 border-2 border-border bg-[oklch(0.86_0.04_75)]" />
+                  <div className="absolute left-1/2 top-[-10px] h-7 w-7 -translate-x-1/2 border-2 border-border bg-[oklch(0.86_0.04_75)]" style={{ borderRadius: 6 }} />
                   <div className="absolute left-4 top-[-2px] h-2 w-2 bg-background" />
                   <div className="absolute right-4 top-[-2px] h-2 w-2 bg-background" />
                   <div className="absolute left-4 top-6 h-3 w-3" style={{ background: bot.trim }} />
@@ -781,8 +782,13 @@ function LobbyMap({
                 </div>
                 {!down && striking && (
                   <div
-                    className="pointer-events-none absolute h-16 w-28 -translate-x-1/2 -translate-y-1/2 border-2 border-danger bg-danger/20"
-                    style={{ left: bot.x + 50, top: bot.y + 4 }}
+                    className="pointer-events-none absolute h-2 w-24 -translate-x-1/2 -translate-y-1/2 bg-danger"
+                    style={{
+                      left: bot.x + 52,
+                      top: bot.y + 4,
+                      boxShadow: "0 0 18px var(--color-danger)",
+                      transform: "translate(-50%, -50%) rotate(-12deg)",
+                    }}
                   />
                 )}
               </div>
