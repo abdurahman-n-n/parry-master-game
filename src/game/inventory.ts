@@ -31,7 +31,6 @@ export const STORE_ITEMS: StoreItem[] = [
   // Weapons
   { id: "weapon-daggers", kind: "weapon", name: "Daggers", desc: "Fast throwable daggers with endless ammo. 0.1s cooldown.", creditCost: 300, gemCost: 30, weapon: { cooldownMs: 100, ranged: true } },
   { id: "weapon-mace", kind: "weapon", name: "Mace", desc: "Slow heavy hit. Deals 10x your upgraded strike damage. 1s cooldown.", creditCost: 500, gemCost: 50, weapon: { cooldownMs: 1000, damageMultiplier: 10 } },
-  { id: "weapon-heavy-sword", kind: "weapon", name: "Excalibur", desc: "A huge legendary blade. Deals 12 damage. 1.5s cooldown.", creditCost: 400, gemCost: 40, weapon: { cooldownMs: 1500, damage: 12 } },
 
   // Weapon Effects
   { id: "skin-crimson", kind: "skin", name: "Crimson Edge", desc: "Wreathes your blade in a bloody red aura.",   creditCost: 30, color: "oklch(0.65 0.22 25)" },
